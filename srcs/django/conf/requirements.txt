@@ -2,3 +2,4 @@ Django
 psycopg
 gunicorn
 whitenoise
+channels
