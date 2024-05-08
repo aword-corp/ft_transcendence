@@ -1,1 +1,5 @@
 .env
+*.pass
+*.key
+__pycache__
+*.sqlite3
