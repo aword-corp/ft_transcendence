@@ -1,9 +1,14 @@
-from django.shortcuts import render, HttpResponse
+from pong.models import Count
+from django.shortcuts import render
 
-# Create your views here.
-u = 0
+
 def pong(request):
-	global u
-	s= f"Hello user {u}"
-	u += 1
-	return HttpResponse(s)
+    count_obj, created = Count.objects.get_or_create(id=1)
+    count_obj.clicks += 1
+    count_obj.save()
+    message = {"title": "Bonjour !", "body": f"Hello user {count_obj.clicks}"}
+    return render(
+        request,
+        "home/index.html",
+        {"message": message, "counter": count_obj},
+    )

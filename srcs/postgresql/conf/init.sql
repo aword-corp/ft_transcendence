@@ -8,3 +8,7 @@ CREATE TABLE users (
     password_hash VARCHAR(100) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE count (
+    clicks INT
+);

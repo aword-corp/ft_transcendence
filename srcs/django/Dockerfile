@@ -16,6 +16,9 @@ ADD backend /app/backend
 
 WORKDIR /app/backend
 
+COPY tools/entrypoint.sh /app/backend/entrypoint.sh
+RUN chmod +x /app/backend/entrypoint.sh
+
 EXPOSE 8000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "backend.wsgi:application"]
+CMD ["/app/backend/entrypoint.sh"]

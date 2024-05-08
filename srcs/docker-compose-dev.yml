@@ -4,7 +4,7 @@ services:
     ports:
       - "8080:8080"
     networks:
-      - reseau
+      - tiktok
     restart: always
     env_file:
       - .env
@@ -12,21 +12,20 @@ services:
   postgresql:
     build: postgresql
     networks:
-      - reseau
+      - tiktok
     restart: always
     env_file:
       - .env
     healthcheck:
       test: pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
-      interval: 20s
+      interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 30s
 
   django:
     build: django
     networks:
-      - reseau
+      - tiktok
     restart: always
     env_file:
       - .env
@@ -35,5 +34,5 @@ services:
         condition: service_healthy
 
 networks:
-  reseau:
+  tiktok:
     driver: bridge
