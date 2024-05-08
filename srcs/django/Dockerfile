@@ -1,16 +1,21 @@
-FROM debian:bookworm-slim
+FROM python:3.9-slim
 
 RUN apt-get update && apt-get install -y \
-	python3-full \
-	python3-pip
+	gcc \
+	libpq-dev
 
-RUN apt-get update && apt-get install -y \
-	python3-django
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
-ENV PYTHONUNBUFFERED=1 DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+WORKDIR /app
 
-ADD djangotest /djangotest
+COPY conf/requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
+
+ADD backend /app/backend
+
+WORKDIR /app/backend
 
 EXPOSE 8000
 
-ENTRYPOINT ["python3", "/djangotest/manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "backend.wsgi:application"]

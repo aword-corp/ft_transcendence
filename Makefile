@@ -22,10 +22,10 @@ repurge: purge
 	make build
 	make run
 status:
-	cd srcs && docker compose ps && cd ..
+	docker compose -f $(COMPOSE_FILE) ps
 
 logs:
-	cd srcs && docker compose logs && cd ..
+	docker compose -f $(COMPOSE_FILE) logs
 
 fclean:
 	docker compose -f $(COMPOSE_FILE) down

@@ -10,7 +10,6 @@ services:
     env_file:
       - .env
 
-  # TODO : faire le container pour postgresql
   postgresql:
     build: postgresql
     networks:
