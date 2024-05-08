@@ -18,13 +18,12 @@ services:
     restart: always
     env_file:
       - .env
-    # healthcheck:
-    #   test: ["CMD", "/bin/true"]
-    #   interval: 1m30s
-    #   timeout: 30s
-    #   retries: 5
-    #   start_period: 30s
-    # TODO : configurer le healthcheck pour postgresql
+    healthcheck:
+      test: pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   django:
     build: django
@@ -33,9 +32,9 @@ services:
     restart: always
     env_file:
       - .env
-    # depends_on:
-    #   postgresql:
-    #     condition: service_healthy
+    depends_on:
+      postgresql:
+        condition: service_healthy
 
 networks:
   reseau:
