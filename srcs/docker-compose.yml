@@ -1,10 +1,9 @@
 services:
-
   nginx:
     build: nginx
     ports:
-      - "443:443"
-      - "443:443/udp"
+      - "8080:8080"
+      - "8080:8080/udp"
     networks:
       - reseau
     restart: always
@@ -12,33 +11,31 @@ services:
       - .env
 
   # TODO : faire le container pour postgresql
-  # postgresql:
-  #   build: postgresql
-  #   networks:
-  #     - reseau
-  #   restart: always
-  #   env_file:
-  #     - .env
-  #   # healthcheck:
-  #   #   test: ["executable", "arg"]
-  #   #   interval: 1m30s
-  #   #   timeout: 30s
-  #   #   retries: 5
-  #   #   start_period: 30s
-  #   # TODO : configurer le healthcheck pour postgresql
-  
+  postgresql:
+    build: postgresql
+    networks:
+      - reseau
+    restart: always
+    env_file:
+      - .env
+    # healthcheck:
+    #   test: ["CMD", "/bin/true"]
+    #   interval: 1m30s
+    #   timeout: 30s
+    #   retries: 5
+    #   start_period: 30s
+    # TODO : configurer le healthcheck pour postgresql
+
   django:
     build: django
     networks:
       - reseau
     restart: always
-    env_file: 
+    env_file:
       - .env
     # depends_on:
-      # - postgresql
-      # postgresql:
-      #   condition: service_healthy
-      # TODO: doit dependre d'un postgresql configure
+    #   postgresql:
+    #     condition: service_healthy
 
 networks:
   reseau:
