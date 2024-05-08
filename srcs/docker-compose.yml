@@ -1,0 +1,44 @@
+services:
+
+  nginx:
+    build: nginx
+    ports:
+      - "443:443"
+    networks:
+      - reseau
+    restart: always
+    env_file:
+      - .env
+
+  # TODO : faire les containers pour postgresql et pour le backend
+  # postgresql:
+  #   build: postgresql
+  #   networks:
+  #     - reseau
+  #   restart: always
+  #   env_file:
+  #     - .env
+  #   # healthcheck:
+  #   #   test: ["executable", "arg"]
+  #   #   interval: 1m30s
+  #   #   timeout: 30s
+  #   #   retries: 5
+  #   #   start_period: 30s
+  #   # TODO : configurer le healthcheck pour postgresql
+  
+  # backend:
+  #   build: backend
+  #   networks:
+  #     - reseau
+  #   restart: always
+  #   env_file: 
+  #     - .env
+  #   depends_on:
+  #     - postgresql
+  #     # postgresql:
+  #     #   condition: service_healthy
+  #     # TODO: doit dependre d'un postgresql configure
+
+networks:
+  reseau:
+    driver: bridge
