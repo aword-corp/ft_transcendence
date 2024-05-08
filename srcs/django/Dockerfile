@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get update && apt-get install -y \
 	python3-django
 
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
 
 ADD djangotest /djangotest
 
