@@ -2,8 +2,8 @@ services:
 
   nginx:
     build: nginx
-    # ports:
-      # - "443:443"
+    ports:
+      - "443:443"
     networks:
       - reseau
     restart: always
