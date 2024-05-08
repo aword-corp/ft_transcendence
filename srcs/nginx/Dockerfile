@@ -34,6 +34,8 @@ COPY conf/acorp.games.crt /etc/ssl/certs/
 
 COPY conf/acorp.games.key /etc/ssl/private/
 
-EXPOSE 8080 8080/udp
+COPY conf/localhost.conf /etc/nginx/sites-enabled/
+
+EXPOSE 443 443/udp
 
 ENTRYPOINT ["nginx", "-g", "daemon off;"]
