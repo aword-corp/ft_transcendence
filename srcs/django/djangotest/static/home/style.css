@@ -1,4 +1,11 @@
-.titlebar {
+body {
+    background-color: black;
+    text-align: center;
+    color: white;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+
+.titlebar-animated {
     background-color: #555555;
     color: white;
     padding: 10px;
@@ -10,11 +17,26 @@
     padding: 10px;
 }
 
-.boite {
+.boite-animated {
+    transition: all 100ms;
     margin: 10px;
     width: 300px;
     display: inline-block;
     vertical-align: top;
     background-color: #f9f9f9;
     box-shadow: 10px 5px #888888;
+}
+
+.boite-animated:hover {
+    width: 400px;
+    margin: 20px;
+    box-shadow: 10px 0px 0px #888888;
+}
+
+.confirm-button {
+    transition: all 100ms;
+}
+
+.confirm-button:hover {
+    width: 100px;
 }

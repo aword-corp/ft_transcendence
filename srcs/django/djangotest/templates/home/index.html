@@ -15,15 +15,18 @@
 		</style>
 		{% load static %}
 		<link rel="stylesheet" href="{% static 'home/style.css' %}">
+		<script src="{% static 'home/script.js' %}"></script> 
 	</head>
 	<body>
-		<div class="boite">
-			<div class="titlebar">
+		<div class="boite-animated">
+			<div class="titlebar-animated">
 				<span>{{message.title}}</span>
 			</div>
 			<div class="content">
 				<p>{{message.body}}</p>
+				<p id="count"><p>
+				<button onclick="onClickMe()" class="confirm-button">Cliquez-moi !</button>
 			</div>
-		</div>		
+		</div>
 	</body>
 </html>
