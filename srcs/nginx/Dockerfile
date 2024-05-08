@@ -36,4 +36,4 @@ COPY conf/acorp.games.key /etc/ssl/private/
 
 EXPOSE 443
 
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["nginx", "-g", "daemon off;"]

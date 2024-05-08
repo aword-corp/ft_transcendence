@@ -11,4 +11,5 @@ ADD djangotest /djangotest
 
 EXPOSE 8000
 
-CMD ["python3" "/djangotest/manage.py" "runserver"]
+
+ENTRYPOINT ["python3", "/djangotest/manage.py", "runserver"]
