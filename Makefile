@@ -9,7 +9,7 @@ build: $(ENV_FILE)
 	docker compose -f $(COMPOSE_FILE) build
 
 run: $(ENV_FILE)
-	docker compose -f $(COMPOSE_FILE) up -d
+	docker compose -f $(COMPOSE_FILE) up -d --remove-orphans
 
 re: fclean
 	make build
