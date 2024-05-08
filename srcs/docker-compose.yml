@@ -2,9 +2,9 @@ services:
 
   nginx:
     build: nginx
-    # ports:
-    #   - "443:443"
-    #   - "443:443/udp"
+    ports:
+      - "443:443"
+      - "443:443/udp"
     networks:
       - reseau
     restart: always
