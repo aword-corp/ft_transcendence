@@ -1,0 +1,20 @@
+.titlebar {
+    background-color: #555555;
+    color: white;
+    padding: 10px;
+    text-align: left;
+}
+
+.content {
+    color: black;
+    padding: 10px;
+}
+
+.boite {
+    margin: 10px;
+    width: 300px;
+    display: inline-block;
+    vertical-align: top;
+    background-color: #f9f9f9;
+    box-shadow: 10px 5px #888888;
+}

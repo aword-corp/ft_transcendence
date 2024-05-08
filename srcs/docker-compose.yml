@@ -2,16 +2,16 @@ services:
 
   nginx:
     build: nginx
-    ports:
-      - "443:443"
-      - "443:443/udp"
+    # ports:
+    #   - "443:443"
+    #   - "443:443/udp"
     networks:
       - reseau
     restart: always
     env_file:
       - .env
 
-  # TODO : faire les containers pour postgresql et pour le backend
+  # TODO : faire le container pour postgresql
   # postgresql:
   #   build: postgresql
   #   networks:
@@ -27,8 +27,8 @@ services:
   #   #   start_period: 30s
   #   # TODO : configurer le healthcheck pour postgresql
   
-  backend:
-    build: backend
+  django:
+    build: django
     networks:
       - reseau
     restart: always

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<!-- TODO: faire une page template avec header et footer a inclure dans toutes les routes -->
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Transcendance</title>
+		<style>
+			body {
+				background-color: black;
+				text-align: center;
+				color: white;
+				font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+			}
+		</style>
+		{% load static %}
+		<link rel="stylesheet" href="{% static 'home/style.css' %}">
+	</head>
+	<body>
+		<div class="boite">
+			<div class="titlebar">
+				<span>{{message.title}}</span>
+			</div>
+			<div class="content">
+				<p>{{message.body}}</p>
+			</div>
+		</div>		
+	</body>
+</html>
