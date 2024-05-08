@@ -6,7 +6,7 @@ all: build
 	make run
 
 build: $(ENV_FILE)
-	docker compose -f $(COMPOSE_FILE) build
+	docker compose -f $(COMPOSE_FILE) build --remove-orphans
 
 run: $(ENV_FILE)
 	docker compose -f $(COMPOSE_FILE) up -d
