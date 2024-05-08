@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-y)2rsor_xyw=q(_3!lwni_pdvkchf@f*geek=w+prq&c+2jqxt
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["acorp.games"]
 
 
 # Application definition
