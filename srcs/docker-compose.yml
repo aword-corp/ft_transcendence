@@ -14,15 +14,29 @@ services:
     build: postgresql
     networks:
       - reseau
+    volumes:
+      - db:/var/lib/postgresql/data 
     restart: always
     env_file:
       - .env
     healthcheck:
       test: pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
-      interval: 20s
+      interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 30s
+  
+  redis:
+    build: redis
+    networks:
+      - reseau
+    restart: always
+    env_file:
+      - .env
+    healthcheck:
+      test: redis-cli ping | grep "PONG"
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   django:
     build: django
@@ -31,10 +45,17 @@ services:
     restart: always
     env_file:
       - .env
+    environment:
+      dev: true
     depends_on:
       postgresql:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
 networks:
   reseau:
     driver: bridge
+
+volumes:
+  db:
