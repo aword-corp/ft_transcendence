@@ -13,6 +13,8 @@ services:
     build: postgresql
     networks:
       - tiktok
+    volumes:
+      - db:/var/lib/postgresql/data 
     restart: always
     env_file:
       - .env
@@ -38,3 +40,6 @@ services:
 networks:
   tiktok:
     driver: bridge
+
+volumes:
+  db:
