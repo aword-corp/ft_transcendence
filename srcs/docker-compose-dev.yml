@@ -23,6 +23,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+  
+  redis:
+    build: redis
+    networks:
+      - tiktok
+    restart: always
+    env_file:
+      - .env
+    healthcheck:
+      test: redis-cli ping | grep "PONG"
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   django:
     build: django
@@ -35,6 +48,8 @@ services:
       dev: true
     depends_on:
       postgresql:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
 networks:
