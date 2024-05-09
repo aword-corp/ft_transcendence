@@ -33,3 +33,21 @@
 .confirm-button:hover {
     width: 100px;
 }
+
+.chat {
+    height: 30vh;
+    overflow: scroll;
+    transition: all 100ms;
+    margin: 10px;
+    width: 300px;
+    display: inline-block;
+    vertical-align: top;
+    background-color: #f9f9f9;
+    box-shadow: 10px 5px #888888;
+}
+
+.chat:hover {
+    width: 400px;
+    margin: 20px;
+    box-shadow: 10px 0px 0px #888888;
+}
