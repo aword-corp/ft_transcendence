@@ -1,6 +1,5 @@
 Django
 psycopg
-gunicorn
-whitenoise
+daphne
 channels
 djangorestframework
