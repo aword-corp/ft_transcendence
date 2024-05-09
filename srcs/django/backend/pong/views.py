@@ -8,5 +8,5 @@ def pong(request):
     return render(
         request,
         "home/index.html",
-        {"message": message, "counter": count_obj},
+        {"message": message, "counter": count_obj.clicks},
     )
