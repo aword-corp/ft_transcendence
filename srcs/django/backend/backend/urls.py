@@ -17,4 +17,8 @@ Including another URLconf
 
 from django.urls import path, include
 
-urlpatterns = [path("pong/", include("pong.urls")), path("", include("home.urls"))]
+urlpatterns = [
+    path("pong/", include("pong.urls")),
+    path("", include("home.urls")),
+    path("api-auth/", include("rest_framework.urls")),
+]
