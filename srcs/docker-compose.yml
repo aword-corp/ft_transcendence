@@ -45,8 +45,6 @@ services:
     restart: always
     env_file:
       - .env
-    environment:
-      dev: true
     depends_on:
       postgresql:
         condition: service_healthy
