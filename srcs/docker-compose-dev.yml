@@ -3,6 +3,8 @@ services:
     build: nginx
     ports:
       - "8080:8080"
+    volumes:
+      - static:/var/www
     networks:
       - tiktok
     restart: always
@@ -39,6 +41,8 @@ services:
 
   django:
     build: django
+    volumes:
+      - static:/var/www
     networks:
       - tiktok
     restart: always
@@ -58,3 +62,4 @@ networks:
 
 volumes:
   db:
+  static:

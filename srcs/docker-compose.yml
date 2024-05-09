@@ -4,6 +4,8 @@ services:
     ports:
       - "443:443"
       - "443:443/udp"
+    volumes:
+      - static:/var/www
     networks:
       - reseau
     restart: always
@@ -40,6 +42,8 @@ services:
 
   django:
     build: django
+    volumes:
+      - static:/var/www
     networks:
       - reseau
     restart: always
@@ -57,3 +61,4 @@ networks:
 
 volumes:
   db:
+  static:

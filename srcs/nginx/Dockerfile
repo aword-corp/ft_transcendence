@@ -36,12 +36,6 @@ COPY conf/acorp.games.key /etc/ssl/private/
 
 COPY conf/localhost.conf /etc/nginx/sites-enabled/
 
-ADD static /var/www/static
-
-RUN chmod -R 755 /var/www
-
-RUN chown -R www-data:www-data /var/www
-
 EXPOSE 443 443/udp
 
 ENTRYPOINT ["nginx", "-g", "daemon off;"]
