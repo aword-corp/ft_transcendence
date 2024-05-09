@@ -40,8 +40,8 @@ services:
       timeout: 5s
       retries: 10
 
-  django:
-    build: django
+  backend-game:
+    build: backend-game
     volumes:
       - static:/var/www
     networks:
