@@ -15,7 +15,7 @@ services:
     networks:
       - reseau
     volumes:
-      - db:/var/lib/postgresql/data 
+      - db:/var/lib/postgresql/data
     restart: always
     env_file:
       - .env
@@ -24,7 +24,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-  
+
   redis:
     build: redis
     networks:
