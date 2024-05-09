@@ -3,7 +3,7 @@ import json
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 
-from pong.models import Count, Chat
+from db.models import Count, Chat
 
 
 class CountConsumer(WebsocketConsumer):

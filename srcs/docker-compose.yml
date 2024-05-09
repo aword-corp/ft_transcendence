@@ -40,10 +40,21 @@ services:
       timeout: 5s
       retries: 10
 
-  backend-game:
-    build: backend-game
+  backend:
+    build: backend
     volumes:
       - static:/var/www
+    networks:
+      - reseau
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      postgresql:
+        condition: service_healthy
+
+  backend-game:
+    build: backend-game
     networks:
       - reseau
     restart: always
