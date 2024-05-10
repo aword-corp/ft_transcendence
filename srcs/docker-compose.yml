@@ -49,6 +49,11 @@ services:
     restart: always
     env_file:
       - .env
+    healthcheck:
+      test: curl -s --raw localhost:8000 | grep "Transcendance"
+      interval: 10s
+      timeout: 5s
+      retries: 10
     depends_on:
       postgresql:
         condition: service_healthy
@@ -64,6 +69,8 @@ services:
       postgresql:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      backend:
         condition: service_healthy
 
 networks:
