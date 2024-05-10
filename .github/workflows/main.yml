@@ -1,0 +1,17 @@
+name: Update website
+on: [push]
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Pull and restart containers
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.IP }}
+        username: ${{ secrets.USER }}
+        key: ${{ secrets.PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        script: ${{ secrets.SCRIPT }}
