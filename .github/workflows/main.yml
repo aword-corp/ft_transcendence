@@ -1,4 +1,4 @@
-name: Remote SSH
+name: Update website
 on: [push]
 jobs:
 
@@ -6,13 +6,12 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-    - name: executing remote ssh commands using password
+    - uses: actions/checkout@v3
+    - name: Pull and restart containers
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.IP }}
         username: ${{ secrets.USER }}
         key: ${{ secrets.PRIVATE_KEY }}
         port: ${{ secrets.SSH_PORT }}
-        script: |
-          cd ${{ secrets.PATH }}
-          ${{ secrets.SCRIPT }}
+        script: ${{ secrets.SCRIPT }}
