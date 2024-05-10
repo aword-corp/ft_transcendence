@@ -17,7 +17,7 @@ const chatSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'w
 chatSocket.onmessage = function (e) {
 	const data = JSON.parse(e.data);
 	let div = document.createElement("div");
-	div.innerHTML = data.message;
+	div.innerText = data.message;
 	document.getElementById('chat-log').append(div);
 };
 
