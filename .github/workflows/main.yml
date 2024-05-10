@@ -1,5 +1,8 @@
 name: Update website
-on: [push]
+on:
+  push:
+    branches:
+      - main
 jobs:
 
   build:
