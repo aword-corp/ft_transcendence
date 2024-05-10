@@ -2,12 +2,11 @@ services:
   nginx:
     build: nginx
     ports:
-      - "443:443"
-      - "443:443/udp"
+      - "8080:8080"
     volumes:
       - static:/var/www
     networks:
-      - reseau
+      - tiktok
     restart: always
     env_file:
       - .env
@@ -15,7 +14,7 @@ services:
   postgresql:
     build: postgresql
     networks:
-      - reseau
+      - tiktok
     volumes:
       - db:/var/lib/postgresql/data
     restart: always
@@ -30,7 +29,7 @@ services:
   redis:
     build: redis
     networks:
-      - reseau
+      - tiktok
     restart: always
     env_file:
       - .env
@@ -45,10 +44,12 @@ services:
     volumes:
       - static:/var/www
     networks:
-      - reseau
+      - tiktok
     restart: always
     env_file:
       - .env
+    environment:
+      dev: true
     depends_on:
       postgresql:
         condition: service_healthy
@@ -56,10 +57,12 @@ services:
   backend-game:
     build: backend-game
     networks:
-      - reseau
+      - tiktok
     restart: always
     env_file:
       - .env
+    environment:
+      dev: true
     depends_on:
       postgresql:
         condition: service_healthy
@@ -67,7 +70,7 @@ services:
         condition: service_healthy
 
 networks:
-  reseau:
+  tiktok:
     driver: bridge
 
 volumes:

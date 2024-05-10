@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!-- TODO: faire une page template avec header et footer a inclure dans toutes les routes -->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transcendance</title>
+  <style>
+    body {
+      background-color: black;
+      text-align: center;
+      color: white;
+      font-family: "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande",
+        "Lucida Sans", Arial, sans-serif;
+    }
+  </style>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'home/style.css' %}" />
+  <script src="{% static 'home/script.js' %}"></script>
+</head>
+
+<body>
+  <div class="boite-animated">
+    <div class="titlebar-animated">
+      <span>{{message.title}}</span>
+    </div>
+    <div class="content">
+      <p>{{message.body}}</p>
+      <p id="count">{{counter}}</p>
+      <p>
+        <button onclick="onClickMe()" class="confirm-button">
+          Cliquez sur moi !
+        </button>
+      </p>
+    </div>
+  </div>
+  <div class="chat">
+    <div class="titlebar-animated">
+      <span>Chat</span>
+    </div>
+    <div id="chat-log" class="content">
+      {% for message in message_list %}
+      <div>
+        {{message.message}} 
+      </div>
+      {% endfor %}
+    </div>
+    <input onkeyup="onKeyUp(event)" id="chat-message-input" type="text" size="100"><br>
+    <input onclick="onClick(event)" id="chat-message-submit" type="button" value="Send">
+  </div>
+</body>
+
+</html>
