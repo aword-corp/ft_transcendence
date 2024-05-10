@@ -2,10 +2,12 @@
 <!-- TODO: faire une page template avec header et footer a inclure dans toutes les routes -->
 <html lang="en">
 
-<head>
+  <head>
+  {% load static %}
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Transcendance</title>
+  <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
   <style>
     body {
       background-color: black;
@@ -15,7 +17,6 @@
         "Lucida Sans", Arial, sans-serif;
     }
   </style>
-  {% load static %}
   <link rel="stylesheet" href="{% static 'home/style.css' %}" />
   <script src="{% static 'home/script.js' %}"></script>
 </head>
