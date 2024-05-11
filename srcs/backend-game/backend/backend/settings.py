@@ -141,8 +141,6 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-STATICFILES_DIRS = [BASE_DIR / "static"]
-
 STATIC_URL = f'{os.getenv("S3_URL_PROTOCOL")}://{os.getenv("S3_HOST")}/static/'
 STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
