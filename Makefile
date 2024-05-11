@@ -7,11 +7,7 @@ endif
 ENV_FILE = srcs/.env
 
 all: build
-ifeq ($(dev),true)
-	make run dev=true
-else
-	make run
-endif
+	$(MAKE) run
 
 build: $(ENV_FILE)
 	docker compose -f $(COMPOSE_FILE) build
@@ -20,15 +16,16 @@ run: $(ENV_FILE)
 	docker compose -f $(COMPOSE_FILE) up -d --remove-orphans
 
 re: fclean
-	make build
-	make run
+	$(MAKE) build
+	$(MAKE) run
 
 stop:
 	docker compose -f $(COMPOSE_FILE) stop
 
 repurge: purge
-	make build
-	make run
+	$(MAKE) build
+	$(MAKE) run
+
 status:
 	docker compose -f $(COMPOSE_FILE) ps
 
