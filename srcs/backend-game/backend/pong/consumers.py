@@ -3,7 +3,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 
-from db.models import Count, Chat, Game
+from db.models import Count, GlobalChat, Game
 
 class DefaultConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -57,7 +57,7 @@ class PongConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         self.game_id = self.scope["url_route"]["kwargs"]["id"]
-        # self.user = trouver l'user
+        self.user = None
         try:
             self.game: Game = await Game.get_game(self.game_id)
         except Game.DoesNotExist:
@@ -115,7 +115,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
         
         message = str(text_data_json["message"])
-        await Chat.create_message(self.user, message)
+        await GlobalChat.create_message(self.user, message)
         await self.channel_layer.group_send(
             "chat", {"type": "chat.message", "message": message}
             )

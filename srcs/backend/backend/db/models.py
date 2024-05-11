@@ -23,7 +23,7 @@ class Device(models.Model):
     last_online = models.DateTimeField(auto_now=True)
 
 class PongUserManager(BaseUserManager):
-    def create_user(self, email: str, password: str, username: str, region: str, country_code: str, language: str, birth_date: date, device_os:str, device_client:str, avatar_url: str):
+    def create_user(self, email: str, password: str, username: str, region: str, country_code: str, language: str, birth_date: date, device_os:str, device_client:str):
         user = self.model(
             email=self.normalize_email(email),
             username=username,
@@ -31,7 +31,6 @@ class PongUserManager(BaseUserManager):
             country_code=country_code,
             language=language,
             birth_date=birth_date,
-            avatar_url=avatar_url,
         )
         device: Device = Device(
             os=device_os,
@@ -43,7 +42,7 @@ class PongUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email: str, password: str, username: str, region: str, country_code: str, language: str, birth_date: str, device_os:str, device_client:str, avatar_url: str):
+    def create_superuser(self, email: str, password: str, username: str, region: str, country_code: str, language: str, birth_date: str, device_os:str, device_client:str):
         user = self.create_user(
             email=email,
             password=password,
@@ -54,7 +53,6 @@ class PongUserManager(BaseUserManager):
             birth_date=birth_date,
             device_os=device_os,
             device_client=device_client,
-            avatar_url=avatar_url,
         )
         user.grade = 4
         user.save(using=self._db)
@@ -74,8 +72,8 @@ class User(AbstractBaseUser):
     region = models.CharField(max_length=6)
     country_code = models.CharField(max_length=3)
     language = models.CharField(max_length=5)
-    avatar_url = models.CharField(max_length=256, null=True)
-    banner_url = models.CharField(max_length=256, null=True)
+    avatar_url = models.ImageField(max_length=256, null=True, upload_to="medias/users/avatar/")
+    banner_url = models.ImageField(max_length=256, null=True, upload_to="medias/users/banner/")
     birth_date = models.DateField()
     GRADE_CHOICES = [
         (1, 'User'),
@@ -135,15 +133,15 @@ class User(AbstractBaseUser):
 
     objects = PongUserManager()
     
-class Chat(models.Model):
+class GlobalChat(models.Model):
     content = models.CharField(max_length=512)
-    user = models.ForeignKey(User, related_name='global_chat', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='global_chat_author', on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     @staticmethod
     @database_sync_to_async
-    def create_message(user: User, message: str) -> None:
-        Chat.objects.create(content=message[:512], user=user) # TODO Non null user
+    def create_message(user, message: str) -> None:
+        GlobalChat.objects.create(content=message[:512], user=user)
 
 class Messages(models.Model):
     content = models.CharField(max_length=2048)
@@ -156,7 +154,7 @@ class Messages(models.Model):
 class PrivateMessage(models.Model):
     name = models.CharField(max_length=64)
     description = models.CharField(max_length=256, null=True)
-    avatar_url = models.CharField(max_length=256, null=True)
+    avatar_url = models.ImageField(max_length=256, null=True, upload_to="medias/groups/avatar/")
     users = models.ManyToManyField(User, related_name="channel_users")
     messages = models.ManyToManyField(Messages, related_name="channel_messages")
     created_at = models.DateTimeField(auto_now_add=True)

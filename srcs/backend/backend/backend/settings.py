@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "channels",
     "home",
     "db",
+    "storages"
 ]
 
 CHANNEL_LAYERS = {}
@@ -133,13 +134,27 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = "/static/"
-
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-STATIC_ROOT = "/var/www/static/"
+STATIC_URL = f'{os.getenv("S3_URL_PROTOCOL")}://{os.getenv("S3_HOST")}/static/'
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+MEDIA_URL = f'{os.getenv("S3_URL_PROTOCOL")}://{os.getenv("S3_HOST")}/media/'
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+AWS_S3_ENDPOINT_URL = f'https://{os.getenv("S3_ACC_ID")}.r2.cloudflarestorage.com'
+AWS_STORAGE_BUCKET_NAME = os.getenv("S3_BUCKET")
+AWS_S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY")
+AWS_S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_KEY")
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+AWS_S3_URL_PROTOCOL = 'https:'
+AWS_S3_USE_SSL = True
+AWS_S3_VERIFY = True
+AWS_QUERYSTRING_AUTH = False
+AWS_S3_CUSTOM_DOMAIN = os.getenv("S3_HOST")

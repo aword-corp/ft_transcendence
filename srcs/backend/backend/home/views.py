@@ -1,12 +1,12 @@
 from django.shortcuts import render
-from db.models import Count, Chat
+from db.models import Count, GlobalChat
 
 
 # Create your views here.
 def home(request):
     count_obj, created = Count.objects.get_or_create(id=1)
     count_obj.save()
-    messages = Chat.objects.all
+    messages = GlobalChat.objects.all
     message = {"title": "Bonjour !", "body": "Bienvenue sur ce site !"}
     context = {
         "message": message,

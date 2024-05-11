@@ -4,3 +4,6 @@ daphne
 channels
 channels_redis
 djangorestframework
+django-storages
+boto3
+Pillow
