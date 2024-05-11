@@ -2,7 +2,9 @@
 
 python3 manage.py makemigrations
 
-python3 manage.py migrate
+rm -rf db/migrations
+
+python3 manage.py migrate --run-syncdb --noinput
 
 mkdir -p /var/www/static
 
