@@ -50,7 +50,7 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: curl -s --raw localhost:8000 | grep "Transcendance"
+      test: curl -s --raw https://acorp.games | grep "Transcendance"
       interval: 10s
       timeout: 5s
       retries: 20
