@@ -24,7 +24,7 @@ services:
       test: pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 20
 
   redis:
     build: redis
@@ -37,7 +37,7 @@ services:
       test: redis-cli ping | grep "PONG"
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 20
 
   backend:
     build: backend
@@ -52,7 +52,7 @@ services:
       test: curl -s --raw localhost:8000 | grep "Transcendance"
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 20
     environment:
       dev: true
     depends_on:
