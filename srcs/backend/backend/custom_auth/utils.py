@@ -1,5 +1,6 @@
 import string
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 ALLOWED_SYMBOLS_USERNAME = "_-."
 ALLOWED_CHARS_USERNAME = string.ascii_letters + string.digits
@@ -73,3 +74,30 @@ def verify_password(password, username):
             f"There must be not more a sequence of {MAX_REPEAT} following or repeating characters"
         )
     return password
+
+
+MIN_AGE_REGISTER = 13
+MIN_YEAR_BIRTH = 1900
+
+
+def verify_date(date):
+    if not date:
+        raise ValidationError("Birth date cannot be blank.")
+
+    if date > timezone.now().date():
+        raise ValidationError("Birth date cannot be in the future.")
+    if date.year < MIN_YEAR_BIRTH:
+        raise ValidationError(f"Birth date cannot be before {MIN_YEAR_BIRTH}.")
+    age = (
+        timezone.now().date().year
+        - date.year
+        - (
+            (timezone.now().date().month, timezone.now().date().day)
+            < (date.month, date.day)
+        )
+    )
+    if age < MIN_AGE_REGISTER:
+        raise ValidationError(
+            f"You must be at least {MIN_AGE_REGISTER} years old to register."
+        )
+    return date
