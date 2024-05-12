@@ -22,4 +22,5 @@ urlpatterns = [
     path("pong", include("pong.urls")),
     path("api-auth/", include("rest_framework.urls")),
     path("auth/", include("custom_auth.urls")),
+    path("profile/", include("user_profile.urls")),
 ]

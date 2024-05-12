@@ -1,6 +1,10 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout
-from .admin import UserCreationForm, CustomAuthenticationForm
+from .admin import (
+    UserCreationForm,
+    CustomAuthenticationForm,
+    Custom2faAuthenticationForm,
+)
 from db.models import User
 from django.http import HttpResponseNotAllowed
 
@@ -24,6 +28,26 @@ def register_view(request):
     return HttpResponseNotAllowed(["GET", "POST"])
 
 
+def login_2fa_view(request):
+    if request.user.is_authenticated and request.method in ["GET", "POST"]:
+        return redirect("home")
+    if request.method == "POST":
+        form = Custom2faAuthenticationForm(request.POST)
+        if form.is_valid():
+            user = User.get_user(
+                form.cleaned_data.get("username"), form.cleaned_data.get("password")
+            )
+            if user is not None:
+                login(request, user)
+                return redirect("home")
+        form.add_error(None, "Could not login")
+        return render(request, "auth/2fa.html", {"form": form})
+    elif request.method == "GET":
+        form = Custom2faAuthenticationForm()
+        return render(request, "auth/2fa.html", {"form": form})
+    return HttpResponseNotAllowed(["GET", "POST"])
+
+
 def login_view(request):
     if request.user.is_authenticated and request.method in ["GET", "POST"]:
         return redirect("home")
@@ -34,6 +58,13 @@ def login_view(request):
                 form.cleaned_data.get("username"), form.cleaned_data.get("password")
             )
             if user is not None:
+                if user.has_2fa:
+                    initial = {
+                        "username": form.cleaned_data.get("username"),
+                        "password": form.cleaned_data.get("password"),
+                    }
+                    form = Custom2faAuthenticationForm(initial=initial)
+                    return render(request, "auth/2fa.html", {"form": form})
                 login(request, user)
                 return redirect("home")
         form.add_error(None, "Could not login")

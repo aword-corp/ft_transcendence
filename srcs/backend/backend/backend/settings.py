@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "db",
     "storages",
     "pong",
+    "user_profile",
 ]
 
 CHANNEL_LAYERS = {}

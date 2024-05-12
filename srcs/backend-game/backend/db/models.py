@@ -1,7 +1,15 @@
 from django.db import models
+from django.conf import settings
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 from datetime import date
+from typing import Optional
+
+import uuid
+
+import pyotp
+import qrcode
+import qrcode.image.svg
 
 
 class Count(models.Model):
@@ -39,7 +47,7 @@ class PongUserManager(BaseUserManager):
         # device_client: str,
     ):
         user = self.model(
-            email=self.normalize_email(email),
+            email=self.normalize_email(email.lower()),
             username=username,
             region=region,
             country_code=country_code,
@@ -82,6 +90,38 @@ class PongUserManager(BaseUserManager):
         user.grade = 4
         user.save(using=self._db)
         return user
+
+
+class UserTwoFactorAuthData(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        related_name="two_factor_auth_data",
+        on_delete=models.CASCADE,
+    )
+
+    otp_secret = models.CharField(max_length=255)
+    session_identifier = models.UUIDField(blank=True, null=True)
+
+    def generate_qr_code(self, name: Optional[str] = None) -> str:
+        totp = pyotp.TOTP(self.otp_secret)
+        qr_uri = totp.provisioning_uri(
+            name=name, issuer_name="Styleguide Example Admin 2FA Demo"
+        )
+
+        image_factory = qrcode.image.svg.SvgPathImage
+        qr_code_image = qrcode.make(qr_uri, image_factory=image_factory)
+
+        return qr_code_image.to_string().decode("utf_8")
+
+    def validate_otp(self, otp: str) -> bool:
+        totp = pyotp.TOTP(self.otp_secret)
+
+        return totp.verify(otp)
+
+    def rotate_session_identifier(self):
+        self.session_identifier = uuid.uuid4()
+
+        self.save(update_fields=["session_identifier"])
 
 
 class User(AbstractBaseUser):
@@ -150,6 +190,7 @@ class User(AbstractBaseUser):
     allow_duel = models.BooleanField(default=True)
     msg_sound = models.BooleanField(default=True)
     duel_sound = models.BooleanField(default=True)
+    has_2fa = models.BooleanField(default=False, null=True)
 
     objects = PongUserManager()
 
@@ -163,14 +204,14 @@ class User(AbstractBaseUser):
     ]
 
     @staticmethod
-    def get_user(login, password) -> "User":
+    def get_user(login: str, password: str) -> "User":
         try:
             user = User.objects.get(username=login)
         except User.DoesNotExist:
             user = None
         if not user:
             try:
-                user = User.objects.get(email=login)
+                user = User.objects.get(email=login.lower())
             except User.DoesNotExist:
                 user = None
         if not user:

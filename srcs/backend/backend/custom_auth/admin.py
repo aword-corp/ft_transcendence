@@ -6,7 +6,7 @@ from django.contrib.auth.forms import ReadOnlyPasswordHashField
 from django.core.exceptions import ValidationError
 from django_countries.fields import CountryField
 
-from db.models import User
+from db.models import User, UserTwoFactorAuthData
 from .utils import verify_username, verify_password, verify_date
 
 
@@ -47,6 +47,37 @@ class CustomAuthenticationForm(forms.ModelForm):
             "username",
             "password",
         ]
+
+
+class Custom2faAuthenticationForm(forms.ModelForm):
+    username = forms.CharField(label="Username/Email", widget=forms.TextInput)
+    password = forms.CharField(label="Password", widget=forms.PasswordInput)
+    otp = forms.CharField(label="2FA validation code", widget=forms.TextInput)
+
+    class Meta:
+        model = User
+        fields = [
+            "username",
+            "password",
+        ]
+
+    def clean_otp(self):
+        print(self.data)
+        self.two_factor_auth_data = UserTwoFactorAuthData.objects.filter(
+            user=User.get_user(
+                self.cleaned_data.get("username"), self.cleaned_data.get("password")
+            )
+        ).first()
+
+        if self.two_factor_auth_data is None:
+            raise ValidationError("2FA not set up.")
+
+        otp = self.cleaned_data.get("otp")
+
+        if not self.two_factor_auth_data.validate_otp(otp):
+            raise ValidationError("Invalid 2FA code.")
+
+        return otp
 
 
 class UserCreationForm(forms.ModelForm):
