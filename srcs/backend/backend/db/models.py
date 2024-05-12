@@ -163,7 +163,6 @@ class User(AbstractBaseUser):
     ]
 
 
-
 class GlobalChat(models.Model):
     content = models.CharField(max_length=512)
     user = models.ForeignKey(
