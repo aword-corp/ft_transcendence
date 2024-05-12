@@ -10,3 +10,4 @@ Pillow
 django-countries
 pyotp
 qrcode
+djangorestframework_simplejwt

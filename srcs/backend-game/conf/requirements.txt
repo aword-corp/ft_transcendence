@@ -9,3 +9,4 @@ boto3
 Pillow
 pyotp
 qrcode
+djangorestframework_simplejwt
