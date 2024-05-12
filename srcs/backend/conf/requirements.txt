@@ -7,3 +7,4 @@ djangorestframework
 django-storages
 boto3
 Pillow
+django-countries
