@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django_countries",
     "rest_framework",
+    "custom_auth",
     "channels",
     "home",
     "db",
@@ -119,6 +120,8 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+
+AUTH_USER_MODEL = "db.User"
 
 
 # Internationalization

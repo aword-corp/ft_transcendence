@@ -5,8 +5,11 @@ from db.models import Count, GlobalChat
 # Create your views here.
 def home(request):
     count_obj, created = Count.objects.get_or_create(id=1)
-    count_obj.save()
-    messages = GlobalChat.objects.all
+    if created:
+        count_obj.save()
+    messages = []
+    if request.user.is_authenticated:
+        messages = GlobalChat.objects.all
     message = {"title": "Bonjour !", "body": "Bienvenue sur ce site !"}
     context = {
         "message": message,
