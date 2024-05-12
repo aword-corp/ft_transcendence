@@ -15,5 +15,6 @@ def home(request):
         "message": message,
         "counter": count_obj.clicks,
         "message_list": messages,
+        "auth": request.user.is_authenticated,
     }
     return render(request, "home/index.html", context)

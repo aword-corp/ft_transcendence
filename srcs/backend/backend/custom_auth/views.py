@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
 from .admin import UserCreationForm, CustomAuthenticationForm
 from db.models import User
 from django.http import HttpResponseNotAllowed
@@ -42,3 +42,10 @@ def login_view(request):
         form = CustomAuthenticationForm()
         return render(request, "auth/login.html", {"form": form})
     return HttpResponseNotAllowed(["GET", "POST"])
+
+
+def logout_view(request):
+    if not request.user.is_authenticated:
+        return redirect("home")
+    logout(request)
+    return redirect("home")

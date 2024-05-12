@@ -21,6 +21,14 @@
   </head>
 
   <body>
+    <header>
+      {% if auth %}
+      <a href="/auth/logout">Logout</a>
+      {% else %}
+      <a href="/auth/register">Register</a>
+      <a href="/auth/login">Login</a>
+      {% endif %}
+    </header>
     <div class="boite-animated">
       <div class="titlebar-animated">
         <span>{{message.title}}</span>
