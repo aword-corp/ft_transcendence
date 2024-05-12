@@ -162,6 +162,21 @@ class User(AbstractBaseUser):
         "birth_date",
     ]
 
+    @staticmethod
+    def get_user(login, password) -> "User":
+        try:
+            user = User.objects.get(username=login)
+        except User.DoesNotExist:
+            user = None
+        if not user:
+            try:
+                user = User.objects.get(email=login)
+            except User.DoesNotExist:
+                user = None
+        if not user:
+            return None
+        return user if user.check_password(password) else None
+
 
 class GlobalChat(models.Model):
     content = models.CharField(max_length=512)

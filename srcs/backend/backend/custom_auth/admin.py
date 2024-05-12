@@ -2,7 +2,7 @@ from django import forms
 from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.contrib.auth.forms import ReadOnlyPasswordHashField
+from django.contrib.auth.forms import ReadOnlyPasswordHashField, AuthenticationForm
 from django.core.exceptions import ValidationError
 from django_countries.fields import CountryField
 
@@ -36,6 +36,17 @@ LANGUAGE_CHOICES = [
     ("CH-ZH", "Chinese"),
 ]
 
+
+class CustomAuthenticationForm(forms.ModelForm):
+    username = forms.CharField(label="Username/Email", widget=forms.TextInput)
+    password = forms.CharField(label="Password", widget=forms.PasswordInput)
+
+    class Meta:
+        model = User
+        fields = [
+            "username",
+            "password",
+        ]
 
 class UserCreationForm(forms.ModelForm):
     email = forms.EmailField(label="Email", widget=forms.EmailInput)

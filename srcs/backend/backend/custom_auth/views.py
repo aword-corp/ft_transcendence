@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login, authenticate
-from .admin import UserCreationForm
+from django.contrib.auth import login
+from .admin import UserCreationForm, CustomAuthenticationForm
 from db.models import User
 from django.http import HttpResponseNotAllowed
 
@@ -24,23 +24,21 @@ def register_view(request):
     return HttpResponseNotAllowed(["GET", "POST"])
 
 
-# def login_view(request):
-#     if request.user.is_authenticated and request.method in ["GET", "POST"]:
-#         return redirect("home")
-#     if request.method == "POST":
-#         form = UserLoginForm(request.POST)
-#         if form.is_valid():
-#             authenticate(
-#                 email=form.cleaned_data["email"],
-#                 password=form.cleaned_data["password"],
-#                 username=form.cleaned_data["username"],
-#             )
-#             if user is not None:
-#                 login(request, user)
-#                 return redirect("home")
-#         form.add_error(None, "Could not login")
-#         return render(request, "auth/login.html", {"form": form})
-#     elif request.method == "GET":
-#         form = UserLoginForm()
-#         return render(request, "auth/login.html", {"form": form})
-#     return HttpResponseNotAllowed(["GET", "POST"])
+def login_view(request):
+    if request.user.is_authenticated and request.method in ["GET", "POST"]:
+        return redirect("home")
+    if request.method == "POST":
+        form = CustomAuthenticationForm(request.POST)
+        if form.is_valid():
+            user = User.get_user(
+                form.cleaned_data.get("username"), form.cleaned_data.get("password")
+            )
+            if user is not None:
+                login(request, user)
+                return redirect("home")
+        form.add_error(None, "Could not login")
+        return render(request, "auth/login.html", {"form": form})
+    elif request.method == "GET":
+        form = CustomAuthenticationForm()
+        return render(request, "auth/login.html", {"form": form})
+    return HttpResponseNotAllowed(["GET", "POST"])
