@@ -38,7 +38,7 @@ class CountConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         count_obj = await self.increment_count()
         await self.channel_layer.group_send(
-            "count", {"type": "click.message", "count": count_obj.clicks}
+            "count", {"type": "click.message", "count": str(count_obj.clicks)}
         )
 
     async def click_message(self, event):
