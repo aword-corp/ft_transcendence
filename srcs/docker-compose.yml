@@ -51,9 +51,9 @@ services:
       - .env
     healthcheck:
       test: curl -s --raw https://acorp.games | grep "Transcendance"
-      interval: 10s
+      interval: 15s
       timeout: 5s
-      retries: 20
+      retries: 30
     depends_on:
       postgresql:
         condition: service_healthy
