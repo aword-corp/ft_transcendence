@@ -19,8 +19,8 @@ class time_cache:
     def __call__(self, fun):
         def wrapped(*args):
             now = time_ns() // 1e9
-            if not fun in self.cache or now - self.cache[fun]['last_call'] > self.time:
-                self.cache[fun] = {'last_result': fun(*args), 'last_call': now}
+            if not fun in self.cache or now > self.cache[fun]['next_call']:
+                self.cache[fun] = {'last_result': fun(*args), 'next_call': now + self.time}
             else:
                 print(f"{fun.__name__} call, using last result")
             return self.cache[fun]['last_result']
