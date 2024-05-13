@@ -35,5 +35,5 @@ logs:
 fclean:
 	docker compose -f $(COMPOSE_FILE) down
 
-purge: fclean
-	docker system prune -af --volumes
+purge:
+	docker compose -f $(COMPOSE_FILE) down -v --rmi all
