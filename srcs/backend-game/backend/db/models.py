@@ -2,14 +2,29 @@ from django.db import models
 from django.conf import settings
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
-from datetime import date
-from typing import Optional
-
+from datetime import date, timedelta
+from time import time_ns
+from typing import Optional, List
 import uuid
-
 import pyotp
 import qrcode
 import qrcode.image.svg
+from operator import itemgetter
+
+class time_cache:
+    def __init__(self, time=1):
+        self.time = time.total_seconds() if isinstance(time, timedelta) else time
+        self.cache = {}
+
+    def __call__(self, fun):
+        def wrapped(*args):
+            now = time_ns() // 1e9
+            if not fun in self.cache or now - self.cache[fun]['last_call'] > self.time:
+                self.cache[fun] = {'last_result': fun(*args), 'last_call': now}
+            else:
+                print(f"{fun.__name__} call, using last result")
+            return self.cache[fun]['last_result']
+        return wrapped
 
 
 class Count(models.Model):
@@ -150,7 +165,7 @@ class User(AbstractBaseUser):
     # Stats
     created_at = models.DateTimeField(auto_now_add=True)
     xp = models.FloatField(default=0.0)
-    elo = models.FloatField(default=0.0)
+    elo = models.FloatField(default=800.0)
     elo_history = models.ManyToManyField(Elo, related_name="user_elo_history")
     badges = models.ManyToManyField(Badge, related_name="user_badges")
 
@@ -204,19 +219,32 @@ class User(AbstractBaseUser):
     ]
 
     @staticmethod
-    def get_user(login: str, password: str) -> "User":
+    @database_sync_to_async
+    def get_user(login: str, password: str) -> Optional['User']:
         try:
             user = User.objects.get(username=login)
+            return user if user.check_password(password) else None
         except User.DoesNotExist:
-            user = None
-        if not user:
-            try:
-                user = User.objects.get(email=login.lower())
-            except User.DoesNotExist:
-                user = None
-        if not user:
-            return None
-        return user if user.check_password(password) else None
+            pass
+
+        try:
+            user = User.objects.get(email=login.lower())
+            return user if user.check_password(password) else None
+        except User.DoesNotExist:
+            pass
+
+        return None
+
+    @staticmethod
+    @database_sync_to_async
+    @time_cache(time = timedelta(seconds=10))
+    def get_leaderboard() -> List['User']:
+        print("---------Get leaderboard call---------")
+        leaderboard = sorted(
+            User.objects.values(),
+            key = itemgetter("elo")
+        )
+        return leaderboard
 
 
 class GlobalChat(models.Model):
@@ -301,8 +329,14 @@ class Game(models.Model):
 
     @staticmethod
     @database_sync_to_async
-    def get_game(req_uuid) -> "Game":
-        return Game.objects.get(uuid=req_uuid)
+    def get_game(req_uuid) -> Optional["Game"]:
+        try:
+            game = Game.objects.get(uuid=req_uuid)
+            return game
+        except Game.DoesNotExist:
+            pass
+
+        return None
 
 
 class Tournament(models.Model):

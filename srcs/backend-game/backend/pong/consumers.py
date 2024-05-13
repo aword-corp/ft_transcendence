@@ -21,9 +21,10 @@ class DefaultConsumer(AsyncWebsocketConsumer):
 class CountConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def increment_count(self):
-        count_obj = Count.objects.get_or_create(id=1)[0]
+        count_obj = Count.objects.get(id=1)
         count_obj.clicks += 1
         count_obj.save()
+
         return count_obj
 
     async def connect(self):
@@ -36,16 +37,12 @@ class CountConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         count_obj = await self.increment_count()
-        message = {"count": count_obj.clicks}
-
         await self.channel_layer.group_send(
-            "count", {"type": "click.message", "message": message}
+            "count", {"type": "click.message", "count": count_obj.clicks}
         )
 
     async def click_message(self, event):
-        message = event["message"]
-
-        await self.send(text_data=json.dumps({"message": message}))
+        await self.send(text_data=event["count"])
 
 
 class PongConsumer(AsyncWebsocketConsumer):
