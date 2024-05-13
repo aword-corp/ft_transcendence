@@ -99,6 +99,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_add("chat", self.channel_name)
             self.user = self.scope["user"]
         else:
+            await self.accept()
+            await self.send(text_data=json.dumps({"error": "You need to be logged in."}))
             await self.close()
 
     async def disconnect(self, close_code):

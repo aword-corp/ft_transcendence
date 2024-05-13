@@ -18,7 +18,7 @@ chatSocket.onmessage = function (e) {
 	const data = JSON.parse(e.data);
 	if (!data || !data.message || data.error)
 	{
-		console.error("Error: " + (data ? (data.error ? data.error : "No message") : "No data"));
+		console.log("Error: " + (data ? (data.error ? data.error : "No message") : "No data"));
 		return ;
 	}
 	let div = document.createElement("div");
