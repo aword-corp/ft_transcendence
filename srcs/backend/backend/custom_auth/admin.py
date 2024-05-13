@@ -37,29 +37,16 @@ LANGUAGE_CHOICES = [
 ]
 
 
-class CustomAuthenticationForm(forms.ModelForm):
+class CustomAuthenticationForm(forms.Form):
     username = forms.CharField(label="Username/Email", widget=forms.TextInput)
     password = forms.CharField(label="Password", widget=forms.PasswordInput)
 
-    class Meta:
-        model = User
-        fields = [
-            "username",
-            "password",
-        ]
 
-
-class Custom2faAuthenticationForm(forms.ModelForm):
+class Custom2faAuthenticationForm(forms.Form):
     username = forms.CharField(label="Username/Email", widget=forms.TextInput)
     password = forms.CharField(label="Password", widget=forms.PasswordInput)
     otp = forms.CharField(label="2FA validation code", widget=forms.TextInput)
 
-    class Meta:
-        model = User
-        fields = [
-            "username",
-            "password",
-        ]
 
     def clean_otp(self):
         print(self.data)
