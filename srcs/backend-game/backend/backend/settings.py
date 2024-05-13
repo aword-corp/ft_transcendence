@@ -124,6 +124,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTH_USER_MODEL = "db.User"
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
@@ -142,13 +143,10 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 if os.getenv("dev"):
+
 	STATIC_URL = "/static/"
 
-	STATICFILES_DIRS = [BASE_DIR / "static"]
-
-	STATIC_ROOT = "/var/www/static/" 
 else:
-	STATICFILES_DIRS = [BASE_DIR / "static"]
 
 	STATIC_URL = f'{os.getenv("S3_URL_PROTOCOL")}://{os.getenv("S3_HOST")}/static/'
 	STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'

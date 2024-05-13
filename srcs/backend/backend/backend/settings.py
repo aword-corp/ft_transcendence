@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -43,12 +44,16 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_countries",
     "rest_framework",
+    "rest_framework_simplejwt",
+    "custom_auth",
     "channels",
     "home",
     "db",
     "storages",
-	"pong"
+    "pong",
+    "user_profile",
 ]
 
 CHANNEL_LAYERS = {}
@@ -62,6 +67,21 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
+    "SLIDING_TOKEN_LIFETIME": timedelta(days=30),
+    "SLIDING_TOKEN_REFRESH_LIFETIME_LATE_USER": timedelta(days=1),
+    "SLIDING_TOKEN_LIFETIME_LATE_USER": timedelta(days=30),
+}
 
 ROOT_URLCONF = "backend.urls"
 
@@ -119,6 +139,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTH_USER_MODEL = "db.User"
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
@@ -136,29 +157,28 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 if os.getenv("dev"):
-	STATIC_URL = "/static/"
+    STATIC_URL = "/static/"
 
-	STATICFILES_DIRS = [BASE_DIR / "static"]
+    STATICFILES_DIRS = [BASE_DIR / "static"]
 
-	STATIC_ROOT = "/var/www/static/" 
+    STATIC_ROOT = "/var/www/static/"
 else:
-	STATICFILES_DIRS = [BASE_DIR / "static"]
+    STATICFILES_DIRS = [BASE_DIR / "static"]
 
-	STATIC_URL = f'{os.getenv("S3_URL_PROTOCOL")}://{os.getenv("S3_HOST")}/static/'
-	STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    STATIC_URL = f'{os.getenv("S3_URL_PROTOCOL")}://{os.getenv("S3_HOST")}/static/'
+    STATICFILES_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-	MEDIA_URL = f'{os.getenv("S3_URL_PROTOCOL")}://{os.getenv("S3_HOST")}/media/'
-	DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    MEDIA_URL = f'{os.getenv("S3_URL_PROTOCOL")}://{os.getenv("S3_HOST")}/media/'
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-
-	DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-	AWS_S3_ENDPOINT_URL = f'https://{os.getenv("S3_ACC_ID")}.r2.cloudflarestorage.com'
-	AWS_STORAGE_BUCKET_NAME = os.getenv("S3_BUCKET")
-	AWS_S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY")
-	AWS_S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_KEY")
-	AWS_S3_SIGNATURE_VERSION = 's3v4'
-	AWS_S3_URL_PROTOCOL = 'https:'
-	AWS_S3_USE_SSL = True
-	AWS_S3_VERIFY = True
-	AWS_QUERYSTRING_AUTH = False
-	AWS_S3_CUSTOM_DOMAIN = os.getenv("S3_HOST")
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    AWS_S3_ENDPOINT_URL = f'https://{os.getenv("S3_ACC_ID")}.r2.cloudflarestorage.com'
+    AWS_STORAGE_BUCKET_NAME = os.getenv("S3_BUCKET")
+    AWS_S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY")
+    AWS_S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_KEY")
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_S3_URL_PROTOCOL = "https:"
+    AWS_S3_USE_SSL = True
+    AWS_S3_VERIFY = True
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_CUSTOM_DOMAIN = os.getenv("S3_HOST")

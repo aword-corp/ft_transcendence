@@ -14,4 +14,4 @@ chown -R www-data:www-data /var/www
 
 python3 manage.py collectstatic --noinput
 
-python3 manage.py runserver 0.0.0.0:8000
+gunicorn -b 0.0.0.0:8000 -w 2 backend.wsgi:application

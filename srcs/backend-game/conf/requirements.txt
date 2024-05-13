@@ -7,3 +7,7 @@ djangorestframework
 django-storages
 boto3
 Pillow
+pyotp
+qrcode
+djangorestframework_simplejwt
+gunicorn
