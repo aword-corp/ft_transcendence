@@ -6,9 +6,7 @@ countSocket.onmessage = function (e) {
 };
 
 function onClickMe() {
-	countSocket.send(JSON.stringify({
-		'message': 'clicked'
-	}));
+	countSocket.send("");
 }
 
 const chatSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/chat/');
