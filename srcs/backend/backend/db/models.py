@@ -190,7 +190,7 @@ class User(AbstractBaseUser):
     allow_duel = models.BooleanField(default=True)
     msg_sound = models.BooleanField(default=True)
     duel_sound = models.BooleanField(default=True)
-    has_2fa = models.BooleanField(default=False, null=True)
+    has_2fa = models.BooleanField(default=False)
 
     objects = PongUserManager()
 

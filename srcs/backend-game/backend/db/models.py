@@ -47,7 +47,7 @@ class PongUserManager(BaseUserManager):
         # device_client: str,
     ):
         user = self.model(
-            email=self.normalize_email(email.lower()),
+            email=self.normalize_email(email),
             username=username,
             region=region,
             country_code=country_code,
@@ -190,7 +190,7 @@ class User(AbstractBaseUser):
     allow_duel = models.BooleanField(default=True)
     msg_sound = models.BooleanField(default=True)
     duel_sound = models.BooleanField(default=True)
-    has_2fa = models.BooleanField(default=False, null=True)
+    has_2fa = models.BooleanField(default=False)
 
     objects = PongUserManager()
 
