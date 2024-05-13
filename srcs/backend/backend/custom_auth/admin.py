@@ -61,6 +61,8 @@ class Custom2faAuthenticationForm(forms.Form):
 
         otp = self.cleaned_data.get("otp")
 
+        otp = ''.join(filter(str.isdigit, otp))
+
         if not self.two_factor_auth_data.validate_otp(otp):
             raise ValidationError("Invalid 2FA code.")
 
