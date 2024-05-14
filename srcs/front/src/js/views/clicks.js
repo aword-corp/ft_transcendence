@@ -1,3 +1,5 @@
+import "../components/counter.js";
+
 export function clicks_title() {
 	return ("");
 }

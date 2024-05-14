@@ -22,7 +22,7 @@ body {
     background-color: var(--primary);
 }
 
-nav {
+nav-bar {
     display: flex;
 }
 
@@ -30,7 +30,7 @@ nav {
     margin-left: auto;
 }
 
-nav a {
+nav-bar a {
     margin-right: .75em;
     padding: 0.25rem;
     font-weight: 600;

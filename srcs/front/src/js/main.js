@@ -1,9 +1,9 @@
-import {home_view, home_title} from "./views/home.js";
-import {clicks_view, clicks_title} from "./views/clicks.js";
-import {chat_view, chat_title} from "./views/chat.js";
-import {login_view, login_title} from "./views/login.js";
-import {register_view, register_title} from "./views/register.js";
-import { navbar_view } from "./views/navbar.js";
+import { home_view, home_title } from "./views/home.js";
+import { clicks_view, clicks_title } from "./views/clicks.js";
+import { chat_view, chat_title } from "./views/chat.js";
+import { login_view, login_title } from "./views/login.js";
+import { register_view, register_title } from "./views/register.js";
+import "./components/navbar.js";
 
 const routes = {
     "/": { title: home_title(), render: home_view() },
@@ -19,7 +19,6 @@ function router() {
     if (view) {
         document.title = view.title;
         app.innerHTML = view.render;
-        navbar.innerHTML = navbar_view();
     } else {
         history.replaceState("", "", "/");
         router();
