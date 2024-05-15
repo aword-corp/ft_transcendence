@@ -1,8 +1,11 @@
 from django.core.exceptions import ValidationError
 from db.models import UserTwoFactorAuthData, User
-from django.shortcuts import render, redirect
+from django.shortcuts import render
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import UserRateThrottle
 import pyotp
-from django.http import HttpResponseNotAllowed
 
 
 def user_two_factor_auth_data_create(*, user: User) -> UserTwoFactorAuthData:
@@ -18,9 +21,14 @@ def user_two_factor_auth_data_create(*, user: User) -> UserTwoFactorAuthData:
     return two_factor_auth_data
 
 
+class TenPerDayUserThrottle(UserRateThrottle):
+    rate = "10/day"
+
+
+@api_view(["POST", "GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([TenPerDayUserThrottle])
 def setup_2fa(request):
-    if not request.user.is_authenticated:
-        return redirect("home")
     if request.method == "POST":
         context = {}
         user = request.user
@@ -37,4 +45,22 @@ def setup_2fa(request):
         return render(request, "profile/settings/setup_2fa.html", context=context)
     elif request.method == "GET":
         return render(request, "profile/settings/setup_2fa.html")
-    return HttpResponseNotAllowed(["GET", "POST"])
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([TenPerDayUserThrottle])
+def remove_2fa(request):
+    try:
+        user = User.objects.get(id=request.user.id)
+
+        if user and user.has_2fa:
+            UserTwoFactorAuthData.objects.filter(user=user).delete()
+            user.has_2fa = False
+            user.save()
+            return Response("removed")
+
+    except User.DoesNotExist:
+        pass
+
+    return Response("couldn't remove")
