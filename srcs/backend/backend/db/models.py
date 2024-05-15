@@ -117,9 +117,7 @@ class UserTwoFactorAuthData(models.Model):
 
     def generate_qr_code(self, name: Optional[str] = None) -> str:
         totp = pyotp.TOTP(self.otp_secret)
-        qr_uri = totp.provisioning_uri(
-            name=name, issuer_name="Styleguide Example Admin 2FA Demo"
-        )
+        qr_uri = totp.provisioning_uri(name=name, issuer_name=f"acorp.games: {name}")
 
         image_factory = qrcode.image.svg.SvgPathImage
         qr_code_image = qrcode.make(qr_uri, image_factory=image_factory)

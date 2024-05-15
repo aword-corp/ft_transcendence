@@ -21,5 +21,4 @@ urlpatterns = [
     path("", include("home.urls")),
     path("pong", include("pong.urls")),
     path("api/", include("db.urls")),
-    path("profile/", include("user_profile.urls")),
 ]

@@ -77,6 +77,10 @@ click-counter button:active {
     padding: 5px;
 }
 
+.hidden {
+    display: none;
+}
+
 @media (min-width: 1000px) {
     * {
         font-size: 18px;

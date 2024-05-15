@@ -353,8 +353,8 @@ class Register extends HTMLElement {
 					}
 				);
 				json = await response.json();
-				localStorage.setItem("access-token", json.access);
-				localStorage.setItem("refresh-token", json.refresh);
+				localStorage.setItem("access-token", json.access_token);
+				localStorage.setItem("refresh-token", json.refresh_token);
 				history.pushState("", "", "/");
 				router();
 
