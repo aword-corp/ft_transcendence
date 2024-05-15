@@ -12,3 +12,4 @@ pyotp
 qrcode
 djangorestframework_simplejwt
 gunicorn
+django-cors-headers

@@ -17,7 +17,7 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-CSRF_TRUSTED_ORIGINS = [os.getenv("URL")]
+CSRF_TRUSTED_ORIGINS = [os.getenv("URL"), "http://localhost:5173"]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -33,7 +33,6 @@ DEBUG = True if os.getenv("dev") else False
 
 ALLOWED_HOSTS = [os.getenv("HOST")]
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -48,6 +47,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "channels",
+    "corsheaders",
     "home",
     "db",
     "storages",
@@ -59,12 +59,17 @@ CHANNEL_LAYERS = {}
 
 MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -84,6 +89,7 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_LIFETIME": timedelta(days=30),
     "SLIDING_TOKEN_REFRESH_LIFETIME_LATE_USER": timedelta(days=1),
     "SLIDING_TOKEN_LIFETIME_LATE_USER": timedelta(days=30),
+    "TOKEN_OBTAIN_SERIALIZER": "db.serializers.MyTokenObtainPairSerializer",
 }
 
 ROOT_URLCONF = "backend.urls"

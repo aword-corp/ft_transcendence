@@ -147,9 +147,34 @@ class User(AbstractBaseUser):
         max_length=320,
         unique=True,
     )
-    region = models.CharField(max_length=6)
+
+    REGION_CHOICES = [
+        ("eu-we", "Europe West"),
+        ("eu-ea", "Europe East"),
+        ("eu-no", "Europe North"),
+        ("na-we", "North America West"),
+        ("na-ce", "North America Central"),
+        ("na-ea", "North America East"),
+        ("ce-am", "Central America"),
+        ("so-am", "South America"),
+        ("no-af", "North Africa"),
+        ("so-af", "South Africa"),
+        ("mi-ea", "Middle East"),
+        ("as-cn", "China"),
+        ("as-in", "India"),
+        ("as-sg", "Singapore"),
+        ("as-kr", "Korea"),
+        ("as-jp", "Japan"),
+        ("oc-pa", "Oceania"),
+    ]
+    region = models.CharField(choices=REGION_CHOICES, max_length=6)
     country_code = models.CharField(max_length=3)
-    language = models.CharField(max_length=5)
+    LANGUAGE_CHOICES = [
+        ("FR-FR", "French"),
+        ("EN-US", "English"),
+        ("CH-ZH", "Chinese"),
+    ]
+    language = models.CharField(choices=LANGUAGE_CHOICES, max_length=5)
     avatar_url = models.ImageField(
         max_length=256, null=True, upload_to="medias/users/avatar/"
     )

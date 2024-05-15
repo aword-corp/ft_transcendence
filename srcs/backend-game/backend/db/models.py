@@ -11,6 +11,7 @@ import qrcode
 import qrcode.image.svg
 from operator import itemgetter
 
+
 class time_cache:
     def __init__(self, time=1):
         self.time = time.total_seconds() if isinstance(time, timedelta) else time
@@ -19,11 +20,15 @@ class time_cache:
     def __call__(self, fun):
         def wrapped(*args):
             now = time_ns() // 1e9
-            if not fun in self.cache or now > self.cache[fun]['next_call']:
-                self.cache[fun] = {'last_result': fun(*args), 'next_call': now + self.time}
+            if fun not in self.cache or now > self.cache[fun]["next_call"]:
+                self.cache[fun] = {
+                    "last_result": fun(*args),
+                    "next_call": now + self.time,
+                }
             else:
                 print(f"{fun.__name__} call, using last result")
-            return self.cache[fun]['last_result']
+            return self.cache[fun]["last_result"]
+
         return wrapped
 
 
@@ -49,6 +54,8 @@ class Device(models.Model):
 
 
 class PongUserManager(BaseUserManager):
+    use_in_migrations = True
+
     def create_user(
         self,
         email: str,
@@ -58,9 +65,10 @@ class PongUserManager(BaseUserManager):
         country_code: str,
         language: str,
         birth_date: date,
-        # device_os: str,
-        # device_client: str,
     ):
+        if not email:
+            raise ValueError("Email is Required")
+
         user = self.model(
             email=self.normalize_email(email),
             username=username,
@@ -69,12 +77,6 @@ class PongUserManager(BaseUserManager):
             language=language,
             birth_date=birth_date,
         )
-        # device: Device = Device(
-        #     os=device_os,
-        #     client=device_client,
-        # )
-        # device.save()
-        # user.devices.add(device)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -88,8 +90,6 @@ class PongUserManager(BaseUserManager):
         country_code: str,
         language: str,
         birth_date: str,
-        # device_os: str,
-        # device_client: str,
     ):
         user = self.create_user(
             email=email,
@@ -99,8 +99,6 @@ class PongUserManager(BaseUserManager):
             country_code=country_code,
             language=language,
             birth_date=birth_date,
-            # device_os=device_os,
-            # device_client=device_client,
         )
         user.grade = 4
         user.save(using=self._db)
@@ -149,9 +147,34 @@ class User(AbstractBaseUser):
         max_length=320,
         unique=True,
     )
-    region = models.CharField(max_length=6)
+
+    REGION_CHOICES = [
+        ("eu-we", "Europe West"),
+        ("eu-ea", "Europe East"),
+        ("eu-no", "Europe North"),
+        ("na-we", "North America West"),
+        ("na-ce", "North America Central"),
+        ("na-ea", "North America East"),
+        ("ce-am", "Central America"),
+        ("so-am", "South America"),
+        ("no-af", "North Africa"),
+        ("so-af", "South Africa"),
+        ("mi-ea", "Middle East"),
+        ("as-cn", "China"),
+        ("as-in", "India"),
+        ("as-sg", "Singapore"),
+        ("as-kr", "Korea"),
+        ("as-jp", "Japan"),
+        ("oc-pa", "Oceania"),
+    ]
+    region = models.CharField(choices=REGION_CHOICES, max_length=6)
     country_code = models.CharField(max_length=3)
-    language = models.CharField(max_length=5)
+    LANGUAGE_CHOICES = [
+        ("FR-FR", "French"),
+        ("EN-US", "English"),
+        ("CH-ZH", "Chinese"),
+    ]
+    language = models.CharField(choices=LANGUAGE_CHOICES, max_length=5)
     avatar_url = models.ImageField(
         max_length=256, null=True, upload_to="medias/users/avatar/"
     )
@@ -220,7 +243,7 @@ class User(AbstractBaseUser):
 
     @staticmethod
     @database_sync_to_async
-    def get_user(login: str, password: str) -> Optional['User']:
+    def get_user(login: str, password: str) -> Optional["User"]:
         try:
             user = User.objects.get(username=login)
             return user if user.check_password(password) else None
@@ -237,13 +260,10 @@ class User(AbstractBaseUser):
 
     @staticmethod
     @database_sync_to_async
-    @time_cache(time = timedelta(seconds=10))
-    def get_leaderboard() -> List['User']:
+    @time_cache(time=timedelta(seconds=10))
+    def get_leaderboard() -> List["User"]:
         print("---------Get leaderboard call---------")
-        leaderboard = sorted(
-            User.objects.values(),
-            key = itemgetter("elo")
-        )
+        leaderboard = sorted(User.objects.values(), key=itemgetter("elo"))
         return leaderboard
 
 

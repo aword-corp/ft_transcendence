@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User
 
 
@@ -49,3 +50,41 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(validated_data["password"])
         user.save()
         return user
+
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        token["email"] = user.email
+        token["username"] = user.username
+        token["display_name"] = user.display_name
+        token["bio"] = user.bio
+        token["region"] = user.region
+        token["country_code"] = user.country_code
+        token["language"] = user.language
+        token["avatar_url"] = None
+        token["banner_url"] = None
+        token["avatar_url"] = user.avatar_url.url if user.avatar_url else None
+        token["banner_url"] = user.banner_url.url if user.banner_url else None
+        token["birth_date"] = user.birth_date.strftime("%m/%d/%Y")
+        token["grade"] = user.grade
+        token["created_at"] = user.created_at.strftime("%m/%d/%Y, %H:%M:%S")
+        token["xp"] = user.xp
+        token["elo"] = user.elo
+        token["verified"] = user.verified
+        token["status"] = user.status
+        token["paddle_type"] = user.paddle_type
+        token["theme"] = user.theme
+        token["goal_effect"] = user.goal_effect
+        token["win_effect"] = user.win_effect
+        token["friend_default_response"] = user.friend_default_response
+        token["msg_default_response"] = user.msg_default_response
+        token["vc_auto_join"] = user.vc_auto_join
+        token["allow_duel"] = user.allow_duel
+        token["msg_sound"] = user.msg_sound
+        token["duel_sound"] = user.duel_sound
+        token["has_2fa"] = user.has_2fa
+
+        return token

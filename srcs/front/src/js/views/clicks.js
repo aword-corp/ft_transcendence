@@ -1,7 +1,5 @@
-import "../components/counter.js";
-
 export function clicks_title() {
-	return ("");
+	return ("Clicks");
 }
 
 export function clicks_view() {

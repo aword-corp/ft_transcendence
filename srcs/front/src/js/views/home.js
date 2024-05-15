@@ -1,5 +1,5 @@
 export function home_title() {
-	return ("");
+	return ("Home");
 }
 
 export function home_view() {

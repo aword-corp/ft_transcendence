@@ -1,5 +1,5 @@
 export function chat_title() {
-	return ("");
+	return ("Chat");
 }
 
 export function chat_view() {
