@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     "django_countries",
     "rest_framework",
     "rest_framework_simplejwt",
-    "custom_auth",
     "channels",
     "home",
     "db",
@@ -68,8 +67,12 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "db.authentication.CustomAuthBackend",
+]
+
 REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
