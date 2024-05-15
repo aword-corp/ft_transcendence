@@ -43,6 +43,7 @@ services:
     build: backend
     volumes:
       - static:/var/www
+      - backend:/app/backend
     networks:
       - tiktok
     restart: always
@@ -63,6 +64,8 @@ services:
     build: backend-game
     networks:
       - tiktok
+    volumes:
+      - backend-game:/app/backend
     restart: always
     env_file:
       - .env
@@ -81,3 +84,15 @@ networks:
 volumes:
   db:
   static:
+  backend:
+    driver: local
+    driver_opts:
+      type: none
+      device: ~/data/backend
+      o: bind
+  backend-game:
+    driver: local
+    driver_opts:
+      type: none
+      device: ~/data/backend-game
+      o: bind
