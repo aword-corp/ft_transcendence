@@ -1,6 +1,9 @@
 services:
   nginx:
-    build: nginx
+    image: acorp/nginx
+    build: 
+      context: nginx/
+      dockerfile: Dockerfile
     ports:
       - "8443:8443"
     volumes:
@@ -12,7 +15,10 @@ services:
       - .env
 
   postgresql:
-    build: postgresql
+    image: acorp/postgresql
+    build: 
+      context: postgresql/
+      dockerfile: Dockerfile
     networks:
       - tiktok
     volumes:
@@ -27,7 +33,10 @@ services:
       retries: 20
 
   redis:
-    build: redis
+    image: acorp/redis
+    build: 
+      context: redis/
+      dockerfile: Dockerfile
     networks:
       - tiktok
     restart: always
@@ -40,7 +49,10 @@ services:
       retries: 20
 
   backend:
-    build: backend
+    image: acorp/backend
+    build: 
+      context: backend/
+      dockerfile: Dockerfile
     volumes:
       - static:/var/www
     networks:
@@ -60,7 +72,10 @@ services:
         condition: service_healthy
 
   backend-game:
-    build: backend-game
+    image: acorp/backend-game
+    build: 
+      context: backend-game/
+      dockerfile: Dockerfile
     networks:
       - tiktok
     restart: always
