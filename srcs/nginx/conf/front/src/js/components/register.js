@@ -334,7 +334,7 @@ class Register extends HTMLElement {
 				);
 				const code = response.status;
 				var json = await response.json();
-				if (code == 400) {
+				if (code !== 201) {
 					var msg = "";
 					Object.keys(json).forEach((key) => msg += `${key} : ${json[key]}\n`);
 					document.getElementById("form-status").innerText = msg;

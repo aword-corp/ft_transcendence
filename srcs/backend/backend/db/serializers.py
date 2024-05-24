@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User
+from .utils import verify_date, verify_password, verify_username
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -37,6 +38,19 @@ class UserSerializer(serializers.ModelSerializer):
             "duel_sound",
             "has_2fa",
         ]
+
+    def validate_username(self, value):
+        return verify_username(value)
+
+    def validate_password(self, value):
+        password = value
+        password_confirmation = self.initial_data["password_confirmation"]
+        if password and password_confirmation and password != password_confirmation:
+            raise serializers.ValidationError("Passwords don't match")
+        return verify_password(password, self.initial_data["username"])
+
+    def validate_birth_date(self, value):
+        return verify_date(value)
 
     def create(self, validated_data):
         user = User.objects.create(

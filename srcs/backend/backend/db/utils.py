@@ -1,6 +1,6 @@
 import string
-from django.core.exceptions import ValidationError
 from django.utils import timezone
+from rest_framework.serializers import ValidationError
 
 ALLOWED_SYMBOLS_USERNAME = "_-."
 ALLOWED_CHARS_USERNAME = string.ascii_letters + string.digits
