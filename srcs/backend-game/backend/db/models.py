@@ -117,9 +117,7 @@ class UserTwoFactorAuthData(models.Model):
 
     def generate_qr_code(self, name: Optional[str] = None) -> str:
         totp = pyotp.TOTP(self.otp_secret)
-        qr_uri = totp.provisioning_uri(
-            name=name, issuer_name="Styleguide Example Admin 2FA Demo"
-        )
+        qr_uri = totp.provisioning_uri(name=name, issuer_name=f"acorp.games: {name}")
 
         image_factory = qrcode.image.svg.SvgPathImage
         qr_code_image = qrcode.make(qr_uri, image_factory=image_factory)
@@ -204,9 +202,10 @@ class User(AbstractBaseUser):
         (4, "Online"),
         (5, "Away"),
         (6, "Focus"),
-        (7, "Invisible"),
     ]
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=4)
+    
+    is_invisible = models.BooleanField(default=False)
 
     # Settings / Cosmetic
     paddle_type = models.SmallIntegerField(default=1)
@@ -222,6 +221,10 @@ class User(AbstractBaseUser):
     MSG_REQUEST_CHOICES = [(1, "Confirm"), (2, "Accept"), (3, "Block")]
     msg_default_response = models.SmallIntegerField(
         choices=MSG_REQUEST_CHOICES, default=1
+    )
+    FRIENDS_DISPLAY_CHOICES = [(1, "Friends"), (2, "Public"), (3, "Private")]
+    display_friends = models.SmallIntegerField(
+        choices=FRIENDS_DISPLAY_CHOICES, default=1
     )
     devices = models.ManyToManyField(Device, related_name="user_devices")
     vc_auto_join = models.BooleanField(default=False)

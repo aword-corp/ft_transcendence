@@ -40,6 +40,12 @@ COPY conf/localhost.crt /etc/ssl/certs/
 
 COPY conf/localhost.key /etc/ssl/private/
 
+ADD conf/front/ /var/www/front/
+
+RUN chown -R www-data:www-data /var/www/front
+
+RUN chmod -R 755 /var/www/front
+
 EXPOSE 443 443/udp
 
 ENTRYPOINT ["nginx", "-g", "daemon off;"]

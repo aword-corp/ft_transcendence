@@ -18,7 +18,6 @@ Including another URLconf
 from django.urls import path, include
 
 urlpatterns = [
-    path("", include("home.urls")),
-    path("pong", include("pong.urls")),
-    path("api/", include("db.urls")),
+    path("", include("db.urls")),
+    path("pong/", include("pong.urls")),
 ]

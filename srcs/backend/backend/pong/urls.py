@@ -3,5 +3,5 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path("", views.pong.as_view(), name="pong"),
+    path("matchmaking", views.MatchmakingView, name="pong_matchmaking"),
 ]
