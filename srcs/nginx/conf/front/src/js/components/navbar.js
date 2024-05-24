@@ -6,6 +6,7 @@ class AnonNavbar extends HTMLElement {
 			<div class="left-nav">
 				<a href="/" data-link id="Home">Home</a>
 				<a href="/clicks" data-link id="Clicks">Clicks</a>
+				<a href="/leaderboard" data-link id="Leaderboard">Leaderboard</a>
 			</div>
 			<div class="right-nav">
 				<a href="/auth/login" data-link id="Login">Login</a>
@@ -26,6 +27,7 @@ class Navbar extends HTMLElement {
 				<a href="/" data-link id="Home">Home</a>
 				<a href="/clicks" data-link id="Clicks">Clicks</a>
 				<a href="/chat" data-link id="Chat">Chat</a>
+				<a href="/leaderboard" data-link id="Leaderboard">Leaderboard</a>
 			</div>
 			<div class="right-nav">
 				<a href="/auth/logout" data-link id="Register">Logout</a>

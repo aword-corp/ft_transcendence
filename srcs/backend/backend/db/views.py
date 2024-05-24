@@ -9,7 +9,29 @@ from .models import User, UserTwoFactorAuthData, Count
 from django.core.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 import pyotp
+from time import time_ns
+from operator import itemgetter
+from datetime import timedelta
+import json
 
+class time_cache:
+    def __init__(self, time=1):
+        self.time = time.total_seconds() if isinstance(time, timedelta) else time
+        self.cache = {}
+
+    def __call__(self, fun):
+        def wrapped(*args):
+            now = time_ns() // 1e9
+            if fun not in self.cache or now > self.cache[fun]["next_call"]:
+                self.cache[fun] = {
+                    "last_result": fun(*args),
+                    "next_call": now + self.time,
+                }
+            else:
+                print(f"{fun.__name__} call, using last result")
+            return self.cache[fun]["last_result"]
+
+        return wrapped
 
 class FivePerMinuteUserThrottle(UserRateThrottle):
     rate = "5/min"
@@ -62,6 +84,13 @@ def LoginView(request):
 
     return Response(
         {"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED
+    )
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def ValidateView(request):
+    return Response(
+        {"detail": "Ok."}, status=status.HTTP_200_OK
     )
 
 
@@ -172,4 +201,17 @@ def get_clicks(request):
     return Response(
         {"count": counter.clicks},
         status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET"])
+@time_cache(time=timedelta(seconds=10))
+def get_leaderboard(request) -> Response:
+    print("---------Get leaderboard call---------")
+    leaderboard = sorted(User.objects.values(), key=itemgetter("elo"))
+    print(leaderboard)
+    
+    return Response(
+        {"leaderboard": json.dumps({name["username"]: name["elo"] for name in leaderboard})},
+        status=status.HTTP_200_OK
     )

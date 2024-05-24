@@ -2,34 +2,12 @@ from django.db import models
 from django.conf import settings
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
-from datetime import date, timedelta
-from time import time_ns
-from typing import Optional, List
+from datetime import date
+from typing import Optional
 import uuid
 import pyotp
 import qrcode
 import qrcode.image.svg
-from operator import itemgetter
-
-
-class time_cache:
-    def __init__(self, time=1):
-        self.time = time.total_seconds() if isinstance(time, timedelta) else time
-        self.cache = {}
-
-    def __call__(self, fun):
-        def wrapped(*args):
-            now = time_ns() // 1e9
-            if fun not in self.cache or now > self.cache[fun]["next_call"]:
-                self.cache[fun] = {
-                    "last_result": fun(*args),
-                    "next_call": now + self.time,
-                }
-            else:
-                print(f"{fun.__name__} call, using last result")
-            return self.cache[fun]["last_result"]
-
-        return wrapped
 
 
 class Count(models.Model):
@@ -260,14 +238,6 @@ class User(AbstractBaseUser):
             pass
 
         return None
-
-    @staticmethod
-    @database_sync_to_async
-    @time_cache(time=timedelta(seconds=10))
-    def get_leaderboard() -> List["User"]:
-        print("---------Get leaderboard call---------")
-        leaderboard = sorted(User.objects.values(), key=itemgetter("elo"))
-        return leaderboard
 
 
 class GlobalChat(models.Model):
