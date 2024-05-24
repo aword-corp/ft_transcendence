@@ -2,7 +2,7 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from db.models import Count, GlobalChat, Game
+from db.models import Count, Game
 
 
 class DefaultConsumer(AsyncWebsocketConsumer):
@@ -21,7 +21,7 @@ class DefaultConsumer(AsyncWebsocketConsumer):
 class CountConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def increment_count(self):
-        count_obj = Count.objects.get(id=1)
+        count_obj, created = Count.objects.get_or_create(id=1)
         count_obj.clicks += 1
         count_obj.save()
 
@@ -101,16 +101,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.user = self.scope["user"]
         else:
             await self.close(1000, "You need to be logged in.")
-            
+
         self.game_id = self.scope["url_route"]["kwargs"]["id"]
         try:
             self.game: Game = await Game.get_game(self.game_id)
         except Game.DoesNotExist:
             await self.close(1000, "Game does not exists.")
             return
-        
+
         await self.channel_layer.group_add(self.game_id, self.channel_name)
-        
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard("chat", self.channel_name)
@@ -125,4 +124,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         user_id = event["user_id"]
         username = event["username"]
 
-        await self.send(text_data=json.dumps({"user_id": user_id, "username": username, "message": message}))
+        await self.send(
+            text_data=json.dumps(
+                {"user_id": user_id, "username": username, "message": message}
+            )
+        )

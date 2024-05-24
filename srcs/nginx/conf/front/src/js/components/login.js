@@ -1,4 +1,4 @@
-import { router } from "../main.js"
+import { router } from "../main.js";
 
 class Login extends HTMLElement {
 	constructor() {
@@ -30,19 +30,15 @@ class Login extends HTMLElement {
 			let request = {};
 			request.username = formData.get("username");
 			request.password = formData.get("password");
-			if (formData.get("otp"))
-				request.otp = formData.get("otp");
-			const response = await fetch(
-				url,
-				{
-					method: "POST",
-					headers: {
-						'Accept': 'application/json, text/plain',
-						'Content-Type': 'application/json;charset=UTF-8'
-					},
-					body: JSON.stringify(request),
-				}
-			);
+			if (formData.get("otp")) request.otp = formData.get("otp");
+			const response = await fetch(url, {
+				method: "POST",
+				headers: {
+					Accept: "application/json, text/plain",
+					"Content-Type": "application/json;charset=UTF-8",
+				},
+				body: JSON.stringify(request),
+			});
 			const json = await response.json();
 			const status = response.status;
 			if (status != 200) {

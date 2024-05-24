@@ -1,3 +1,5 @@
+import "../components/clicks_count.js";
+
 export function clicks_title() {
 	return ("Clicks");
 }

@@ -5,7 +5,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework import status
 from rest_framework.throttling import UserRateThrottle
 from django.contrib.auth import authenticate, login as django_login
-from .models import User, UserTwoFactorAuthData
+from .models import User, UserTwoFactorAuthData, Count
 from django.core.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 import pyotp
@@ -161,4 +161,15 @@ def remove_2fa(request):
     return Response(
         {"detail": "Invalid credentials or user has not two factor enabled."},
         status=status.HTTP_401_UNAUTHORIZED,
+    )
+
+
+@api_view(["GET"])
+def get_clicks(request):
+    counter, created = Count.objects.get_or_create(id=1)
+    if created:
+        counter.save()
+    return Response(
+        {"count": counter.clicks},
+        status=status.HTTP_200_OK,
     )
