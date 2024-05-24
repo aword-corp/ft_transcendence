@@ -1,22 +1,24 @@
-FROM debian:bookworm-slim
+# FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y \
-	curl \
-	gnupg2 \
-	ca-certificates \
-	lsb-release \
-	debian-archive-keyring
+# RUN apt-get update && apt-get install -y \
+# 	curl \
+# 	gnupg2 \
+# 	ca-certificates \
+# 	lsb-release \
+# 	debian-archive-keyring
 
-RUN curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor \
-	| tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
+# RUN curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor \
+# 	| tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
 
-RUN echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] \
-	http://nginx.org/packages/debian $(lsb_release -cs) nginx" \
-	| tee /etc/apt/sources.list.d/nginx.list
+# RUN echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] \
+# 	http://nginx.org/packages/debian $(lsb_release -cs) nginx" \
+# 	| tee /etc/apt/sources.list.d/nginx.list
 
-RUN apt-get update && apt-get install -y \
-	openssl \
-	nginx
+# RUN apt-get update && apt-get install -y \
+# 	openssl \
+# 	nginx
+
+FROM nginx:latest
 
 COPY conf/nginx.conf /etc/nginx/
 
@@ -40,7 +42,7 @@ COPY conf/localhost.crt /etc/ssl/certs/
 
 COPY conf/localhost.key /etc/ssl/private/
 
-ADD conf/front/ /var/www/front/
+ADD conf/front /var/www/front
 
 RUN chown -R www-data:www-data /var/www/front
 

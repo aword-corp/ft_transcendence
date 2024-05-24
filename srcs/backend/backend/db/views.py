@@ -1,4 +1,4 @@
-from .serializers import UserSerializer
+from .serializers import UserSerializer, MyTokenObtainPairSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, throttle_classes, permission_classes
 from rest_framework.permissions import BasePermission
@@ -6,7 +6,6 @@ from rest_framework import status
 from rest_framework.throttling import UserRateThrottle
 from django.contrib.auth import authenticate, login as django_login
 from .models import User, UserTwoFactorAuthData
-from .serializers import MyTokenObtainPairSerializer
 from django.core.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 import pyotp
