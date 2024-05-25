@@ -1,6 +1,11 @@
 from .serializers import UserSerializer, MyTokenObtainPairSerializer
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, throttle_classes, permission_classes
+from rest_framework.decorators import (
+    api_view,
+    throttle_classes,
+    permission_classes,
+)
+from rest_framework.request import Request
 from rest_framework.permissions import BasePermission
 from rest_framework import status
 from rest_framework.throttling import UserRateThrottle
@@ -13,6 +18,9 @@ from time import time_ns
 from operator import itemgetter
 from datetime import timedelta
 import json
+import requests
+from django.conf import settings
+
 
 class time_cache:
     def __init__(self, time=1):
@@ -32,6 +40,7 @@ class time_cache:
             return self.cache[fun]["last_result"]
 
         return wrapped
+
 
 class FivePerMinuteUserThrottle(UserRateThrottle):
     rate = "5/min"
@@ -53,7 +62,7 @@ def RegisterView(request):
     serializer = UserSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     serializer.save()
-    return Response(serializer.data)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @api_view(["POST"])
@@ -86,12 +95,68 @@ def LoginView(request):
         {"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED
     )
 
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def ValidateView(request):
-    return Response(
-        {"detail": "Ok."}, status=status.HTTP_200_OK
-    )
+    return Response({"detail": "Ok."}, status=status.HTTP_200_OK)
+
+
+# class ft_callback(views.APIView):
+#     required_param_fields = ["code"]
+
+#     def get(self, request: Request, *args, **kwargs):
+
+
+@api_view(["GET"])
+@permission_classes([IsNotAuthenticated])
+def ft_callback(request: Request):
+    code = request.GET.get("code")
+    if not code:
+        return Response(
+            {"detail": "No code provided."}, status=status.HTTP_400_BAD_REQUEST
+        )
+    data = {
+        "grant_type": "authorization_code",
+        "client_id": settings.FT_API_UID,
+        "client_secret": settings.FT_API_SECRET,
+        "code": code,
+        "redirect_uri": settings.FT_REDIRECT,
+    }
+    post = requests.post("https://api.intra.42.fr/oauth/token", json=data)
+    post_json = post.json()
+    if "access_token" not in post_json:
+        return Response(
+            {"detail": "Could not authenticate."}, status=status.HTTP_401_UNAUTHORIZED
+        )
+    headers = {"Authorization": f'Bearer {post_json["access_token"]}'}
+    me = requests.get("https://api.intra.42.fr/v2/me", headers=headers)
+    me_json = me.json()
+    email = me_json["email"]
+    try:
+        user = User.objects.get(email=email)
+        django_login(request, user, backend="db.authentication.CustomAuthBackend")
+        refresh = MyTokenObtainPairSerializer.get_token(user)
+        access_token = str(refresh.access_token)
+        return Response(
+            {"access_token": access_token, "refresh_token": str(refresh)},
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        login = me_json["login"]
+        displayname = me_json["displayname"]
+        image_url = me_json["image"]["versions"]["medium"]
+        campus = me_json["campus"]
+        return Response(
+            {
+                "email": email,
+                "login": login,
+                "displayname": displayname,
+                "image_url": image_url,
+                "campus": campus,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 @api_view(["POST"])
@@ -210,8 +275,12 @@ def get_leaderboard(request) -> Response:
     print("---------Get leaderboard call---------")
     leaderboard = sorted(User.objects.values(), key=itemgetter("elo"))
     print(leaderboard)
-    
+
     return Response(
-        {"leaderboard": json.dumps({name["username"]: name["elo"] for name in leaderboard})},
-        status=status.HTTP_200_OK
+        {
+            "leaderboard": json.dumps(
+                {name["username"]: name["elo"] for name in leaderboard}
+            )
+        },
+        status=status.HTTP_200_OK,
     )

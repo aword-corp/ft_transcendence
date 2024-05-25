@@ -13,3 +13,4 @@ qrcode
 djangorestframework_simplejwt
 gunicorn
 django-cors-headers
+requests

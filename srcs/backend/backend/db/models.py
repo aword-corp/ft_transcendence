@@ -182,7 +182,7 @@ class User(AbstractBaseUser):
         (6, "Focus"),
     ]
     status = models.SmallIntegerField(choices=STATUS_CHOICES, default=4)
-    
+
     is_invisible = models.BooleanField(default=False)
 
     # Settings / Cosmetic

@@ -58,8 +58,8 @@ INSTALLED_APPS = [
 CHANNEL_LAYERS = {}
 
 MIDDLEWARE = [
-    "django.middleware.csrf.CsrfViewMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -68,9 +68,11 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-]
+CORS_ORIGIN_ALLOW_ALL = True
+
+CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "https://localhost:8443"]
+
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "https://localhost:8443"]
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
@@ -191,3 +193,18 @@ else:
     AWS_S3_VERIFY = True
     AWS_QUERYSTRING_AUTH = False
     AWS_S3_CUSTOM_DOMAIN = os.getenv("S3_HOST")
+
+FT_API_URL = (
+    os.getenv("FT_API_DEV_URL") if os.getenv("dev") else os.getenv("FT_API_URL")
+)
+FT_API_UID = (
+    os.getenv("FT_API_DEV_UID") if os.getenv("dev") else os.getenv("FT_API_UID")
+)
+FT_API_SECRET = (
+    os.getenv("FT_API_DEV_SECRET") if os.getenv("dev") else os.getenv("FT_API_SECRET")
+)
+FT_REDIRECT = (
+    os.getenv("FT_DEV_REDIRECT_URI")
+    if os.getenv("dev")
+    else os.getenv("FT_REDIRECT_URI")
+)
