@@ -1,9 +1,10 @@
+from time import time_ns
 from django.db import models
 from django.conf import settings
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
-from datetime import date
-from typing import Optional
+from datetime import date, timedelta
+from typing import List, Optional
 import uuid
 import pyotp
 import qrcode
