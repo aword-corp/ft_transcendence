@@ -8,6 +8,28 @@ import uuid
 import pyotp
 import qrcode
 import qrcode.image.svg
+from operator import itemgetter
+from django.utils.translation import gettext_lazy as _
+
+
+class time_cache:
+    def __init__(self, time=1):
+        self.time = time.total_seconds() if isinstance(time, timedelta) else time
+        self.cache = {}
+
+    def __call__(self, fun):
+        def wrapped(*args):
+            now = time_ns() // 1e9
+            if fun not in self.cache or now > self.cache[fun]["next_call"]:
+                self.cache[fun] = {
+                    "last_result": fun(*args),
+                    "next_call": now + self.time,
+                }
+            else:
+                print(f"{fun.__name__} call, using last result")
+            return self.cache[fun]["last_result"]
+
+        return wrapped
 
 
 class Count(models.Model):
@@ -124,33 +146,34 @@ class User(AbstractBaseUser):
         unique=True,
     )
 
-    REGION_CHOICES = [
-        ("eu-we", "Europe West"),
-        ("eu-ea", "Europe East"),
-        ("eu-no", "Europe North"),
-        ("na-we", "North America West"),
-        ("na-ce", "North America Central"),
-        ("na-ea", "North America East"),
-        ("ce-am", "Central America"),
-        ("so-am", "South America"),
-        ("no-af", "North Africa"),
-        ("so-af", "South Africa"),
-        ("mi-ea", "Middle East"),
-        ("as-cn", "China"),
-        ("as-in", "India"),
-        ("as-sg", "Singapore"),
-        ("as-kr", "Korea"),
-        ("as-jp", "Japan"),
-        ("oc-pa", "Oceania"),
-    ]
-    region = models.CharField(choices=REGION_CHOICES, max_length=6)
+    class Region(models.TextChoices):
+        EU_WE = "EU_WE", _("Europe West")
+        EU_EA = "EU_EA", _("Europe East")
+        EU_NO = "EU_NO", _("Europe North")
+        NA_WE = "NA_WE", _("North America West")
+        NA_CE = "NA_CE", _("North America Central")
+        NA_EA = "NA_EA", _("North America East")
+        CE_AM = "CE_AM", _("Central America")
+        SO_AM = "SO_AM", _("South America")
+        NO_AF = "NO_AF", _("North Africa")
+        SO_AF = "SO_AF", _("South Africa")
+        MI_EA = "MI_EA", _("Middle East")
+        AS_CN = "AS_CN", _("China")
+        AS_IN = "AS_IN", _("India")
+        AS_SG = "AS_SG", _("Singapore")
+        AS_KR = "AS_KR", _("Korea")
+        AS_JP = "AS_JP", _("Japan")
+        OC_PA = "OC_PA", _("Oceania")
+
+    region = models.CharField(choices=Region, max_length=6)
     country_code = models.CharField(max_length=3)
-    LANGUAGE_CHOICES = [
-        ("FR-FR", "French"),
-        ("EN-US", "English"),
-        ("CH-ZH", "Chinese"),
-    ]
-    language = models.CharField(choices=LANGUAGE_CHOICES, max_length=5)
+
+    class Language(models.TextChoices):
+        FR_FR = "FR_FR", _("Français")
+        EN_US = "EN_US", _("English (United States)")
+        CH_ZH = "CH_ZH", _("中文")
+
+    language = models.CharField(choices=Language, max_length=5)
     avatar_url = models.ImageField(
         max_length=256, null=True, upload_to="medias/users/avatar/"
     )
@@ -158,8 +181,14 @@ class User(AbstractBaseUser):
         max_length=256, null=True, upload_to="medias/users/banner/"
     )
     birth_date = models.DateField()
-    GRADE_CHOICES = [(1, "User"), (2, "Premium"), (3, "Moderator"), (4, "Admin")]
-    grade = models.SmallIntegerField(choices=GRADE_CHOICES, default=1)
+
+    class Grade(models.IntegerChoices):
+        USER = 1, _("User")
+        PREMIUM = 2, _("Premium")
+        MODERATOR = 3, _("Moderator")
+        ADMIN = 4, ("Admin")
+
+    grade = models.SmallIntegerField(choices=Grade, default=Grade.USER)
 
     # Stats
     created_at = models.DateTimeField(auto_now_add=True)
@@ -173,17 +202,20 @@ class User(AbstractBaseUser):
     friends = models.ManyToManyField("self", symmetrical=True)
     blocked = models.ManyToManyField("self")
     verified = models.BooleanField(default=False)
-    STATUS_CHOICES = [
-        (1, "Offline"),
-        (2, "Playing"),
-        (3, "Spectating"),
-        (4, "Online"),
-        (5, "Away"),
-        (6, "Focus"),
-    ]
-    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=4)
-    
+
+    class Status(models.IntegerChoices):
+        OFF = 1, _("Offline")
+        GAME = 2, _("Playing")
+        SPEC = 3, _("Spectating")
+        ON = 4, _("Online")
+        AWAY = 5, _("Away")
+        FOCUS = 6, _("Focus")
+
+    status = models.SmallIntegerField(choices=Status, default=Status.ON)
+
     is_invisible = models.BooleanField(default=False)
+
+    channel_name = models.CharField(max_length=128, null=True)
 
     # Settings / Cosmetic
     paddle_type = models.SmallIntegerField(default=1)
@@ -192,17 +224,32 @@ class User(AbstractBaseUser):
     win_effect = models.SmallIntegerField(default=1)
 
     # Settings / Privacy
-    FRIEND_REQUEST_CHOICES = [(1, "Wait"), (2, "Reject"), (3, "Accept")]
+
+    class Friend_Request(models.IntegerChoices):
+        WAIT = 1, _("Wait")
+        REJECT = 2, _("Reject")
+        ACCEPT = 3, _("Accept")
+
     friend_default_response = models.SmallIntegerField(
-        choices=FRIEND_REQUEST_CHOICES, default=1
+        choices=Friend_Request, default=Friend_Request.WAIT
     )
-    MSG_REQUEST_CHOICES = [(1, "Confirm"), (2, "Accept"), (3, "Block")]
+
+    class Message_Request(models.IntegerChoices):
+        CONFIRM = 1, _("Confirm")
+        ACCEPT = 2, _("Accept")
+        BLOCK = 3, _("Block")
+
     msg_default_response = models.SmallIntegerField(
-        choices=MSG_REQUEST_CHOICES, default=1
+        choices=Message_Request, default=Message_Request.CONFIRM
     )
-    FRIENDS_DISPLAY_CHOICES = [(1, "Friends"), (2, "Public"), (3, "Private")]
+
+    class Friend_Display(models.IntegerChoices):
+        FRIENDS = 1, _("Friends")
+        PUBLIC = 2, _("Public")
+        PRIVATE = 3, _("Private")
+
     display_friends = models.SmallIntegerField(
-        choices=FRIENDS_DISPLAY_CHOICES, default=1
+        choices=Friend_Display, default=Friend_Display.FRIENDS
     )
     devices = models.ManyToManyField(Device, related_name="user_devices")
     vc_auto_join = models.BooleanField(default=False)
@@ -238,6 +285,26 @@ class User(AbstractBaseUser):
             pass
 
         return None
+
+    @staticmethod
+    @database_sync_to_async
+    @time_cache(time=timedelta(seconds=10))
+    def get_leaderboard() -> List["User"]:
+        print("---------Get leaderboard call---------")
+        leaderboard = sorted(User.objects.values(), key=itemgetter("elo"))
+        return leaderboard
+
+    @database_sync_to_async
+    def set_channel_name(self, channel_name: str) -> None:
+        self.channel_name = channel_name
+
+    @database_sync_to_async
+    def is_in_queue(self):
+        return bool(self.channel_name)
+
+    @database_sync_to_async
+    def get_channel_name(self) -> str:
+        return self.channel_name
 
 
 class GlobalChat(models.Model):
@@ -285,8 +352,13 @@ class Report(models.Model):
     )
     reason = models.CharField(max_length=2048)
     created_at = models.DateTimeField(auto_now_add=True)
-    REPORT_CHOICES = [(1, "Pending"), (2, "Escalated"), (3, "Closed")]
-    state = models.SmallIntegerField(choices=REPORT_CHOICES, default=1)
+
+    class Type(models.IntegerChoices):
+        PENDING = 1, _("Pending")
+        ESCALATED = 2, _("Escalated")
+        CLOSED = 3, _("Closed")
+
+    state = models.SmallIntegerField(choices=Type, default=Type.PENDING)
 
 
 class ChatReport(Report):
@@ -305,20 +377,21 @@ class Game(models.Model):
     loser = models.ForeignKey(
         User, related_name="game_losers", on_delete=models.SET_NULL, null=True
     )
-    ball_speed = models.FloatField()
-    ball_size = models.FloatField()
-    paddle_speed = models.FloatField()
-    paddle_size = models.FloatField()
+    ball_speed = models.FloatField(default=1.0)
+    ball_size = models.FloatField(default=1.0)
+    paddle_speed = models.FloatField(default=1.0)
+    paddle_size = models.FloatField(default=1.0)
     region = models.CharField(max_length=6)
     score_winner = models.IntegerField(default=0)
     score_loser = models.IntegerField(default=0)
-    STATE_CHOICES = [
-        (1, "Starting"),
-        (2, "Waiting"),
-        (3, "Playing"),
-        (4, "Ended"),
-    ]
-    state = models.SmallIntegerField(choices=STATE_CHOICES, default=1)
+
+    class State(models.IntegerChoices):
+        STARTING = 1, _("Starting")
+        WAITING = 2, _("Waiting")
+        PLAYING = 3, _("Playing")
+        ENDED = 4, _("Ended")
+
+    state = models.SmallIntegerField(choices=State, default=State.STARTING)
 
     @staticmethod
     @database_sync_to_async
@@ -347,11 +420,12 @@ class Tournament(models.Model):
     starting_at = models.DateTimeField(auto_now_add=False)
     ended_at = models.DateTimeField(auto_now_add=False)
     region = models.CharField(max_length=6)
-    STATE_CHOICES = [
-        (1, "Waiting"),
-        (2, "Starting"),
-        (3, "Playing"),
-        (4, "Break"),
-        (5, "Ended"),
-    ]
-    state = models.SmallIntegerField(choices=STATE_CHOICES, default=1)
+
+    class State(models.IntegerChoices):
+        STARTING = 1, _("Starting")
+        WAITING = 2, _("Waiting")
+        PLAYING = 3, _("Playing")
+        BREAK = 4, _("Break")
+        ENDED = 5, _("Ended")
+
+    state = models.SmallIntegerField(choices=State, default=State.STARTING)

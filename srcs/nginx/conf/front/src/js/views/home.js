@@ -3,5 +3,6 @@ export function home_title() {
 }
 
 export function home_view() {
-	return (``);
+	return (`<h1>Bonjour</h1>
+				<p>Bonjour</p>`);
 }

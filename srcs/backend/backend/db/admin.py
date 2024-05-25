@@ -10,33 +10,6 @@ from db.models import User, UserTwoFactorAuthData
 from db.utils import verify_username, verify_password, verify_date
 
 
-REGION_CHOICES = [
-    ("eu-we", "Europe West"),
-    ("eu-ea", "Europe East"),
-    ("eu-no", "Europe North"),
-    ("na-we", "North America West"),
-    ("na-ce", "North America Central"),
-    ("na-ea", "North America East"),
-    ("ce-am", "Central America"),
-    ("so-am", "South America"),
-    ("no-af", "North Africa"),
-    ("so-af", "South Africa"),
-    ("mi-ea", "Middle East"),
-    ("as-cn", "China"),
-    ("as-in", "India"),
-    ("as-sg", "Singapore"),
-    ("as-kr", "Korea"),
-    ("as-jp", "Japan"),
-    ("oc-pa", "Oceania"),
-]
-
-LANGUAGE_CHOICES = [
-    ("FR-FR", "French"),
-    ("EN-US", "English"),
-    ("CH-ZH", "Chinese"),
-]
-
-
 class CustomAuthenticationForm(forms.Form):
     username = forms.CharField(label="Username/Email", widget=forms.TextInput)
     password = forms.CharField(label="Password", widget=forms.PasswordInput)
@@ -79,8 +52,8 @@ class UserCreationForm(forms.ModelForm):
         label="Birth date", widget=forms.DateInput(attrs={"type": "date"})
     )
     country_code = CountryField().formfield(label="Country")
-    region = forms.ChoiceField(label="Region", choices=REGION_CHOICES)
-    language = forms.ChoiceField(label="Language", choices=LANGUAGE_CHOICES)
+    # region = forms.TypedChoiceField(label="Region", choices=User.Region)
+    # language = forms.TypedChoiceField(label="Language", choices=User.Language.choices)
 
     class Meta:
         model = User

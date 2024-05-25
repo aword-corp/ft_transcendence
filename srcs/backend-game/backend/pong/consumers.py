@@ -2,7 +2,9 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from db.models import Count, Game
+from db.models import Count, Game, User
+import asyncio
+import uuid
 
 
 class DefaultConsumer(AsyncWebsocketConsumer):
@@ -102,12 +104,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
         else:
             await self.close(1000, "You need to be logged in.")
 
+
         self.game_id = self.scope["url_route"]["kwargs"]["id"]
         try:
             self.game: Game = await Game.get_game(self.game_id)
         except Game.DoesNotExist:
             await self.close(1000, "Game does not exists.")
             return
+
 
         await self.channel_layer.group_add(self.game_id, self.channel_name)
 
@@ -129,3 +133,72 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 {"user_id": user_id, "username": username, "message": message}
             )
         )
+
+
+class MatchmakingConsumer(AsyncWebsocketConsumer):
+    queue: list[User] = []
+
+    starting: bool = False
+
+    region: str = ""
+
+    async def connect(self):
+        if self.scope["user"].is_authenticated:
+            self.user: User = self.scope["user"]
+        else:
+            await self.close(1000, "You need to be logged in.")
+
+        if await self.user.is_in_queue:
+            await self.close(1000, "You are already in queue.")
+        
+        await self.accept()
+
+        await self.user.set_channel_name(self.channel_name)
+
+        self.queue.append(self.user)
+
+        self.region = self.user.region
+
+        await self.channel_layer.group_add("matchmaking", self.channel_name)
+
+        await self.channel_layer.group_send(
+            "matchmaking", {"type": "update.message", "users": self.queue}
+        )
+
+        if len(self.queue) >= 2 and not self.starting:
+            self.starting = True
+            await asyncio.sleep(3)
+            if len(self.queue < 2):
+                self.starting = False
+                return
+            game = await Game.objects.acreate(uuid=uuid.uuid4(), region=self.region)
+            player_1 = self.queue.pop()
+            await self.channel_layer.group_discard(
+                "matchmaking", await player_1.get_channel_name()
+            )
+            player_2 = self.queue.pop()
+            await self.channel_layer.group_discard(
+                "matchmaking", await player_2.get_channel_name()
+            )
+            await game.users.aadd(player_1)
+            await game.users.aadd(player_2)
+            self.starting = False
+
+    async def disconnect(self, close_code):
+        try:
+            self.queue.remove(self.user)
+        except ValueError:
+            pass
+
+        await self.user.set_channel_name(None)
+
+        await self.channel_layer.group_discard("matchmaking", self.channel_name)
+
+        await self.channel_layer.group_send(
+            "matchmaking", {"type": "update.message", "users": self.queue}
+        )
+
+    async def update_message(self, event):
+        users = event["users"]
+
+        await self.send(text_data=json.dumps(users))
