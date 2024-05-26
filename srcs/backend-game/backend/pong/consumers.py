@@ -5,6 +5,7 @@ from channels.db import database_sync_to_async
 from db.models import Count, Game, User
 import asyncio
 import uuid
+import datetime
 
 
 class DefaultConsumer(AsyncWebsocketConsumer):
@@ -104,14 +105,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         else:
             await self.close(1000, "You need to be logged in.")
 
-
         self.game_id = self.scope["url_route"]["kwargs"]["id"]
         try:
             self.game: Game = await Game.get_game(self.game_id)
         except Game.DoesNotExist:
             await self.close(1000, "Game does not exists.")
             return
-
 
         await self.channel_layer.group_add(self.game_id, self.channel_name)
 
@@ -138,9 +137,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
 class MatchmakingConsumer(AsyncWebsocketConsumer):
     queue: list[User] = []
 
-    starting: bool = False
-
     region: str = ""
+
+    elo_range = {}
+
+    elo_range_timer = {}
 
     async def connect(self):
         if self.scope["user"].is_authenticated:
@@ -150,14 +151,21 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
 
         if await self.user.is_in_queue:
             await self.close(1000, "You are already in queue.")
-        
+
+        self.update_lock = asyncio.Lock()
+
+        async with self.update_lock:
+            self.elo_range[self.user.id] = 30
+            self.elo_range_timer[self.user.id] = datetime.datetime.now()
+            self.queue.append(self.user)
+            self.region = self.user.region
+
+        if len(self.queue) == 1:
+            asyncio.create_task(self.matchmaking())
+
         await self.accept()
 
         await self.user.set_channel_name(self.channel_name)
-
-        self.queue.append(self.user)
-
-        self.region = self.user.region
 
         await self.channel_layer.group_add("matchmaking", self.channel_name)
 
@@ -165,24 +173,42 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             "matchmaking", {"type": "update.message", "users": self.queue}
         )
 
-        if len(self.queue) >= 2 and not self.starting:
-            self.starting = True
-            await asyncio.sleep(3)
-            if len(self.queue < 2):
-                self.starting = False
-                return
+    async def matchmaking(self):
+        while True:
+            async with self.update_lock:
+                now = datetime.datetime.now()
+                for player in self.queue:
+                    potential_matches = [
+                        opps
+                        for opps in self.queue
+                        if abs(opps.elo - player.elo) <= self.elo_range[player.id]
+                        and player != opps
+                    ]
+
+                    if len(potential_matches) >= 1:
+                        asyncio.create_task(self.start_game(potential_matches))
+                    else:
+                        if now.second - self.elo_range_timer[player.id].second > 30:
+                            self.elo_range[player.id] *= 1.5
+                            self.elo_range_timer[player.id] = now
+                await asyncio.sleep(1)
+
+    async def start_game(self, potential_matches):
+        users = []
+        for _ in range(2):
+            player = potential_matches.pop()
+            users.append(player)
+            self.queue.remove(player)
+            self.elo_range.pop(player.id)
+        await asyncio.sleep(3)
+        async with self.update_lock:
             game = await Game.objects.acreate(uuid=uuid.uuid4(), region=self.region)
-            player_1 = self.queue.pop()
-            await self.channel_layer.group_discard(
-                "matchmaking", await player_1.get_channel_name()
-            )
-            player_2 = self.queue.pop()
-            await self.channel_layer.group_discard(
-                "matchmaking", await player_2.get_channel_name()
-            )
-            await game.users.aadd(player_1)
-            await game.users.aadd(player_2)
-            self.starting = False
+            for _ in range(2):
+                user = users.pop()
+                await self.channel_layer.group_discard(
+                    "matchmaking", await user.get_channel_name()
+                )
+                await game.users.aadd(user)
 
     async def disconnect(self, close_code):
         try:
