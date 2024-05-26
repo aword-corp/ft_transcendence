@@ -19,3 +19,20 @@ export function closeSocketClick() {
 		countSocket.close();
 	countSocket = undefined;
 }
+
+var mmSocket = undefined;
+
+export function initMMSocket() {
+	if (mmSocket)
+		return;
+	mmSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/pong/matchmaking');
+	mmSocket.onmessage = function (e) {
+		document.getElementById('count').innerText = e.data;
+	};
+}
+
+export function closeMMSocket() {
+	if (mmSocket && (mmSocket.readyState === WebSocket.OPEN || mmSocket.readyState === WebSocket.CONNECTING))
+		mmSocket.close();
+	mmSocket = undefined;
+}

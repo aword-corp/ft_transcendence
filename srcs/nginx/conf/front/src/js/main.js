@@ -7,7 +7,7 @@ import { profile_view, profile_title } from "./views/profile.js";
 import { setup_2fa_view, setup_2fa_title } from "./views/setup_2fa.js";
 import { leaderboard_view, leaderboard_title } from "./views/leaderboard.js";
 import "./components/navbar.js";
-import { closeSocketClick } from "./components/socket.js";
+import { closeMMSocket } from "./components/socket.js";
 import { ft_callback_title, ft_callback_view } from "./views/ft_callback.js";
 
 function logout() {
@@ -33,7 +33,7 @@ function remove_2fa() {
 
 const routes = {
 	"/": { title: home_title(), render: home_view, auth: "no" },
-	"/clicks": { title: clicks_title(), render: clicks_view, auth: "no", destructor: closeSocketClick },
+	"/clicks": { title: clicks_title(), render: clicks_view, auth: "no", destructor: closeMMSocket },
 	"/chat": { title: chat_title(), render: chat_view, auth: "yes" },
 	"/auth/login": { title: login_title(), render: login_view, auth: "no_only" },
 	"/auth/ft/callback": { title: ft_callback_title(), render: ft_callback_view, auth: "no_only" },

@@ -148,9 +148,15 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             self.user: User = self.scope["user"]
         else:
             await self.close(1000, "You need to be logged in.")
+            return
 
-        if await self.user.is_in_queue:
+        if bool(self.user.channel_name):
             await self.close(1000, "You are already in queue.")
+            return
+
+        if self.user.status == User.Status.GAME:
+            await self.close(1000, "You are already in a game.")
+            return
 
         self.update_lock = asyncio.Lock()
 
@@ -170,36 +176,42 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add("matchmaking", self.channel_name)
 
         await self.channel_layer.group_send(
-            "matchmaking", {"type": "update.message", "users": self.queue}
+            "matchmaking", {"type": "update.message", "users": repr(self.queue)}
         )
 
     async def matchmaking(self):
         while True:
             async with self.update_lock:
+                if len(self.queue) == 0:
+                    break
                 now = datetime.datetime.now()
                 for player in self.queue:
                     potential_matches = [
                         opps
                         for opps in self.queue
                         if abs(opps.elo - player.elo) <= self.elo_range[player.id]
-                        and player != opps
+                        and abs(opps.elo - player.elo) <= self.elo_range[opps.id]
                     ]
 
-                    if len(potential_matches) >= 1:
-                        asyncio.create_task(self.start_game(potential_matches))
+                    if len(potential_matches) >= 2:
+                        users = []
+                        for _ in range(2):
+                            player = potential_matches.pop()
+                            users.append(player)
+                            self.queue.remove(player)
+                            await self.channel_layer.group_send(
+                                "matchmaking",
+                                {"type": "update.message", "users": repr(self.queue)},
+                            )
+                            self.elo_range.pop(player.id)
+                        asyncio.create_task(self.start_game(users))
                     else:
                         if now.second - self.elo_range_timer[player.id].second > 30:
                             self.elo_range[player.id] *= 1.5
                             self.elo_range_timer[player.id] = now
                 await asyncio.sleep(1)
 
-    async def start_game(self, potential_matches):
-        users = []
-        for _ in range(2):
-            player = potential_matches.pop()
-            users.append(player)
-            self.queue.remove(player)
-            self.elo_range.pop(player.id)
+    async def start_game(self, users):
         await asyncio.sleep(3)
         async with self.update_lock:
             game = await Game.objects.acreate(uuid=uuid.uuid4(), region=self.region)
@@ -209,19 +221,21 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
                     "matchmaking", await user.get_channel_name()
                 )
                 await game.users.aadd(user)
+                user.status = User.Status.GAME
+                await user.asave()
 
     async def disconnect(self, close_code):
         try:
             self.queue.remove(self.user)
-        except ValueError:
-            pass
+        except (ValueError, AttributeError):
+            return
 
         await self.user.set_channel_name(None)
 
         await self.channel_layer.group_discard("matchmaking", self.channel_name)
 
         await self.channel_layer.group_send(
-            "matchmaking", {"type": "update.message", "users": self.queue}
+            "matchmaking", {"type": "update.message", "users": repr(self.queue)}
         )
 
     async def update_message(self, event):

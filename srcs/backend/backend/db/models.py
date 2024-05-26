@@ -148,33 +148,33 @@ class User(AbstractBaseUser):
     )
 
     class Region(models.TextChoices):
-        EU_WE = "EU_WE", _("Europe West")
-        EU_EA = "EU_EA", _("Europe East")
-        EU_NO = "EU_NO", _("Europe North")
-        NA_WE = "NA_WE", _("North America West")
-        NA_CE = "NA_CE", _("North America Central")
-        NA_EA = "NA_EA", _("North America East")
-        CE_AM = "CE_AM", _("Central America")
-        SO_AM = "SO_AM", _("South America")
-        NO_AF = "NO_AF", _("North Africa")
-        SO_AF = "SO_AF", _("South Africa")
-        MI_EA = "MI_EA", _("Middle East")
-        AS_CN = "AS_CN", _("China")
-        AS_IN = "AS_IN", _("India")
-        AS_SG = "AS_SG", _("Singapore")
-        AS_KR = "AS_KR", _("Korea")
-        AS_JP = "AS_JP", _("Japan")
-        OC_PA = "OC_PA", _("Oceania")
+        EU_WE = "eu-we", _("Europe West")
+        EU_EA = "eu-ea", _("Europe East")
+        EU_NO = "eu-no", _("Europe North")
+        NA_WE = "na-we", _("North America West")
+        NA_CE = "na-ce", _("North America Central")
+        NA_EA = "na-ea", _("North America East")
+        CE_AM = "ce-am", _("Central America")
+        SO_AM = "so-am", _("South America")
+        NO_AF = "no-af", _("North Africa")
+        SO_AF = "so-af", _("South Africa")
+        MI_EA = "mi-ea", _("Middle East")
+        AS_CN = "as-cn", _("China")
+        AS_IN = "as-in", _("India")
+        AS_SG = "as-sg", _("Singapore")
+        AS_KR = "as-kr", _("Korea")
+        AS_JP = "as-jp", _("Japan")
+        OC_PA = "oc-pa", _("Oceania")
 
-    region = models.CharField(choices=Region, max_length=6)
+    region = models.CharField(choices=Region.choices, max_length=6)
     country_code = models.CharField(max_length=3)
 
     class Language(models.TextChoices):
-        FR_FR = "FR_FR", _("Français")
-        EN_US = "EN_US", _("English (United States)")
-        CH_ZH = "CH_ZH", _("中文")
+        FR_FR = "FR-FR", _("Français")
+        EN_US = "EN-US", _("English (United States)")
+        CH_ZH = "CH-ZH", _("中文")
 
-    language = models.CharField(choices=Language, max_length=5)
+    language = models.CharField(choices=Language.choices, max_length=5)
     avatar_url = models.ImageField(
         max_length=256, null=True, upload_to="medias/users/avatar/"
     )
@@ -189,7 +189,7 @@ class User(AbstractBaseUser):
         MODERATOR = 3, _("Moderator")
         ADMIN = 4, ("Admin")
 
-    grade = models.SmallIntegerField(choices=Grade, default=Grade.USER)
+    grade = models.SmallIntegerField(choices=Grade.choices, default=Grade.USER)
 
     # Stats
     created_at = models.DateTimeField(auto_now_add=True)
@@ -212,7 +212,7 @@ class User(AbstractBaseUser):
         AWAY = 5, _("Away")
         FOCUS = 6, _("Focus")
 
-    status = models.SmallIntegerField(choices=Status, default=Status.ON)
+    status = models.SmallIntegerField(choices=Status.choices, default=Status.ON)
 
     is_invisible = models.BooleanField(default=False)
 
@@ -232,7 +232,7 @@ class User(AbstractBaseUser):
         ACCEPT = 3, _("Accept")
 
     friend_default_response = models.SmallIntegerField(
-        choices=Friend_Request, default=Friend_Request.WAIT
+        choices=Friend_Request.choices, default=Friend_Request.WAIT
     )
 
     class Message_Request(models.IntegerChoices):
@@ -241,7 +241,7 @@ class User(AbstractBaseUser):
         BLOCK = 3, _("Block")
 
     msg_default_response = models.SmallIntegerField(
-        choices=Message_Request, default=Message_Request.CONFIRM
+        choices=Message_Request.choices, default=Message_Request.CONFIRM
     )
 
     class Friend_Display(models.IntegerChoices):
@@ -250,7 +250,7 @@ class User(AbstractBaseUser):
         PRIVATE = 3, _("Private")
 
     display_friends = models.SmallIntegerField(
-        choices=Friend_Display, default=Friend_Display.FRIENDS
+        choices=Friend_Display.choices, default=Friend_Display.FRIENDS
     )
     devices = models.ManyToManyField(Device, related_name="user_devices")
     vc_auto_join = models.BooleanField(default=False)
@@ -359,7 +359,7 @@ class Report(models.Model):
         ESCALATED = 2, _("Escalated")
         CLOSED = 3, _("Closed")
 
-    state = models.SmallIntegerField(choices=Type, default=Type.PENDING)
+    state = models.SmallIntegerField(choices=Type.choices, default=Type.PENDING)
 
 
 class ChatReport(Report):
@@ -392,7 +392,7 @@ class Game(models.Model):
         PLAYING = 3, _("Playing")
         ENDED = 4, _("Ended")
 
-    state = models.SmallIntegerField(choices=State, default=State.STARTING)
+    state = models.SmallIntegerField(choices=State.choices, default=State.STARTING)
 
     @staticmethod
     @database_sync_to_async
@@ -429,4 +429,4 @@ class Tournament(models.Model):
         BREAK = 4, _("Break")
         ENDED = 5, _("Ended")
 
-    state = models.SmallIntegerField(choices=State, default=State.STARTING)
+    state = models.SmallIntegerField(choices=State.choices, default=State.STARTING)
