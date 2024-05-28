@@ -289,7 +289,7 @@ class User(AbstractBaseUser):
 
     @staticmethod
     @database_sync_to_async
-    @time_cache(time=timedelta(seconds=10))
+    @time_cache(time=timedelta(minutes=5))
     def get_leaderboard() -> List["User"]:
         print("---------Get leaderboard call---------")
         leaderboard = sorted(User.objects.values(), key=itemgetter("elo"))

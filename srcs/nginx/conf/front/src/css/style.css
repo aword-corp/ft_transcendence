@@ -81,6 +81,10 @@ click-counter button:active {
     display: none;
 }
 
+.leaderboard-align-text {
+    text-align: center;
+}
+
 @media (min-width: 1000px) {
     * {
         font-size: 18px;

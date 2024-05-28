@@ -1,3 +1,5 @@
+import { objIsEmpty } from "../utils/objects.js";
+
 class Leaderboard extends HTMLElement {
 	constructor() {
 		super();
@@ -11,7 +13,13 @@ class Leaderboard extends HTMLElement {
 		}).then((response) => {
 			response.json().then((json) => {
 				const leaderboardElement = document.getElementById("leaderboard");
-				const leaderboardData = json.leaderboard;
+				const leaderboardData = JSON.parse(json.leaderboard);
+
+				if (objIsEmpty(leaderboardData)) {
+					leaderboardElement.innerText = "No data";
+					leaderboardElement.classList.add("leaderboard-align-text");
+					return ;
+				}
 
 				leaderboardElement.innerHTML = '';
 
@@ -34,21 +42,26 @@ class Leaderboard extends HTMLElement {
 				headerRow.appendChild(scoreHeader);
 
 				const tbody = table.createTBody();
-				JSON.parse(leaderboardData, (name, score) => {
+				Object.entries(leaderboardData).forEach(([name, score]) => {
 					if (!name || !name.length)
 						return ;
 					const row = tbody.insertRow();
-					const nameCell = row.insertCell();
+					const nameCell = row.insertCell(); // TODO Fix cell size
 					const scoreCell = row.insertCell();
-
-					nameCell.textContent = name;
-					nameCell.style.textAlign = 'center';
-					nameCell.style.border = '1px solid black';
-					nameCell.style.padding = '8px';	
+	
+					const profile = document.createElement('a');
+					profile.style.width = "100%";
+					profile.textContent = name;
+					profile.href = `/profile/${name}`;
+					profile.style.textAlign = 'center';
+					profile.style.border = '1px solid black';
+					profile.style.padding = '8px';
+					nameCell.appendChild(profile);
 					scoreCell.textContent = score;
 					scoreCell.style.textAlign = 'center';
 					scoreCell.style.border = '1px solid black';
 					scoreCell.style.padding = '8px';
+					
 				});
 
 				leaderboardElement.appendChild(table);
