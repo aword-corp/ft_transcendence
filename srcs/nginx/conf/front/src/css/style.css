@@ -85,6 +85,12 @@ click-counter button:active {
     text-align: center;
 }
 
+.pongCanvas {
+	background-color: grey;
+	display: block;
+	margin: 0 auto;
+}
+
 @media (min-width: 1000px) {
     * {
         font-size: 18px;
