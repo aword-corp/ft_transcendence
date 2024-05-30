@@ -65,4 +65,4 @@ class PongGame extends HTMLElement {
 
 
 
-customElements.define("pong", PongGame);
+customElements.define("pong-game", PongGame);

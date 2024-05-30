@@ -5,5 +5,5 @@ export function pong_title() {
 }
 
 export function pong_view() {
-	return (`<pong></pong>`);
+	return (`<pong-game></pong-game>`);
 }

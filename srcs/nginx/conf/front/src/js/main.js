@@ -1,6 +1,7 @@
 import { home_view, home_title } from "./views/home.js";
 import { clicks_view, clicks_title } from "./views/clicks.js";
 import { chat_view, chat_title } from "./views/chat.js";
+import { pong_view, pong_title } from "./views/pong.js";
 import { login_view, login_title } from "./views/login.js";
 import { register_view, register_title } from "./views/register.js";
 import { profile_view, profile_title } from "./views/profile.js";
@@ -129,8 +130,10 @@ export function router() {
 	let view = routes[location.pathname];
 	let action = actions[location.pathname];
 
-	if (location.pathname === last_view)
+	if (location.pathname === last_view){
+		console.log("Same view");
 		return;
+	}
 
 	if (view && checkAccess(view)) {
 		document.title = ` ACorp - ${view.title} `;
