@@ -36,3 +36,22 @@ export function closeMMSocket() {
 		mmSocket.close();
 	mmSocket = undefined;
 }
+
+
+var pongSocket = undefined;
+
+export function initPongSocket() {
+	if (pongSocket)
+		return;
+	pongSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/pong/game');
+	pongSocket.onmessage = function (e) {
+		let data = JSON.parse(e.data);
+		console.long(data);
+	};
+}
+
+export function closePongSocket() {
+	if (pongSocket && (pongSocket.readyState === WebSocket.OPEN || pongSocket.readyState === WebSocket.CONNECTING))
+		pongSocket.close();
+	pongSocket = undefined;
+}

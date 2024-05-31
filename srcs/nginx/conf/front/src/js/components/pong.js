@@ -1,15 +1,16 @@
-import {} from "./socket.js";
+import {initPongSocket, closePongSocket} from "./socket.js";
 
 class PongGame extends HTMLElement {
 	constructor() {
 		super();
 
 		this.innerHTML = `
-			<canvas id="pongCanvas"></canvas>
+			<canvas id="pongCanvas" class="pongCanvas"></canvas>
 		`;
 
-		canvas = document.getElementById("pongCanvas");
-		ctx = canvas.getContext("2d");
+		let canvas = document.getElementById("pongCanvas");
+		let ctx = canvas.getContext("2d");
+		initPongSocket();
 
 		// if (!canvas || !canvas.getContext) {
 		// 	console.error('Error: Canva not initialized properly');
@@ -33,7 +34,7 @@ class PongGame extends HTMLElement {
 					break ;
 			}
 			if (message) {
-				// socket.send(message);
+				pongSocket.send(message);
 			}
 		});
 
@@ -54,7 +55,7 @@ class PongGame extends HTMLElement {
 					break ;
 			}
 			if (message) {
-				// socket.send(message);
+				pongSocket.send(message);
 			}
 		});
 

@@ -130,11 +130,10 @@ export function router() {
 	let view = routes[location.pathname];
 	let action = actions[location.pathname];
 
-	if (location.pathname === last_view){
-		console.log("Same view");
+	
+	if (location.pathname === last_view)
 		return;
-	}
-
+	
 	if (view && checkAccess(view)) {
 		document.title = ` ACorp - ${view.title} `;
 		app.innerHTML = view.render();

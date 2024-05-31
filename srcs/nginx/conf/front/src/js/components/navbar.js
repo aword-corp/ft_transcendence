@@ -28,6 +28,7 @@ class Navbar extends HTMLElement {
 				<a href="/clicks" data-link id="Clicks">Clicks</a>
 				<a href="/chat" data-link id="Chat">Chat</a>
 				<a href="/leaderboard" data-link id="Leaderboard">Leaderboard</a>
+				<a href="/pong" data-link id="pong">Pong</a>
 			</div>
 			<div class="right-nav">
 				<a href="/auth/logout" data-link id="Register">Logout</a>
