@@ -36,7 +36,7 @@ const routes = {
 	"/": { title: home_title(), render: home_view, auth: "no" },
 	"/clicks": { title: clicks_title(), render: clicks_view, auth: "no", destructor: closeMMSocket },
 	"/chat": { title: chat_title(), render: chat_view, auth: "yes" },
-	"/pong": { title: pong_title(), render: pong_view, auth: "yes" },
+	"/pong": { title: pong_title(), render: pong_view, auth: "no" }, // auth = yes for prod
 	"/auth/login": { title: login_title(), render: login_view, auth: "no_only" },
 	"/auth/ft/callback": { title: ft_callback_title(), render: ft_callback_view, auth: "no_only" },
 	"/auth/register": { title: register_title(), render: register_view, auth: "no_only" },

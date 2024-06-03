@@ -1,4 +1,4 @@
-import {initPongSocket, closePongSocket} from "./socket.js";
+import {pongSocket, initPongSocket, closePongSocket} from "./socket.js";
 
 class PongGame extends HTMLElement {
 	constructor() {
@@ -10,7 +10,7 @@ class PongGame extends HTMLElement {
 
 		let canvas = document.getElementById("pongCanvas");
 		let ctx = canvas.getContext("2d");
-		initPongSocket();
+		this.onEvent = initPongSocket();
 
 		// if (!canvas || !canvas.getContext) {
 		// 	console.error('Error: Canva not initialized properly');
@@ -60,6 +60,10 @@ class PongGame extends HTMLElement {
 		});
 
 		// the rendering to adapt to the socket messages received
+
+		pongSocket.addEventListener("message", function(event) {
+			console.log(event.data);
+		});
 	}
 }
 

@@ -38,7 +38,7 @@ export function closeMMSocket() {
 }
 
 
-var pongSocket = undefined;
+export var pongSocket = undefined;
 
 export function initPongSocket() {
 	if (pongSocket)
@@ -46,7 +46,7 @@ export function initPongSocket() {
 	pongSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/pong/game');
 	pongSocket.onmessage = function (e) {
 		let data = JSON.parse(e.data);
-		console.long(data);
+		console.log(data);
 	};
 }
 
