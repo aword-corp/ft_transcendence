@@ -13,7 +13,9 @@ class DefaultConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
 
-        await self.close(1000, "Invalid route.")
+        await self.send("Invalid route.")
+
+        await self.close()
 
     async def disconnect(self, close_code):
         pass
@@ -69,49 +71,56 @@ class PongConsumer(AsyncWebsocketConsumer):
 
     acceleration = 1.05
     games = {}
-    game_started = False
+
+    # update_lock = asyncio.Lock()
 
     async def connect(self):
         await self.accept()
         if self.scope["user"].is_authenticated:
             self.user = self.scope["user"]
         else:
-            await self.close(1000, "You need to be logged in.")
+            await self.send("You need to be logged in.")
+            await self.close()
 
         self.game_id = self.scope["url_route"]["kwargs"]["id"]
+        self.game_channel = str(self.game_id).replace("-", "_")
         try:
             self.game: Game = await Game.get_game(self.game_id)
         except Game.DoesNotExist:
-            await self.close(1000, "Game does not exists.")
+            await self.send("Game does not exists.")
+            await self.close()
             return
 
-        self.update_lock = asyncio.Lock()
-
-        if self.game not in self.games:
-            async with self.update_lock:
-                self.games[self.game_id] = {
-                    "ball": self.Ball(0.5, 0.5, 0.09, -0.05, 0.05),
-                    "users": [],
-                }
+        # async with self.update_lock:
+        if self.game_id not in self.games:
+            self.games[self.game_id] = {
+                "ball": self.Ball(0.5, 0.5, 0.09, -0.05, 0.05),
+                "users": [],
+                "started": False,
+            }
 
         if len(self.games[self.game_id]["users"]) < 2:
-            async with self.update_lock:
-                self.games[self.game_id][self.user.id] = self.Paddle(
-                    0, 0.5, 0, 0.05, 0.01, 0
-                )
-                self.games[self.game_id]["users"].append(self.user)
-        elif len(self.games[self.game_id]["users"]) == 2 and not self.game_started:
-            self.game_started = True
-            asyncio.create_task(self.game_loop())
+            self.games[self.game_id][self.user.id] = self.Paddle(
+                0, 0.5, 0, 0.05, 0.01, 0
+            )
+            self.games[self.game_id]["users"].append(self.user)
 
-        await self.channel_layer.group_add(self.game_id, self.channel_name)
+        if (
+            len(self.games[self.game_id]["users"]) == 2
+            and not self.games[self.game_id]["started"]
+        ):
+            self.games[self.game_id]["started"] = True
+            asyncio.create_task(self.game_loop(self.game_id))
+
+        await self.channel_layer.group_add(self.game_channel, self.channel_name)
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(self.game_id, self.channel_name)
+        await self.channel_layer.group_discard(self.game_channel, self.channel_name)
 
     async def receive(self, text_data):
         data = json.loads(text_data)
         action = data.get("action")
+
         if action == "UP_PRESS_KEYDOWN":
             self.games[self.game_id][self.user.id].dy = -5
         elif action == "DOWN_PRESS_KEYDOWN":
@@ -127,117 +136,138 @@ class PongConsumer(AsyncWebsocketConsumer):
     #     await self.send(text_data=json.dumps(event))
 
     # utils
-    def no_winner(self):
-        b = True
-        for user in self.games[self.game_id]["users"]:
-            if self.games[self.game_id][user.id].score >= 3:
-                b = False
-        return b
 
-    def reset_ball(self, player_n):
-        ball = self.games[self.game_id]["ball"]
-        ball.x = 0.5
-        ball.y = 0.5
-        ball.dx *= 0.05 if player_n == 1 else -0.05
-        ball.dy *= 0.05
+    async def game_loop(self, game_id):
+        player1 = self.games[game_id][self.games[game_id]["users"][0].id]
+        player2 = self.games[game_id][self.games[game_id]["users"][1].id]
+        ball = self.games[game_id]["ball"]
+        while player1.score < 3 and player2.score < 3:
+            # async with self.update_lock:
+            # update paddle position
+            player1.y += player1.dy
+            if player1.y < 0:
+                player1.y = 0
+            if player1.y + player1.height > 1:
+                player1.y = 1
+            player2.y += player2.dy
+            if player2.y < 0:
+                player2.y = 0
+            if player2.y + player2.height > 1:
+                player2.y = 1
+            # update ball position
+            old_x = ball.x
+            ball.x += ball.dx
+            ball.y += ball.dy
+            if ball.y - ball.radius < 0:
+                ball.y = ball.radius
+                ball.dy *= -1
+            elif ball.y + ball.radius > 1:
+                ball.y = 1 - ball.radius
+                ball.dy *= -1
 
-    def reset_paddles(self):
-        for user in self.games[self.game_id]["users"]:
-            self.games[self.game_id][user.id].y = 0.5
-
-    async def game_loop(self):
-        player1 = self.games[self.game_id]["users"][0]
-        player2 = self.games[self.game_id]["users"][1]
-        while self.no_winner():
-            async with self.update_lock:
-                # update paddle position
-                for user in self.games[self.game_id]["users"]:
-                    self.games[self.game_id][user.id].y += self.games[self.game_id][
-                        user.id
-                    ].dy
-                    if self.games[self.game_id][user.id].y < 0:
-                        self.games[self.game_id][user.id].y = 0
-                    elif (
-                        self.games[self.game_id][user.id].y
-                        + self.games[self.game_id][user.id].height
-                        > 1
-                    ):
-                        self.games[self.game_id][user.id].y = 1
-
-                # update ball position
-                ball = self.games[self.game_id]["ball"]
-                old_x = ball.x
-                ball.x += ball.dx
-                ball.y += ball.dy
-                if ball.y - ball.radius < 0:
-                    ball.y = ball.radius
-                    ball.dy *= -1
-                elif ball.y + ball.radius > 1:
-                    ball.y = 1 - ball.radius
-                    ball.dy *= -1
-
-                if ball.x - ball.radius < 0:
-                    self.reset_ball(self, 1)
-                    self.reset_paddles()
-                    self.games[self.game_id][player2.id].score += 1
-                elif ball.x + ball.radius > 1:
-                    self.reset_ball(self, 2)
-                    self.reset_paddles()
-                    self.games[self.game_id][player1.id].score += 1
-
-                # check ball collision with paddles
-                maxAngle = pi / 4
-
-                wentThrough1 = (
-                    old_x - ball.radius > player1.width + player1.x
-                    and ball.x - ball.radius <= player1.width + player1.x
-                )
-                if (
-                    wentThrough1
-                    and player1.y <= ball.y + ball.radius
-                    and ball.y - ball.radius <= player1.y + player1.height
-                ):
-                    ball.temperature += 0.05
-                    ballPosPaddle = (player1.y + player1.height / 2) - ball.y
-                    relPos = ballPosPaddle / (player1.height / 2)
-                    bounceAngle = relPos * maxAngle
-
-                    speed = (ball.dx**2 + ball.dy**2) ** 0.5 * self.acceleration
-                    ball.dx = speed * cos(bounceAngle)
-                    ball.dy = speed * -sin(bounceAngle)
-
-                wentThrough2 = (
-                    old_x + ball.radius < player2.x
-                    and ball.x + ball.radius >= player2.x
-                )
-                if (
-                    wentThrough2
-                    and player2.y <= ball.y + ball.radius
-                    and ball.y - ball.radius <= player2.y + player2.height
-                ):
-                    ball.temperature += 0.05
-                    ballPosPaddle = (player2.y + player2.height / 2) - ball.y
-                    relPos = ballPosPaddle / (player2.height / 2)
-                    bounceAngle = relPos * maxAngle
-
-                    speed = (ball.dx**2 + ball.dy**2) ** 0.5 * self.acceleration
-                    ball.dx = speed * -cos(bounceAngle)
-                    ball.dy = speed * -sin(bounceAngle)
-
-                # sending the new positions to all clients in the game
+            if ball.x - ball.radius < 0:
+                ball.x = 0.5
+                ball.y = 0.5
+                ball.dx *= 0.05
+                ball.dy *= 0.05
+                player1.y = 0.5
+                player2.y = 0.5
+                player2.score += 1
                 await self.channel_layer.group_send(
-                    self.game_id,
+                    self.game_channel,
                     {
-                        "type": "broadcast.pos",
-                        "position": [self.user, self.games[self.game_id]],
+                        "type": "broadcast.score",
+                        "score": {"player1": player1.score, "player2": player2.score},
                     },
                 )
-                await asyncio.sleep(0.05)
+            elif ball.x + ball.radius > 1:
+                ball.x = 0.5
+                ball.y = 0.5
+                ball.dx *= 0.05
+                ball.dy *= -0.05
+                player1.y = 0.5
+                player2.y = 0.5
+                player1.score += 1
+                await self.channel_layer.group_send(
+                    self.game_channel,
+                    {
+                        "type": "broadcast.score",
+                        "score": {"player1": player1.score, "player2": player2.score},
+                    },
+                )
+            # check ball collision with paddles
+            maxAngle = pi / 4
+
+            wentThrough1 = (
+                old_x - ball.radius > player1.width + player1.x
+                and ball.x - ball.radius <= player1.width + player1.x
+            )
+            if (
+                wentThrough1
+                and player1.y <= ball.y + ball.radius
+                and ball.y - ball.radius <= player1.y + player1.height
+            ):
+                ball.temperature += 0.05
+                ballPosPaddle = (player1.y + player1.height / 2) - ball.y
+                relPos = ballPosPaddle / (player1.height / 2)
+                bounceAngle = relPos * maxAngle
+
+                speed = (ball.dx**2 + ball.dy**2) ** 0.5 * self.acceleration
+                ball.dx = speed * cos(bounceAngle)
+                ball.dy = speed * -sin(bounceAngle)
+
+            wentThrough2 = (
+                old_x + ball.radius < player2.x and ball.x + ball.radius >= player2.x
+            )
+            if (
+                wentThrough2
+                and player2.y <= ball.y + ball.radius
+                and ball.y - ball.radius <= player2.y + player2.height
+            ):
+                ball.temperature += 0.05
+                ballPosPaddle = (player2.y + player2.height / 2) - ball.y
+                relPos = ballPosPaddle / (player2.height / 2)
+                bounceAngle = relPos * maxAngle
+
+                speed = (ball.dx**2 + ball.dy**2) ** 0.5 * self.acceleration
+                ball.dx = speed * -cos(bounceAngle)
+                ball.dy = speed * -sin(bounceAngle)
+
+            # sending the new positions to all clients in the game
+            await self.channel_layer.group_send(
+                self.game_channel,
+                {
+                    "type": "broadcast.pos",
+                    "position": {
+                        "ball": {"x": ball.x, "y": ball.y},
+                        "player1": {"x": player1.x, "y": player1.y},
+                        "player2": {"x": player2.x, "y": player2.y},
+                    },
+                },
+            )
+            await asyncio.sleep(0.05)
+        await self.channel_layer.group_send(
+            self.game_channel,
+            {
+                "type": "broadcast.result",
+                "result": {"player1": player1.score, "player2": player2.score},
+            },
+        )
 
     async def broadcast_pos(self, event):
         position = event["position"]
 
-        await self.send(text_data=json.dumps(position))
+        await self.send(text_data=json.dumps({"position": position}))
+
+    async def broadcast_score(self, event):
+        score = event["score"]
+
+        await self.send(text_data=json.dumps({"score": score}))
+
+    async def broadcast_result(self, event):
+        result = event["result"]
+
+        await self.send(text_data=json.dumps({"result": result}))
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -247,13 +277,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_add("chat", self.channel_name)
             self.user = self.scope["user"]
         else:
-            await self.close(1000, "You need to be logged in.")
+            await self.send("You need to be logged in.")
+            await self.close()
 
         self.game_id = self.scope["url_route"]["kwargs"]["id"]
         try:
             self.game: Game = await Game.get_game(self.game_id)
         except Game.DoesNotExist:
-            await self.close(1000, "Game does not exists.")
+            await self.send("Game does not exists.")
+            await self.close()
             return
 
         await self.channel_layer.group_add(self.game_id, self.channel_name)
@@ -288,19 +320,22 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
     elo_range_timer = {}
 
     async def connect(self):
+        await self.accept()
         if self.scope["user"].is_authenticated:
             self.user: User = self.scope["user"]
         else:
-            await self.close(1000, "You need to be logged in.")
+            await self.send("You need to be logged in.")
+            await self.close()
             return
 
         if bool(self.user.channel_name):
-            await self.close(1000, "You are already in queue.")
-            print("test")
+            await self.send("You are already in queue.")
+            await self.close()
             return
 
         if self.user.status == User.Status.GAME:
-            await self.close(1000, "You are already in a game.")
+            await self.send("You are already in a game.")
+            await self.close()
             return
 
         self.update_lock = asyncio.Lock()
@@ -313,8 +348,6 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
 
         if len(self.queue) == 1:
             asyncio.create_task(self.matchmaking())
-
-        await self.accept()
 
         await self.user.set_channel_name(self.channel_name)
 
@@ -362,16 +395,17 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             game = await Game.objects.acreate(uuid=uuid.uuid4(), region=self.region)
             for _ in range(2):
                 user = users.pop()
-                await self.channel_layer.group_discard(
-                    "matchmaking", await user.get_channel_name()
-                )
                 await game.users.aadd(user)
-                user.status = User.Status.GAME
-                await user.asave()
                 await self.channel_layer.send(
                     await user.get_channel_name(),
                     {"type": "game.start", "game_id": str(game.uuid)},
                 )
+                await self.channel_layer.group_discard(
+                    "matchmaking", await user.get_channel_name()
+                )
+                user.status = User.Status.GAME
+                user.channel_name = None
+                await user.asave()
 
     async def disconnect(self, close_code):
         try:
@@ -399,5 +433,5 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
         users = event["users"]
 
         await self.send(
-            text_data=json.dumps({"type": "update.message", "users": users})
+            text_data=json.dumps({"type": "update.message", "users": repr(users)})
         )

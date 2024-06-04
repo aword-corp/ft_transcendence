@@ -1,10 +1,6 @@
-import {pongSocket, initPongSocket, closePongSocket} from "./socket.js";
+import { pongSocket, initPongSocket, closePongSocket } from "./socket.js";
 
 class PongGame extends HTMLElement {
-	static get observedAttributes() {
-		return ['uuid'];
-	}
-
 	constructor() {
 		super();
 
@@ -14,7 +10,7 @@ class PongGame extends HTMLElement {
 
 		let canvas = document.getElementById("pongCanvas");
 		let ctx = canvas.getContext("2d");
-		initPongSocket(this.uuid);
+		initPongSocket(this.attributes.getNamedItem("uuid").value);
 
 		document.addEventListener("keydown", this.handleKeyDown);
 		document.addEventListener("keyup", this.handleKeyUp);
@@ -27,17 +23,17 @@ class PongGame extends HTMLElement {
 		let message;
 		switch (event.key) {
 			case "w":
-				message = JSON.stringify({ "action": "UP_PRESS_KEYDOWN"});
-				break ;
+				message = JSON.stringify({ "action": "UP_PRESS_KEYDOWN" });
+				break;
 			case "s":
-				message = JSON.stringify({ "action": "DOWN_PRESS_KEYDOWN"});
-				break ;
+				message = JSON.stringify({ "action": "DOWN_PRESS_KEYDOWN" });
+				break;
 			case "ArrowUp":
-				message = JSON.stringify({ "action": "UP_PRESS_KEYDOWN"});
-				break ;
+				message = JSON.stringify({ "action": "UP_PRESS_KEYDOWN" });
+				break;
 			case "ArrowDown":
-				message = JSON.stringify({ "action": "DOWN_PRESS_KEYDOWN"});
-				break ;
+				message = JSON.stringify({ "action": "DOWN_PRESS_KEYDOWN" });
+				break;
 		}
 		if (message) {
 			pongSocket.send(message);
@@ -48,17 +44,17 @@ class PongGame extends HTMLElement {
 		let message;
 		switch (event.key) {
 			case "w":
-				message = JSON.stringify({ "action": "UP_PRESS_KEYUP"});
-				break ;
-				case "s":
-					message = JSON.stringify({ "action": "DOWN_PRESS_KEYUP"});
-					break ;
-					case "ArrowUp":
-						message = JSON.stringify({ "action": "UP_PRESS_KEYUP"});
-						break ;
-						case "ArrowDown":
-							message = JSON.stringify({ "action": "DOWN_PRESS_KEYUP"});
-							break ;
+				message = JSON.stringify({ "action": "UP_PRESS_KEYUP" });
+				break;
+			case "s":
+				message = JSON.stringify({ "action": "DOWN_PRESS_KEYUP" });
+				break;
+			case "ArrowUp":
+				message = JSON.stringify({ "action": "UP_PRESS_KEYUP" });
+				break;
+			case "ArrowDown":
+				message = JSON.stringify({ "action": "DOWN_PRESS_KEYUP" });
+				break;
 		}
 		if (message) {
 			pongSocket.send(message);

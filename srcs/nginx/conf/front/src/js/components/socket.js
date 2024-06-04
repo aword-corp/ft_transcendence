@@ -26,10 +26,6 @@ export function initMMSocket() {
 	if (mmSocket)
 		return;
 	mmSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/pong/matchmaking');
-	mmSocket.onmessage = function (e) {
-		// document.getElementById('count').innerText = e.data;
-		// console.log(e.data);
-	};
 }
 
 export function closeMMSocket() {

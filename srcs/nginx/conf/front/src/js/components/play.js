@@ -32,7 +32,7 @@ class PlayMenu extends HTMLElement {
 			let data = JSON.parse(e.data);
 			if (data.type == "game.start") {
 				console.log(data.game_id);
-				console.log("Pushed state = ${"/pong/" + data.game_id}")
+				console.log(`Pushed state = ${"/pong/" + data.game_id}`)
 				history.pushState("", "", "/pong/" + data.game_id);
 				router();
 			} else if (data.type == "update.message") {
