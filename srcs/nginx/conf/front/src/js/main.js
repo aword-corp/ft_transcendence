@@ -1,6 +1,7 @@
 import { home_view, home_title } from "./views/home.js";
 import { clicks_view, clicks_title } from "./views/clicks.js";
 import { chat_view, chat_title } from "./views/chat.js";
+import { play_view, play_title } from "./views/play.js";
 import { pong_view, pong_title } from "./views/pong.js";
 import { login_view, login_title } from "./views/login.js";
 import { register_view, register_title } from "./views/register.js";
@@ -36,7 +37,9 @@ const routes = {
 	"/": { title: home_title(), render: home_view, auth: "no" },
 	"/clicks": { title: clicks_title(), render: clicks_view, auth: "no", destructor: closeMMSocket },
 	"/chat": { title: chat_title(), render: chat_view, auth: "yes" },
-	"/pong": { title: pong_title(), render: pong_view, auth: "no" }, // auth = yes for prod
+	"/play": { title: play_title(), render: play_view, auth: "yes" }, // auth = yes for prod
+	// "/play/matchmaking": { title: matchmaking_title(), render: matchmaking_view, auth: "no" }, // auth = yes for prod
+	"/pong/:uuid": { title: pong_title(), render: pong_view, auth: "yes" }, // auth = yes for prod
 	"/auth/login": { title: login_title(), render: login_view, auth: "no_only" },
 	"/auth/ft/callback": { title: ft_callback_title(), render: ft_callback_view, auth: "no_only" },
 	"/auth/register": { title: register_title(), render: register_view, auth: "no_only" },
@@ -126,8 +129,30 @@ function checkAccess(view) {
 	return (true);
 }
 
+function getParams(pathname) {
+    for (let route in routes) {
+        const paramNames = [];
+        const regexPath = route.replace(/\/:(\w+)/g, (_, paramName) => {
+            paramNames.push(paramName);
+            return "/([^/]+)";
+        });
+        const regex = new RegExp(`^${regexPath}$`);
+        const match = pathname.match(regex);
+        if (match) {
+            const params = match.slice(1).reduce((acc, value, index) => {
+                acc[paramNames[index]] = value;
+                return acc;
+            }, {});
+            return { route: routes[route], params };
+        }
+    }
+    return null;
+}
+
 export function router() {
-	let view = routes[location.pathname];
+	let matchedRoute = getParams(location.pathname);
+	let view = matchedRoute ? matchedRoute.route : null;
+	let params = matchedRoute ? matchedRoute.params : {};
 	let action = actions[location.pathname];
 
 	
@@ -136,7 +161,7 @@ export function router() {
 	
 	if (view && checkAccess(view)) {
 		document.title = ` ACorp - ${view.title} `;
-		app.innerHTML = view.render();
+		app.innerHTML = view.render(params);
 		if (!isAuth())
 			document.getElementById("nav").innerHTML = "<anon-nav-bar class=\"navbar\"></anon-nav-bar>";
 		else

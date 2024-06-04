@@ -20,14 +20,15 @@ export function closeSocketClick() {
 	countSocket = undefined;
 }
 
-var mmSocket = undefined;
+export var mmSocket = undefined;
 
 export function initMMSocket() {
 	if (mmSocket)
 		return;
 	mmSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/pong/matchmaking');
 	mmSocket.onmessage = function (e) {
-		document.getElementById('count').innerText = e.data;
+		// document.getElementById('count').innerText = e.data;
+		// console.log(e.data);
 	};
 }
 
@@ -40,10 +41,10 @@ export function closeMMSocket() {
 
 export var pongSocket = undefined;
 
-export function initPongSocket() {
+export function initPongSocket(uuid) {
 	if (pongSocket)
 		return;
-	pongSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/pong/game');
+	pongSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/pong/game/' + uuid);
 	pongSocket.onmessage = function (e) {
 		let data = JSON.parse(e.data);
 		console.log(data);
