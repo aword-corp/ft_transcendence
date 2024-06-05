@@ -9,6 +9,10 @@ class PongGame extends HTMLElement {
 		`;
 
 		this.canvas = document.getElementById("pongCanvas");
+
+		this.canvas.width = 600;
+		this.canvas.height = 400;
+
 		this.ctx = this.canvas.getContext("2d");
 		initPongSocket(this.attributes.getNamedItem("uuid").value);
 
@@ -85,17 +89,20 @@ class PongGame extends HTMLElement {
 	}
 
 	drawBall(ball) {
+		console.log(ball);
 		const ratio_x = this.canvas.width;
 		const ratio_y = this.canvas.height;
+		const scale = Math.min(ratio_x, ratio_y);
 
 		this.ctx.fillStyle = 'black';
 		this.ctx.beginPath();
-		this.ctx.arc(ball.x * ratio_x, ball.y * ratio_y, ball.radius * ratio_x, 0, Math.PI*2);
+		this.ctx.arc(ball.x * ratio_x, ball.y * ratio_y, ball.radius * scale, 0, Math.PI*2);
 		this.ctx.fill();
 		this.ctx.closePath();
 	}
 
 	drawPaddle(paddle) {
+		console.log(paddle);
 		const ratio_x = this.canvas.width;
 		const ratio_y = this.canvas.height;
 

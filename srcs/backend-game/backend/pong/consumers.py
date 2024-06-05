@@ -65,9 +65,9 @@ class PongConsumer(AsyncWebsocketConsumer):
         def __init__(self, x, y, dx, dy, radius, temperature=0):
             self.x = x
             self.y = y
-            self.radius = radius
             self.dx = dx
             self.dy = dy
+            self.radius = radius
 
     acceleration = 1.05
     games = {}
@@ -94,19 +94,19 @@ class PongConsumer(AsyncWebsocketConsumer):
         # async with self.update_lock:
         if self.game_id not in self.games:
             self.games[self.game_id] = {
-                "ball": self.Ball(0.5, 0.5, 0.09, -0.05, 0.05),
+                "ball": self.Ball(0.5, 0.5, 0.00625, -0.0083, 0.0128),
                 "users": [],
                 "started": False,
             }
 
         if len(self.games[self.game_id]["users"]) == 0:
             self.games[self.game_id][self.user.id] = self.Paddle(
-                0, 0.5, 0, 0.05, 0.01, 0
+                0.03, 0.5, 0, 0.166, 0.0125, 0
             )
             self.games[self.game_id]["users"].append(self.user)
         elif len(self.games[self.game_id]["users"]) == 1:
             self.games[self.game_id][self.user.id] = self.Paddle(
-                1, 0.5, 0, 0.05, 0.01, 0
+                0.97, 0.5, 0, 0.166, 0.0125, 0
             )
             self.games[self.game_id]["users"].append(self.user)
 
@@ -127,9 +127,9 @@ class PongConsumer(AsyncWebsocketConsumer):
         action = data.get("action")
 
         if action == "UP_PRESS_KEYDOWN":
-            self.games[self.game_id][self.user.id].dy = -5
+            self.games[self.game_id][self.user.id].dy = -0.0166
         elif action == "DOWN_PRESS_KEYDOWN":
-            self.games[self.game_id][self.user.id].dy = 5
+            self.games[self.game_id][self.user.id].dy = 0.0166
         elif action == "UP_PRESS_KEYUP":
             self.games[self.game_id][self.user.id].dy = 0
         elif action == "DOWN_PRESS_KEYUP":
@@ -173,8 +173,8 @@ class PongConsumer(AsyncWebsocketConsumer):
             if ball.x - ball.radius < 0:
                 ball.x = 0.5
                 ball.y = 0.5
-                ball.dx *= 0.05
-                ball.dy *= 0.05
+                ball.dx = 0.00625
+                ball.dy = 0.0083
                 player1.y = 0.5
                 player2.y = 0.5
                 player2.score += 1
@@ -188,8 +188,8 @@ class PongConsumer(AsyncWebsocketConsumer):
             elif ball.x + ball.radius > 1:
                 ball.x = 0.5
                 ball.y = 0.5
-                ball.dx *= 0.05
-                ball.dy *= -0.05
+                ball.dx = 0.00625
+                ball.dy = -0.0083
                 player1.y = 0.5
                 player2.y = 0.5
                 player1.score += 1
@@ -212,7 +212,7 @@ class PongConsumer(AsyncWebsocketConsumer):
                 and player1.y <= ball.y + ball.radius
                 and ball.y - ball.radius <= player1.y + player1.height
             ):
-                ball.temperature += 0.05
+                # ball.temperature += 0.05
                 ballPosPaddle = (player1.y + player1.height / 2) - ball.y
                 relPos = ballPosPaddle / (player1.height / 2)
                 bounceAngle = relPos * maxAngle
@@ -229,7 +229,7 @@ class PongConsumer(AsyncWebsocketConsumer):
                 and player2.y <= ball.y + ball.radius
                 and ball.y - ball.radius <= player2.y + player2.height
             ):
-                ball.temperature += 0.05
+                # ball.temperature += 0.05
                 ballPosPaddle = (player2.y + player2.height / 2) - ball.y
                 relPos = ballPosPaddle / (player2.height / 2)
                 bounceAngle = relPos * maxAngle
@@ -262,6 +262,7 @@ class PongConsumer(AsyncWebsocketConsumer):
                     },
                 },
             )
+            print(ball.dx, ball.dy)
             await asyncio.sleep(0.05)
         await self.channel_layer.group_send(
             self.game_channel,
