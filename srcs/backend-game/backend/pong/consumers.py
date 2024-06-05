@@ -99,9 +99,14 @@ class PongConsumer(AsyncWebsocketConsumer):
                 "started": False,
             }
 
-        if len(self.games[self.game_id]["users"]) < 2:
+        if len(self.games[self.game_id]["users"]) == 0:
             self.games[self.game_id][self.user.id] = self.Paddle(
                 0, 0.5, 0, 0.05, 0.01, 0
+            )
+            self.games[self.game_id]["users"].append(self.user)
+        elif len(self.games[self.game_id]["users"]) == 1:
+            self.games[self.game_id][self.user.id] = self.Paddle(
+                1, 0.5, 0, 0.05, 0.01, 0
             )
             self.games[self.game_id]["users"].append(self.user)
 
@@ -239,9 +244,21 @@ class PongConsumer(AsyncWebsocketConsumer):
                 {
                     "type": "broadcast.pos",
                     "position": {
-                        "ball": {"x": ball.x, "y": ball.y},
-                        "player1": {"x": player1.x, "y": player1.y},
-                        "player2": {"x": player2.x, "y": player2.y},
+                        "ball": {"x": ball.x, "y": ball.y, "radius": ball.radius},
+                        "player1": {
+                            "x": player1.x,
+                            "y": player1.y,
+                            "width": player1.width,
+                            "height": player1.height,
+                            "score": player1.score,
+                        },
+                        "player2": {
+                            "x": player2.x,
+                            "y": player2.y,
+                            "width": player2.width,
+                            "height": player2.height,
+                            "score": player2.score,
+                        },
                     },
                 },
             )
@@ -257,17 +274,23 @@ class PongConsumer(AsyncWebsocketConsumer):
     async def broadcast_pos(self, event):
         position = event["position"]
 
-        await self.send(text_data=json.dumps({"position": position}))
+        await self.send(
+            text_data=json.dumps({"type": "broadcast.pos", "position": position})
+        )
 
     async def broadcast_score(self, event):
         score = event["score"]
 
-        await self.send(text_data=json.dumps({"score": score}))
+        await self.send(
+            text_data=json.dumps({"type": "broadcast.score", "score": score})
+        )
 
     async def broadcast_result(self, event):
         result = event["result"]
 
-        await self.send(text_data=json.dumps({"result": result}))
+        await self.send(
+            text_data=json.dumps({"type": "broadcast.result", "result": result})
+        )
 
 
 class ChatConsumer(AsyncWebsocketConsumer):

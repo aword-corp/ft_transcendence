@@ -91,7 +91,7 @@ click-counter button:active {
     height: 90vh;
     max-width: 800px;
     max-height: 600px;
-    background-color: black;
+    background-color: grey;
 }
 
 @media (min-width: 1000px) {

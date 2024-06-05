@@ -41,10 +41,6 @@ export function initPongSocket(uuid) {
 	if (pongSocket)
 		return;
 	pongSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/pong/game/' + uuid);
-	pongSocket.onmessage = function (e) {
-		let data = JSON.parse(e.data);
-		console.log(data);
-	};
 }
 
 export function closePongSocket() {

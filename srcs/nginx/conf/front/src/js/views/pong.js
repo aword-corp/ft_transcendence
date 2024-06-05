@@ -5,6 +5,6 @@ export function pong_title() {
 }
 
 export function pong_view(params) {
-	console.log(params.uuid);
+	// console.log(params.uuid);
 	return (`<pong-game uuid="${params.uuid}"></pong-game>`);
 }
