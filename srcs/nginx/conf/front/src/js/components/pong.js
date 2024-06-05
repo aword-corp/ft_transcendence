@@ -1,4 +1,4 @@
-import { pongSocket, initPongSocket, closePongSocket } from "./socket.js";
+import { pongSocket } from "./socket.js";
 
 class PongGame extends HTMLElement {
 	constructor() {
@@ -14,18 +14,18 @@ class PongGame extends HTMLElement {
 		this.canvas.height = 400;
 
 		this.ctx = this.canvas.getContext("2d");
-		initPongSocket(this.attributes.getNamedItem("uuid").value);
 
 
 		this.handleKeyDown = this.handleKeyDown.bind(this);
-        this.handleKeyUp = this.handleKeyUp.bind(this);
-        this.handleSocketMessage = this.handleSocketMessage.bind(this);
+		this.handleKeyUp = this.handleKeyUp.bind(this);
+		this.handleSocketMessage = this.handleSocketMessage.bind(this);
 
-		
+
 		document.addEventListener("keydown", this.handleKeyDown);
 		document.addEventListener("keyup", this.handleKeyUp);
 
 		pongSocket.addEventListener("message", this.handleSocketMessage);
+
 	}
 
 
@@ -75,7 +75,7 @@ class PongGame extends HTMLElement {
 		let data = JSON.parse(event.data);
 
 		if (data.type == "broadcast.pos") {
-			this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+			this.ctx.reset();
 
 			let player1 = data.position.player1;
 			let player2 = data.position.player2;
@@ -85,6 +85,14 @@ class PongGame extends HTMLElement {
 			this.drawPaddle(player2);
 			this.drawCentralLine();
 			this.drawScores(player1, player2);
+		}
+
+		else if (data.type == "broadcast.result") {
+			this.ctx.reset();
+		}
+
+		else if (data.type == "broadcast.message") {
+			console.log(data.message);
 		}
 	}
 
@@ -96,7 +104,7 @@ class PongGame extends HTMLElement {
 
 		this.ctx.fillStyle = 'black';
 		this.ctx.beginPath();
-		this.ctx.arc(ball.x * ratio_x, ball.y * ratio_y, ball.radius * scale, 0, Math.PI*2);
+		this.ctx.arc(ball.x * ratio_x, ball.y * ratio_y, ball.radius * scale, 0, Math.PI * 2);
 		this.ctx.fill();
 		this.ctx.closePath();
 	}
@@ -133,8 +141,5 @@ class PongGame extends HTMLElement {
 	}
 
 }
-
-
-
 
 customElements.define("pong-game", PongGame);

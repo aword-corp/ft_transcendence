@@ -9,8 +9,9 @@ import { profile_view, profile_title } from "./views/profile.js";
 import { setup_2fa_view, setup_2fa_title } from "./views/setup_2fa.js";
 import { leaderboard_view, leaderboard_title } from "./views/leaderboard.js";
 import "./components/navbar.js";
-import { closeMMSocket, closePongSocket } from "./components/socket.js";
+import { closeMMSocket, closePongSocket, closeSocketClick, initMMSocket, initPongSocket, initSocketClick } from "./components/socket.js";
 import { ft_callback_title, ft_callback_view } from "./views/ft_callback.js";
+import { regular_queue_title, regular_queue_view } from "./views/regular_queue.js";
 
 function logout() {
 	localStorage.removeItem("access-token");
@@ -35,10 +36,12 @@ function remove_2fa() {
 
 const routes = {
 	"/": { title: home_title(), render: home_view, auth: "no" },
-	"/clicks": { title: clicks_title(), render: clicks_view, auth: "no" },
+	"/clicks": { title: clicks_title(), render: clicks_view, auth: "no", constructor: initSocketClick, destructor: closeSocketClick },
 	"/chat": { title: chat_title(), render: chat_view, auth: "yes" },
-	"/play": { title: play_title(), render: play_view, auth: "yes", destructor: closeMMSocket },
-	"/pong/:uuid": { title: pong_title(), render: pong_view, auth: "yes", destructor: closePongSocket },
+	"/play": { title: play_title(), render: play_view, auth: "yes" },
+	"/play/regular": { title: regular_queue_title(), render: regular_queue_view, auth: "yes", constructor: initMMSocket, destructor: closeMMSocket },
+	// "/play/tournament": { title: play_title(), render: play_view, auth: "yes", constructor: initMMSocket, destructor: closeMMSocket },
+	"/pong/:uuid": { title: pong_title(), render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket },
 	"/auth/login": { title: login_title(), render: login_view, auth: "no_only" },
 	"/auth/ft/callback": { title: ft_callback_title(), render: ft_callback_view, auth: "no_only" },
 	"/auth/register": { title: register_title(), render: register_view, auth: "no_only" },
@@ -47,7 +50,7 @@ const routes = {
 	"/leaderboard": { title: leaderboard_title(), render: leaderboard_view, auth: "no" },
 };
 
-var last_view = "";
+var last_view = {};
 
 const actions = {
 	"/profile/settings/remove_2fa": { action: remove_2fa, auth: "yes" },
@@ -129,23 +132,23 @@ function checkAccess(view) {
 }
 
 function getParams(pathname) {
-    for (let route in routes) {
-        const paramNames = [];
-        const regexPath = route.replace(/\/:(\w+)/g, (_, paramName) => {
-            paramNames.push(paramName);
-            return "/([^/]+)";
-        });
-        const regex = new RegExp(`^${regexPath}$`);
-        const match = pathname.match(regex);
-        if (match) {
-            const params = match.slice(1).reduce((acc, value, index) => {
-                acc[paramNames[index]] = value;
-                return acc;
-            }, {});
-            return { route: routes[route], params };
-        }
-    }
-    return null;
+	for (let route in routes) {
+		const paramNames = [];
+		const regexPath = route.replace(/\/:(\w+)/g, (_, paramName) => {
+			paramNames.push(paramName);
+			return "/([^/]+)";
+		});
+		const regex = new RegExp(`^${regexPath}$`);
+		const match = pathname.match(regex);
+		if (match) {
+			const params = match.slice(1).reduce((acc, value, index) => {
+				acc[paramNames[index]] = value;
+				return acc;
+			}, {});
+			return { route: routes[route], params };
+		}
+	}
+	return null;
 }
 
 export function router() {
@@ -154,24 +157,27 @@ export function router() {
 	let params = matchedRoute ? matchedRoute.params : {};
 	let action = actions[location.pathname];
 
-	
-	if (location.pathname === last_view)
+
+	if (view === last_view)
 		return;
-	
+
+	if (last_view && last_view.destructor)
+		last_view.destructor();
+
 	if (view && checkAccess(view)) {
 		document.title = ` ACorp - ${view.title} `;
+		if (view.constructor)
+			view.constructor(params);
 		app.innerHTML = view.render(params);
 		if (!isAuth())
 			document.getElementById("nav").innerHTML = "<anon-nav-bar class=\"navbar\"></anon-nav-bar>";
 		else
 			document.getElementById("nav").innerHTML = "<nav-bar class=\"navbar\"></nav-bar>";
-		if (routes[last_view] && routes[last_view].destructor)
-			routes[last_view].destructor();
-		last_view = location.pathname;
+		last_view = view;
 	}
 	else if (action && checkAccess(action)) {
 		action.action();
-		last_view = location.pathname;
+		last_view = view;
 		history.pushState("", "", "/");
 		router();
 	}

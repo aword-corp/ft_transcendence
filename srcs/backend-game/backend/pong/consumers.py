@@ -102,7 +102,7 @@ class PongConsumer(AsyncWebsocketConsumer):
             self.game.state = Game.State.STARTING
             await self.game.asave()
             self.games[self.game_id] = {
-                "ball": self.Ball(0.5, 0.5, 0.003, -0.004, 0.0128),
+                "ball": self.Ball(0.5, 0.5, 0.002, -0.002, 0.0128),
                 "started": False,
                 "users": [],
             }
@@ -140,7 +140,7 @@ class PongConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         data = json.loads(text_data)
 
-        if "action" in data:
+        if "action" in data and self.user.id in self.games[self.game_id]:
             action = data["action"]
             if action == "UP_PRESS_KEYDOWN":
                 self.games[self.game_id][self.user.id].dy = -0.008
@@ -179,7 +179,7 @@ class PongConsumer(AsyncWebsocketConsumer):
         ball = self.games[game_id]["ball"]
         self.game.state = Game.State.PLAYING
         await self.game.asave()
-        while player1.score < 3 and player2.score < 3:
+        while player1.score < 5 and player2.score < 5:
             # async with self.update_lock:
             # update paddle position
             player1.y += player1.dy
@@ -206,8 +206,8 @@ class PongConsumer(AsyncWebsocketConsumer):
             if ball.x - ball.radius < 0:
                 ball.x = 0.5
                 ball.y = 0.5
-                ball.dx = 0.003
-                ball.dy = 0.004
+                ball.dx = 0.002
+                ball.dy = 0.002
                 player1.y = 0.5
                 player2.y = 0.5
                 player2.score += 1
@@ -221,8 +221,8 @@ class PongConsumer(AsyncWebsocketConsumer):
             elif ball.x + ball.radius > 1:
                 ball.x = 0.5
                 ball.y = 0.5
-                ball.dx = 0.003
-                ball.dy = -0.004
+                ball.dx = 0.002
+                ball.dy = -0.002
                 player1.y = 0.5
                 player2.y = 0.5
                 player1.score += 1

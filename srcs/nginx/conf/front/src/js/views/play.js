@@ -1,9 +1,10 @@
-import "../components/play.js";
-
 export function play_title() {
 	return ("Play");
 }
 
 export function play_view(params) {
-	return (`<play-menu></play-menu>`);
+	return (`<div>
+				<a href="/play/regular" data-link id="Regular_Queue">Regular queue</a>
+				<a href="/play/tournament" data-link id="Tournament_Queue">Tournament queue</a>
+			</div>`);
 }
