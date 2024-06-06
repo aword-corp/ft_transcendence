@@ -9,6 +9,7 @@ from .views import (
     get_leaderboard,
     ValidateView,
     ft_callback,
+    HomeView,
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -16,6 +17,7 @@ from rest_framework_simplejwt.views import (
 from django.contrib.auth.views import LogoutView
 
 urlpatterns = [
+    path("/", HomeView, name="home"),
     path("auth/register", RegisterView, name="sign_up"),
     path("auth/login", LoginView, name="token_obtain_pair"),
     path("auth/ft/callback", ft_callback, name="ft_callback"),

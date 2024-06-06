@@ -61,7 +61,7 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: curl -s --raw localhost:8000 | grep "Transcendance"
+      test: curl -s --raw localhost:8000/ | grep "ok"
       interval: 10s
       timeout: 5s
       retries: 20
@@ -87,6 +87,8 @@ services:
       postgresql:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      backend:
         condition: service_healthy
 
 networks:

@@ -181,7 +181,7 @@ class User(AbstractBaseUser):
     banner_url = models.ImageField(
         max_length=256, null=True, upload_to="medias/users/banner/"
     )
-    birth_date = models.DateField()
+    birth_date = models.DateField(null=True)
 
     class Grade(models.IntegerChoices):
         USER = 1, _("User")
@@ -258,6 +258,7 @@ class User(AbstractBaseUser):
     msg_sound = models.BooleanField(default=True)
     duel_sound = models.BooleanField(default=True)
     has_2fa = models.BooleanField(default=False)
+    has_ft = models.BooleanField(default=False)
 
     objects = PongUserManager()
 

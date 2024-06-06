@@ -55,6 +55,14 @@ class IsNotAuthenticated(BasePermission):
         return bool(not request.user or not request.user.is_authenticated)
 
 
+@api_view(["GET"])
+def HomeView(request):
+    return Response(
+        {"details": "ok."},
+        status=status.HTTP_200_OK,
+    )
+
+
 @api_view(["POST"])
 @permission_classes([IsNotAuthenticated])
 @throttle_classes([FivePerMinuteUserThrottle])
@@ -135,7 +143,12 @@ def ft_callback(request: Request):
     email = me_json["email"]
     try:
         user = User.objects.get(email=email)
-        django_login(request, user, backend="db.authentication.CustomAuthBackend")
+        if not user.has_ft:
+            return Response(
+                {"detail": "Could not authenticate."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        django_login(request, user, backend="db.authentication.FTAuthBackend")
         refresh = MyTokenObtainPairSerializer.get_token(user)
         access_token = str(refresh.access_token)
         return Response(
@@ -143,18 +156,21 @@ def ft_callback(request: Request):
             status=status.HTTP_200_OK,
         )
     except User.DoesNotExist:
-        login = me_json["login"]
-        displayname = me_json["displayname"]
-        image_url = me_json["image"]["versions"]["medium"]
-        campus = me_json["campus"]
+        user = User.objects.create(
+            email=email,
+            username=me_json["login"],
+            region="eu-we",
+            country_code="FR",
+            language="FR-FR",
+            has_ft=True,
+        )
+        user.set_unusable_password()
+        user.save()
+        django_login(request, user, backend="db.authentication.FTAuthBackend")
+        refresh = MyTokenObtainPairSerializer.get_token(user)
+        access_token = str(refresh.access_token)
         return Response(
-            {
-                "email": email,
-                "login": login,
-                "displayname": displayname,
-                "image_url": image_url,
-                "campus": campus,
-            },
+            {"access_token": access_token, "refresh_token": str(refresh)},
             status=status.HTTP_200_OK,
         )
 

@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     "channels",
     "pong",
     "db",
-    "storages"
+    "storages",
 ]
 
 CHANNEL_LAYERS = {
@@ -86,6 +86,12 @@ TEMPLATES = [
             ],
         },
     },
+]
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "db.authentication.CustomAuthBackend",
+    "db.authentication.FTAuthBackend",
 ]
 
 ASGI_APPLICATION = "backend.asgi.application"
@@ -143,26 +149,23 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 if os.getenv("dev"):
-
-	STATIC_URL = "/static/"
+    STATIC_URL = "/static/"
 
 else:
+    STATIC_URL = f'{os.getenv("S3_URL_PROTOCOL")}://{os.getenv("S3_HOST")}/static/'
+    STATICFILES_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-	STATIC_URL = f'{os.getenv("S3_URL_PROTOCOL")}://{os.getenv("S3_HOST")}/static/'
-	STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    MEDIA_URL = f'{os.getenv("S3_URL_PROTOCOL")}://{os.getenv("S3_HOST")}/media/'
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-	MEDIA_URL = f'{os.getenv("S3_URL_PROTOCOL")}://{os.getenv("S3_HOST")}/media/'
-	DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-
-
-	DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-	AWS_S3_ENDPOINT_URL = f'https://{os.getenv("S3_ACC_ID")}.r2.cloudflarestorage.com'
-	AWS_STORAGE_BUCKET_NAME = os.getenv("S3_BUCKET")
-	AWS_S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY")
-	AWS_S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_KEY")
-	AWS_S3_SIGNATURE_VERSION = 's3v4'
-	AWS_S3_URL_PROTOCOL = 'https:'
-	AWS_S3_USE_SSL = True
-	AWS_S3_VERIFY = True
-	AWS_QUERYSTRING_AUTH = False
-	AWS_S3_CUSTOM_DOMAIN = os.getenv("S3_HOST")
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    AWS_S3_ENDPOINT_URL = f'https://{os.getenv("S3_ACC_ID")}.r2.cloudflarestorage.com'
+    AWS_STORAGE_BUCKET_NAME = os.getenv("S3_BUCKET")
+    AWS_S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY")
+    AWS_S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_KEY")
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_S3_URL_PROTOCOL = "https:"
+    AWS_S3_USE_SSL = True
+    AWS_S3_VERIFY = True
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_CUSTOM_DOMAIN = os.getenv("S3_HOST")
