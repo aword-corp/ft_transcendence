@@ -2,7 +2,7 @@ export function play_title() {
 	return ("Play");
 }
 
-export function play_view(params) {
+export function play_view() {
 	return (`<div>
 				<a href="/play/regular" data-link id="Regular_Queue">Regular queue</a>
 				<a href="/play/tournament" data-link id="Tournament_Queue">Tournament queue</a>

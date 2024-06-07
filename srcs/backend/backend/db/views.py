@@ -286,6 +286,38 @@ def get_clicks(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def UserProfileView(request, name: str):
+    try:
+        user = User.objects.get(username=name)
+        return Response(
+            {
+                "user": {
+                    "display_name": user.display_name,
+                    "username": user.username,
+                    "bio": user.bio,
+                    "region": user.get_region_display(),
+                    "country_code": user.country_code,
+                    "language": user.get_language_display(),
+                    "avatar_url": user.avatar_url if user.avatar_url else None,
+                    "banner_url": user.banner_url if user.banner_url else None,
+                    "grade": user.get_grade_display(),
+                    "created_at": user.created_at,
+                    "xp": int(user.xp),
+                    "elo": int(user.elo),
+                    "status": user.get_status_display(),
+                }
+            },
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["GET"])
 @time_cache(time=timedelta(seconds=10))
 def get_leaderboard(request) -> Response:
     print("---------Get leaderboard call---------")

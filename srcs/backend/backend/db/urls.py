@@ -10,6 +10,7 @@ from .views import (
     ValidateView,
     ft_callback,
     HomeView,
+    UserProfileView,
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -29,4 +30,5 @@ urlpatterns = [
     path("auth/setup_2fa", setup_2fa, name="setup_2fa"),
     path("clicks", get_clicks, name="get_clicks"),
     path("leaderboard", get_leaderboard, name="get_leaderboard"),
+    path("user/profile/<str:name>", UserProfileView, name="user_profile"),
 ]

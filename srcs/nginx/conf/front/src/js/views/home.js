@@ -3,6 +3,10 @@ export function home_title() {
 }
 
 export function home_view() {
-	return (`<h1>Bonjour</h1>
-				<p>Bonjour</p>`);
+	return (`
+		<h1>Bonjour</h1>
+		<video controls width=640>
+			<source src="/static/assets/mushoku-s01-e22.webm" />
+		</video>`
+	);
 }
