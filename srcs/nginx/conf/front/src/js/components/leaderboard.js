@@ -46,17 +46,18 @@ class Leaderboard extends HTMLElement {
 					if (!name || !name.length)
 						return ;
 					const row = tbody.insertRow();
-					const nameCell = row.insertCell(); // TODO Fix cell size
+					const nameCell = row.insertCell();
 					const scoreCell = row.insertCell();
 	
 					const profile = document.createElement('a');
-					profile.style.width = "100%";
 					profile.textContent = name;
 					profile.href = `/profile/${name}`;
-					profile.style.textAlign = 'center';
-					profile.style.border = '1px solid black';
-					profile.style.padding = '8px';
 					nameCell.appendChild(profile);
+
+					nameCell.style.textAlign = 'center';
+					nameCell.style.border = '1px solid black';
+					nameCell.style.padding = '8px';
+					
 					scoreCell.textContent = score;
 					scoreCell.style.textAlign = 'center';
 					scoreCell.style.border = '1px solid black';
