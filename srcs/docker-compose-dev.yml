@@ -90,6 +90,32 @@ services:
         condition: service_healthy
       backend:
         condition: service_healthy
+  
+  coturn:
+    image: acorp/coturn
+    build: 
+      context: coturn/
+      dockerfile: Dockerfile
+    networks:
+      - tiktok
+    ports:
+      - "3478:3478"
+      - "3478:3478/udp"
+      - "5349:5349"
+      - "5349:5349/udp"
+      - "49152:49152/udp"
+    restart: always
+    env_file:
+      - .env
+    environment:
+      dev: true
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
 
 networks:
   tiktok:

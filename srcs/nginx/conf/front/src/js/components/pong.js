@@ -97,7 +97,6 @@ class PongGame extends HTMLElement {
 	}
 
 	drawBall(ball) {
-		console.log(ball);
 		const ratio_x = this.canvas.width;
 		const ratio_y = this.canvas.height;
 		const scale = Math.min(ratio_x, ratio_y);
@@ -110,7 +109,6 @@ class PongGame extends HTMLElement {
 	}
 
 	drawPaddle(paddle) {
-		console.log(paddle);
 		const ratio_x = this.canvas.width;
 		const ratio_y = this.canvas.height;
 

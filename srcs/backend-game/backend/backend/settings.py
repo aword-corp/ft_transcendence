@@ -16,7 +16,9 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-CSRF_TRUSTED_ORIGINS = [os.getenv("URL")]
+CORS_ORIGIN_ALLOW_ALL = True
+
+CSRF_TRUSTED_ORIGINS = ["https://*"]
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -31,7 +33,6 @@ SECRET_KEY = os.getenv(
 DEBUG = True if os.getenv("dev") else False
 
 ALLOWED_HOSTS = [os.getenv("HOST")]
-
 
 # Application definition
 
