@@ -58,7 +58,7 @@ class Leaderboard extends HTMLElement {
 					nameCell.style.border = '1px solid black';
 					nameCell.style.padding = '8px';
 					
-					scoreCell.textContent = score;
+					scoreCell.textContent = Math.trunc(score);
 					scoreCell.style.textAlign = 'center';
 					scoreCell.style.border = '1px solid black';
 					scoreCell.style.padding = '8px';

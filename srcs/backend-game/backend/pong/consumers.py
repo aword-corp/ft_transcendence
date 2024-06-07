@@ -7,7 +7,7 @@ from math import pi, cos, sin
 import asyncio
 import uuid
 import datetime
-
+from .ai import Paddle, Ball
 
 class DefaultConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -52,26 +52,6 @@ class CountConsumer(AsyncWebsocketConsumer):
 
 
 class PongConsumer(AsyncWebsocketConsumer):
-    class Paddle:
-        def __init__(self, x, y, dy, speed, height, width, score, user: User):
-            self.x = x
-            self.y = y
-            self.dy = dy
-            self.speed = speed
-            self.height = height
-            self.width = width
-            self.score = score
-            self.user = user
-
-    class Ball:
-        def __init__(self, x, y, dx, dy, speed, radius, temperature=0):
-            self.x = x
-            self.y = y
-            self.dx = dx
-            self.dy = dy
-            self.speed = speed
-            self.radius = radius
-
     acceleration = 1.2
     games = {}
 
@@ -131,7 +111,7 @@ class PongConsumer(AsyncWebsocketConsumer):
             self.game.state = Game.State.STARTING
             await self.game.asave()
             self.games[self.game_id] = {
-                "ball": self.Ball(
+                "ball": Ball(
                     0.5,
                     0.5,
                     0.002 * self.game.ball_speed,
@@ -147,7 +127,7 @@ class PongConsumer(AsyncWebsocketConsumer):
             if self.user.id not in self.games[
                 self.game_id
             ] and await self.game.users.aget(id=self.user.id):
-                self.games[self.game_id][self.user.id] = self.Paddle(
+                self.games[self.game_id][self.user.id] = Paddle(
                     0.03 if len(self.games[self.game_id]["users"]) == 0 else 0.97,
                     0.5,
                     0,
