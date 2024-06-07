@@ -68,6 +68,8 @@ CORS_ORIGIN_ALLOW_ALL = True
 
 CSRF_TRUSTED_ORIGINS = ["https://*"]
 
+ALLOWED_HOSTS = ["*"]
+
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "db.authentication.CustomAuthBackend",

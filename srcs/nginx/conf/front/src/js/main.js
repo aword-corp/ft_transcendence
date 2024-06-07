@@ -20,7 +20,7 @@ function logout() {
 
 function remove_2fa() {
 	fetch(
-		"https://localhost:8443/api/auth/remove_2fa",
+		"/api/auth/remove_2fa",
 		{
 			method: "POST",
 			headers: {
@@ -66,7 +66,7 @@ function isAuth() {
 		if (refresh == null || !refresh.length || refresh === "undefined")
 			return (false);
 		fetch(
-			"https://localhost:8443/api/auth/login/refresh",
+			"/api/auth/login/refresh",
 			{
 				method: "POST",
 				headers: {
@@ -95,7 +95,7 @@ function isAuth() {
 	}
 	else {
 		fetch(
-			"https://localhost:8443/api/auth/validate",
+			"/api/auth/validate",
 			{
 				method: "GET",
 				headers: {

@@ -4,7 +4,7 @@ class Leaderboard extends HTMLElement {
 	constructor() {
 		super();
 
-		fetch("https://localhost:8443/api/leaderboard", {
+		fetch("/api/leaderboard", {
 			method: "GET",
 			headers: {
 				Accept: "application/json, text/plain",

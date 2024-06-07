@@ -22,7 +22,7 @@ class TwoFa extends HTMLElement {
 			try {
 
 				const response = await fetch(
-					"https://localhost:8443/api/auth/setup_2fa",
+					"/api/auth/setup_2fa",
 					{
 						method: "POST",
 						headers: {

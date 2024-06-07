@@ -322,7 +322,7 @@ class Register extends HTMLElement {
 			const formData = new FormData(form);
 			try {
 				var response = await fetch(
-					"https://localhost:8443/api/auth/register",
+					"/api/auth/register",
 					{
 						method: "POST",
 						headers: {
@@ -342,7 +342,7 @@ class Register extends HTMLElement {
 				}
 				document.getElementById("form-status").innerText = "User created.";
 				response = await fetch(
-					"https://localhost:8443/api/auth/login",
+					"/api/auth/login",
 					{
 						method: "POST",
 						headers: {

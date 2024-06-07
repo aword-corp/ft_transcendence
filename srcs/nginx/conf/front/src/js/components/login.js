@@ -45,7 +45,7 @@ class Login extends HTMLElement {
 				if (json.detail.includes("validation")) {
 					document.getElementById("otp-input").className = "";
 					document.getElementById("id_otp").required = true;
-					url = "https://localhost:8443/api/auth/login/verify";
+					url = "/api/auth/login/verify";
 				}
 				document.getElementById("form-status").innerText = json.detail;
 				return;
@@ -63,6 +63,6 @@ class Login extends HTMLElement {
 	}
 }
 
-var url = "https://localhost:8443/api/auth/login";
+var url = "/api/auth/login";
 
 customElements.define("login-form", Login);
