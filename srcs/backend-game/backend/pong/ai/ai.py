@@ -1,9 +1,11 @@
-from . import Paddle, Ball, Move
+from . import Paddle, Ball # TODO Fix import
 
-class AiPlayer:
-	def __init__(self, name: str):
+# dy +- 0.008
+class AiPlayer(Paddle):
+	def __init__(self, name: str, x, y, dy, speed, height, width, score):
 		self.trained = False
 		self.name = name
+		super().__init__(x, y, dy, speed, height, width, score, None)
 		print(f"New AI created, say hi to {name}!")
 
 	def train(self, iteration: int) -> None:
@@ -17,7 +19,7 @@ class AiPlayer:
 		self.trained = True
 		print(self.name, "is now trained!")
 	
-	def get_move(self, paddle: Paddle, ball: Ball) -> Move:
-		move = Move.UP
-		print(self.name, "plays", Move(move).name)
-		return move
+	def update_move(self, paddle: Paddle, ball: Ball) -> None:
+		self.dy = -0.008
+		print(self.name, "plays", self.dy)
+

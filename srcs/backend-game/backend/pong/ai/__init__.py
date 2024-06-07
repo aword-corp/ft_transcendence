@@ -1,5 +1,5 @@
-from enum import IntEnum
 from db.models import User
+from .ai import AiPlayer
 
 class Paddle:
 	def __init__(self, x, y, dy, speed, height, width, score, user: User):
@@ -20,7 +20,3 @@ class Ball:
 		self.dy = dy
 		self.speed = speed
 		self.radius = radius
-
-class Move(IntEnum):
-	UP = 0
-	DOWN = 1
