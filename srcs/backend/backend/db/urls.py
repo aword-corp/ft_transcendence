@@ -18,6 +18,7 @@ from .views import (
     UserBlock,
     UserFriendRequestAccept,
     UserFriendRequestReject,
+    UserFriendRequestRemove,
     UserUnBlock,
 )
 from rest_framework_simplejwt.views import (
@@ -54,6 +55,11 @@ urlpatterns = [
         "user/requests/friends/reject/<str:name>",
         UserFriendRequestReject,
         name="user_requests_friends_reject",
+    ),
+    path(
+        "user/requests/friends/remove/<str:name>",
+        UserFriendRequestRemove,
+        name="user_requests_friends_remove",
     ),
     path("user/block/<str:name>", UserBlock, name="user_block"),
     path("user/unblock/<str:name>", UserUnBlock, name="user_unblock"),

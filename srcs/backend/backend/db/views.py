@@ -312,7 +312,10 @@ def UserProfileView(request, name: str):
                     "elo": int(user.elo),
                     "status": user.get_status_display(),
                     "is_friend": user.friends.filter(id=request.user.id).exists(),
-                    "has_friend_request": user.friendrequests.filter(
+                    "has_friend_request": request.user.friendrequests.filter(
+                        id=user.id
+                    ).exists(),
+                    "sent_friend_request": user.friendrequests.filter(
                         id=request.user.id
                     ).exists(),
                     "has_dms": GroupChannel.objects.filter(
@@ -322,6 +325,7 @@ def UserProfileView(request, name: str):
                     .filter(users=user)
                     .distinct()
                     .exists(),
+                    "is_blocked": request.user.blocked.filter(id=user.id).exists(),
                 }
             },
             status=status.HTTP_200_OK,
@@ -476,7 +480,7 @@ def UserFriendRequestAccept(request, name: str):
                 {"error": "You are blocked."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-        if not request.user.friendrequests.filter(user.id).exists():
+        if not request.user.friendrequests.filter(id=user.id).exists():
             return Response(
                 {"error": "You have no friend request from this user."},
                 status=status.HTTP_401_UNAUTHORIZED,
@@ -507,13 +511,42 @@ def UserFriendRequestReject(request, name: str):
         )
     try:
         user = User.objects.get(username=name)
-        if not request.user.friendrequests.filter(user.id).exists():
+        if not request.user.friendrequests.filter(id=user.id).exists():
             return Response(
                 {"error": "You have no friend request from this user."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         request.user.friendrequests.remove(user)
         request.user.save()
+        return Response(
+            {"details": "ok."},
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([FivePerMinuteUserThrottle])
+def UserFriendRequestRemove(request, name: str):
+    if name == request.user.username:
+        return Response(
+            {"error": "You cannot perform this action on yourself."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        user = User.objects.get(username=name)
+        if not user.friendrequests.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You have no pending request to this user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        user.friendrequests.remove(request.user)
+        user.save()
         return Response(
             {"details": "ok."},
             status=status.HTTP_200_OK,
