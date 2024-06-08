@@ -199,9 +199,13 @@ class User(AbstractBaseUser):
     badges = models.ManyToManyField(Badge, related_name="user_badges")
 
     # Social
-    friendrequests = models.ManyToManyField("self", symmetrical=False)
+    friendrequests = models.ManyToManyField(
+        "self", symmetrical=False, related_name="user_friend_requests"
+    )
     friends = models.ManyToManyField("self", symmetrical=True)
-    blocked = models.ManyToManyField("self", symmetrical=False)
+    blocked = models.ManyToManyField(
+        "self", symmetrical=False, related_name="user_blocked_users"
+    )
     verified = models.BooleanField(default=False)
 
     class Status(models.IntegerChoices):
