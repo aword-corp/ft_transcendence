@@ -199,9 +199,13 @@ class User(AbstractBaseUser):
     badges = models.ManyToManyField(Badge, related_name="user_badges")
 
     # Social
-    friendrequests = models.ManyToManyField("self", symmetrical=True)
+    friendrequests = models.ManyToManyField(
+        "self", symmetrical=False, related_name="user_friend_requests"
+    )
     friends = models.ManyToManyField("self", symmetrical=True)
-    blocked = models.ManyToManyField("self")
+    blocked = models.ManyToManyField(
+        "self", symmetrical=False, related_name="user_blocked_users"
+    )
     verified = models.BooleanField(default=False)
 
     class Status(models.IntegerChoices):
@@ -308,6 +312,10 @@ class User(AbstractBaseUser):
     def get_channel_name(self) -> str:
         return self.channel_name
 
+    @database_sync_to_async
+    def is_friend(self, user: "User"):
+        return user.friends.filter(id=self.id).exists()
+
 
 class GlobalChat(models.Model):
     content = models.CharField(max_length=512)
@@ -337,15 +345,21 @@ class Messages(models.Model):
     original_content = models.CharField(max_length=2048)
 
 
-class PrivateMessage(models.Model):
+class GroupChannel(models.Model):
     name = models.CharField(max_length=64)
     description = models.CharField(max_length=256, null=True)
     avatar_url = models.ImageField(
         max_length=256, null=True, upload_to="medias/groups/avatar/"
     )
-    users = models.ManyToManyField(User, related_name="channel_users")
     messages = models.ManyToManyField(Messages, related_name="channel_messages")
     created_at = models.DateTimeField(auto_now_add=True)
+    users = models.ManyToManyField(User, related_name="channel_users")
+
+    class Type(models.IntegerChoices):
+        DM = 1, _("Direct Channel")
+        GROUP = 2, _("Group Channel")
+
+    channel_type = models.SmallIntegerField(choices=Type.choices)
 
 
 class Report(models.Model):

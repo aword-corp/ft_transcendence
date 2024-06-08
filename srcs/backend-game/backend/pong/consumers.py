@@ -7,7 +7,8 @@ from math import pi, cos, sin
 import asyncio
 import uuid
 import datetime
-from .ai import AiPlayer, Paddle, Ball
+from .ai.ai import AiPlayer, Paddle, Ball
+
 
 class DefaultConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -396,6 +397,7 @@ class PongConsumer(AsyncWebsocketConsumer):
 
         await self.close()
 
+
 # TODO No data save in DB
 class PongAIConsumer(AsyncWebsocketConsumer):
     acceleration = 1.2
@@ -633,7 +635,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
         player1.user.status = User.Status.ON
         await player1.user.asave()
         self.game.state = self.game.State.ENDED
-        
+
         del self.games[user_id]
 
         await self.game.asave()

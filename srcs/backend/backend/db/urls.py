@@ -11,6 +11,14 @@ from .views import (
     ft_callback,
     HomeView,
     UserProfileView,
+    SelfUserFriendsList,
+    UserFriendsList,
+    UserFriendsAdd,
+    UserFriendsRemove,
+    UserBlock,
+    UserFriendRequestAccept,
+    UserFriendRequestReject,
+    UserUnBlock,
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -31,4 +39,22 @@ urlpatterns = [
     path("clicks", get_clicks, name="get_clicks"),
     path("leaderboard", get_leaderboard, name="get_leaderboard"),
     path("user/profile/<str:name>", UserProfileView, name="user_profile"),
+    path("user/friends/list", SelfUserFriendsList, name="self_user_friends_list"),
+    path("user/friends/list/<str:name>", UserFriendsList, name="user_friends_list"),
+    path("user/friends/add/<str:name>", UserFriendsAdd, name="user_friends_add"),
+    path(
+        "user/friends/remove/<str:name>", UserFriendsRemove, name="user_friends_remove"
+    ),
+    path(
+        "user/requests/friends/accept/<str:name>",
+        UserFriendRequestAccept,
+        name="user_requests_friends_accept",
+    ),
+    path(
+        "user/requests/friends/reject/<str:name>",
+        UserFriendRequestReject,
+        name="user_requests_friends_reject",
+    ),
+    path("user/block/<str:name>", UserBlock, name="user_block"),
+    path("user/unblock/<str:name>", UserUnBlock, name="user_unblock"),
 ]

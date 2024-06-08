@@ -10,7 +10,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework import status
 from rest_framework.throttling import UserRateThrottle
 from django.contrib.auth import authenticate, login as django_login
-from .models import User, UserTwoFactorAuthData, Count
+from .models import User, UserTwoFactorAuthData, Count, GroupChannel
 from django.core.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 import pyotp
@@ -290,6 +290,11 @@ def get_clicks(request):
 def UserProfileView(request, name: str):
     try:
         user = User.objects.get(username=name)
+        if user.blocked.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are blocked."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         return Response(
             {
                 "user": {
@@ -306,8 +311,276 @@ def UserProfileView(request, name: str):
                     "xp": int(user.xp),
                     "elo": int(user.elo),
                     "status": user.get_status_display(),
+                    "is_friend": user.friends.filter(id=request.user.id).exists(),
+                    "has_friend_request": user.friendrequests.filter(
+                        id=request.user.id
+                    ).exists(),
+                    "has_dms": GroupChannel.objects.filter(
+                        channel_type=GroupChannel.Type.DM
+                    )
+                    .filter(users=request.user)
+                    .filter(users=user)
+                    .distinct()
+                    .exists(),
                 }
             },
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def SelfUserFriendsList(request):
+    return Response(
+        {"friends": [user.username for user in request.user.friends.all()]},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def UserFriendsList(request, name: str):
+    if name == request.user.username:
+        return Response(
+            {"friends": [user.username for user in request.user.friends.all()]},
+            status=status.HTTP_200_OK,
+        )
+    try:
+        user = User.objects.get(username=name)
+        if user.blocked.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are blocked."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if user.display_friends == user.Friend_Display.PRIVATE:
+            return Response(
+                {"error": "You cannot see this user friends list."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if (
+            user.display_friends == user.Friend_Display.FRIENDS
+            and not user.friends.filter(id=request.user.id).exists()
+        ):
+            return Response(
+                {"error": "You cannot see this user friends list."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        return Response(
+            {"friends": [user.username for user in user.friends.all()]},
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([FivePerMinuteUserThrottle])
+def UserFriendsAdd(request, name: str):
+    if name == request.user.username:
+        return Response(
+            {"error": "You cannot add yourself."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        user = User.objects.get(username=name)
+        if user.blocked.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are blocked."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if user.friend_default_response == user.Friend_Request.REJECT:
+            return Response(
+                {"error": "You cannot send a friend request to this user."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if user.friends.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are already friend with this user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if user.friendrequests.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You already sent a friend request to this user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if request.user.friendrequests.filter(id=user.id).exists():
+            user.friends.add(request.user)
+            request.user.friendrequests.remove(user)
+            request.user.save()
+        else:
+            user.friendrequests.add(request.user)
+        user.save()
+        return Response(
+            {"details": "ok."},
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([FivePerMinuteUserThrottle])
+def UserFriendsRemove(request, name: str):
+    if name == request.user.username:
+        return Response(
+            {"error": "You cannot remove yourself."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        user = User.objects.get(username=name)
+        if not user.friends.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are not friend with this user."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        user.friends.remove(request.user)
+        user.save()
+        request.user.save()
+        return Response(
+            {"details": "ok."},
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([FivePerMinuteUserThrottle])
+def UserFriendRequestAccept(request, name: str):
+    if name == request.user.username:
+        return Response(
+            {"error": "You cannot accept yourself."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        user = User.objects.get(username=name)
+        if user.blocked.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are blocked."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if not request.user.friendrequests.filter(user.id).exists():
+            return Response(
+                {"error": "You have no friend request from this user."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        request.user.friendrequests.remove(user)
+        user.friends.add(request.user)
+        user.save()
+        request.user.save()
+        return Response(
+            {"details": "ok."},
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([FivePerMinuteUserThrottle])
+def UserFriendRequestReject(request, name: str):
+    if name == request.user.username:
+        return Response(
+            {"error": "You cannot reject yourself."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        user = User.objects.get(username=name)
+        if not request.user.friendrequests.filter(user.id).exists():
+            return Response(
+                {"error": "You have no friend request from this user."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        request.user.friendrequests.remove(user)
+        request.user.save()
+        return Response(
+            {"details": "ok."},
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([FivePerMinuteUserThrottle])
+def UserBlock(request, name: str):
+    if name == request.user.username:
+        return Response(
+            {"error": "You cannot block yourself."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        user = User.objects.get(username=name)
+        if request.user.blocked.filter(id=user.id).exists():
+            return Response(
+                {"error": "You have already blocked this user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if user.friends.filter(id=request.user.id).exists():
+            user.friends.remove(request.user)
+        if user.friendrequests.filter(id=request.user.id).exists():
+            user.friendrequests.remove(request.user)
+        if request.user.friendrequests.filter(id=user.id).exists():
+            request.user.friendrequests.remove(user)
+        request.user.blocked.add(user)
+        user.save()
+        request.user.save()
+        return Response(
+            {"details": "ok."},
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([FivePerMinuteUserThrottle])
+def UserUnBlock(request, name: str):
+    if name == request.user.username:
+        return Response(
+            {"error": "You cannot unblock yourself."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        user = User.objects.get(username=name)
+        if not request.user.blocked.filter(id=user.id).exists():
+            return Response(
+                {"error": "You did not block this user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        request.user.blocked.remove(user)
+        request.user.save()
+        return Response(
+            {"details": "ok."},
             status=status.HTTP_200_OK,
         )
     except User.DoesNotExist:
