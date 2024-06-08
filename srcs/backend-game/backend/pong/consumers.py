@@ -797,8 +797,8 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
                         self.elo_range.pop(player.id)
                     asyncio.create_task(self.start_game(users))
                 else:
-                    if now.second - self.elo_range_timer[player.id].second > 15:
-                        self.elo_range[player.id] *= 1.5
+                    if (now - self.elo_range_timer[player.id]).total_seconds() > 15:
+                        self.elo_range[player.id] += 15
                         self.elo_range_timer[player.id] = now
             await asyncio.sleep(1)
 

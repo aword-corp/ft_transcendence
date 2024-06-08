@@ -346,7 +346,7 @@ class Messages(models.Model):
 
 
 class GroupChannel(models.Model):
-    name = models.CharField(max_length=64)
+    name = models.CharField(max_length=64, null=True)
     description = models.CharField(max_length=256, null=True)
     avatar_url = models.ImageField(
         max_length=256, null=True, upload_to="medias/groups/avatar/"

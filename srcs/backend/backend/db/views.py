@@ -304,8 +304,8 @@ def UserProfileView(request, name: str):
                     "region": user.get_region_display(),
                     "country_code": user.country_code,
                     "language": user.get_language_display(),
-                    "avatar_url": user.avatar_url if user.avatar_url else None,
-                    "banner_url": user.banner_url if user.banner_url else None,
+                    "avatar_url": user.avatar_url.url if user.avatar_url else None,
+                    "banner_url": user.banner_url.url if user.banner_url else None,
                     "grade": user.get_grade_display(),
                     "created_at": user.created_at,
                     "xp": int(user.xp),
@@ -410,6 +410,13 @@ def UserFriendsAdd(request, name: str):
             return Response(
                 {"error": "You are already friend with this user."},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+        if user.friend_default_response == user.Friend_Request.ACCEPT:
+            user.friends.add(request.user)
+            user.save()
+            return Response(
+                {"details": "ok."},
+                status=status.HTTP_200_OK,
             )
         if user.friendrequests.filter(id=request.user.id).exists():
             return Response(
@@ -619,6 +626,87 @@ def UserUnBlock(request, name: str):
     except User.DoesNotExist:
         return Response(
             {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def channel_username(request, name: str):
+    if name == request.user.username:
+        return Response(
+            {"error": "You cannot start a private message channel with yourself."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        user = User.objects.get(username=name)
+        channel = (
+            GroupChannel.objects.filter(channel_type=GroupChannel.Type.DM)
+            .filter(users=request.user)
+            .filter(users=user)
+            .distinct()
+            .first()
+        )
+        if not channel:
+            if user.msg_default_response == User.Message_Request.BLOCK:
+                return Response(
+                    {
+                        "error": "You cannot start a private message channel with this user."
+                    },
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+            channel = GroupChannel.objects.create()
+            channel.users.add(user)
+            channel.users.add(request.user)
+        return Response({"channel_id": channel.id}, status=status.HTTP_200_OK)
+
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def channel_id(request, id: int):
+    try:
+        channel = GroupChannel.objects.get(id=id)
+        if not channel.users.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are not allowed to see this channel."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        return Response(
+            {
+                "channel": {
+                    "name": channel.name,
+                    "description": channel.description,
+                    "avatar_url": channel.avatar_url.url
+                    if channel.avatar_url
+                    else None,
+                    "created_at": channel.created_at,
+                    "channel_type": channel.channel_type,
+                    "messages": [
+                        {
+                            "content": message.content,
+                            "author": message.author.username,
+                            "created_at": message.created_at,
+                            "seen_by": [
+                                user.username for user in message.seen_by.all()
+                            ],
+                            "edited": message.edited,
+                        }
+                        for message in channel.messages.all()
+                    ],
+                }
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    except GroupChannel.DoesNotExist:
+        return Response(
+            {"error": "Channel not found."},
             status=status.HTTP_404_NOT_FOUND,
         )
 
