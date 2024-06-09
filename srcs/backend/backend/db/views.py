@@ -351,7 +351,18 @@ def SelfUserFriendsList(request):
 def UserFriendsList(request, name: str):
     if name == request.user.username:
         return Response(
-            {"friends": [user.username for user in request.user.friends.all()]},
+            {
+                "friends": [
+                    {
+                        "name": user.username,
+                        "avatar_url": user.avatar_url.url if user.avatar_url else None,
+                        "display_name": user.display_name,
+                        "grade": user.grade,
+                        "verified": user.verified,
+                    }
+                    for user in request.user.friends.all()
+                ]
+            },
             status=status.HTTP_200_OK,
         )
     try:
@@ -375,7 +386,18 @@ def UserFriendsList(request, name: str):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         return Response(
-            {"friends": [user.username for user in user.friends.all()]},
+            {
+                "friends": [
+                    {
+                        "name": user.username,
+                        "avatar_url": user.avatar_url.url if user.avatar_url else None,
+                        "display_name": user.display_name,
+                        "grade": user.grade,
+                        "verified": user.verified,
+                    }
+                    for user in user.friends.all()
+                ]
+            },
             status=status.HTTP_200_OK,
         )
     except User.DoesNotExist:

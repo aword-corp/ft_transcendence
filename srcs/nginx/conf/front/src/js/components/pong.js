@@ -28,6 +28,8 @@ class PongGame extends HTMLElement {
 
 	}
 
+	let name = (JSON.parse(atob(localStorage.getItem("access-token").split('.')[1]))).username;
+
 
 	handleKeyDown(event) {
 		let message;
@@ -79,8 +81,13 @@ class PongGame extends HTMLElement {
 
 			let player1 = data.position.player1;
 			let player2 = data.position.player2;
+			let ball = data.position.ball;
 
-			this.drawBall(data.position.ball);
+			if self.name == player2.name {
+				self.mirror(player1, player2, ball);
+			}
+
+			this.drawBall();
 			this.drawPaddle(player1);
 			this.drawPaddle(player2);
 			this.drawCentralLine();
@@ -127,15 +134,24 @@ class PongGame extends HTMLElement {
 
 	drawCentralLine() {
 		this.ctx.beginPath();
-		this.ctx.moveTo(this.canvas.width / 2, 0);
-		this.ctx.lineTo(this.canvas.width / 2, this.canvas.height);
+		this.ctx.moveTo((this.canvas.width >> 1), 0);
+		this.ctx.lineTo((this.canvas.width >> 1), this.canvas.height);
 		this.ctx.stroke();
 	}
 
 	drawScores(player_1, player_2) {
 		this.ctx.fillStyle = 'black';
-		this.ctx.fillText(player_1.score, this.canvas.width / 2 - 75, 50);
-		this.ctx.fillText(player_2.score, this.canvas.width / 2 + 45, 50);
+		this.ctx.fillText(player_1.score, (this.canvas.width >> 1) - 75, 50);
+		this.ctx.fillText(player_2.score, (this.canvas.width >> 1) + 45, 50);
+	}
+
+	mirror(player1, player2, ball) {
+		let tmp = player1.x;
+		player1.x = player2.x;
+		player2.x = tmp;
+
+		ball.x = Math.abs(0.5 - ball.x);
+		ball.y = Math.abs(0.5 - ball.y);
 	}
 
 }

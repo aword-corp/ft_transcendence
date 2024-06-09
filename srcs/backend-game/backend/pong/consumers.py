@@ -2,12 +2,13 @@ import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from db.models import Count, Game, User
+from db.models import Count, Game, User, Tournament
 from math import pi, cos, sin
 import asyncio
 import uuid
-import datetime
+from datetime import datetime, timedelta
 from .ai.ai import AiPlayer, Paddle, Ball
+import math
 
 
 class DefaultConsumer(AsyncWebsocketConsumer):
@@ -182,10 +183,17 @@ class PongConsumer(AsyncWebsocketConsumer):
                 {
                     "type": "broadcast.message",
                     "message": {
-                        "user": self.user.display_name
-                        if self.user.display_name
-                        else self.user.username,
+                        "user": {
+                            "name": self.user.username,
+                            "avatar_url": self.user.avatar_url.url
+                            if self.user.avatar_url
+                            else None,
+                            "display_name": self.user.display_name,
+                            "grade": self.user.grade,
+                            "verified": self.user.verified,
+                        },
                         "message": message,
+                        "is_player": self.user.id in self.games[self.game_id],
                     },
                 },
             )
@@ -304,6 +312,7 @@ class PongConsumer(AsyncWebsocketConsumer):
                             "width": player1.width,
                             "height": player1.height,
                             "score": player1.score,
+                            "name": player1.user.username,
                         },
                         "player2": {
                             "x": player2.x,
@@ -311,6 +320,7 @@ class PongConsumer(AsyncWebsocketConsumer):
                             "width": player2.width,
                             "height": player2.height,
                             "score": player2.score,
+                            "name": player2.user.username,
                         },
                     },
                 },
@@ -850,3 +860,129 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
         await self.send(
             text_data=json.dumps({"type": "update.message", "users": repr(users)})
         )
+
+
+class TournamentConsumer(AsyncWebsocketConsumer):
+    tournaments = []
+
+    queue: list[User] = []
+
+    @database_sync_to_async
+    def create_tournament(self, user):
+        return Tournament.objects.create(
+            name="Tournament n" + len(Tournament.objects.all()),
+            description="Regular Tournament",
+            author=user,
+            created_at=datetime.now(),
+            starting_at=datetime.now() + timedelta(minutes=5),
+            state=Tournament.State.STARTING,
+        )
+
+    # @database_sync_to_async
+    # def add_user(self, tournament, user):
+    #     tournament.users.add(user)
+    #     tournament.save()
+
+    # @database_sync_to_async
+    # def change_state(self, tournament, state):
+    #     tournament.state = state
+    #     tournament.save()
+
+    @database_sync_to_async
+    def get_tournament_players(self, tournament):
+        return tournament.users.all()
+
+    async def connect(self):
+        await self.accept()
+        if self.scope["user"].is_authenticated:
+            self.user: User = self.scope["user"]
+        else:
+            await self.send(json.dumps({"error": "You need to be logged in."}))
+            await self.close()
+            return
+
+        if bool(self.user.channel_name):
+            await self.send(json.dumps({"error": "You are already in a queue."}))
+            await self.close()
+            return
+
+        if self.user.status == User.Status.GAME:
+            await self.send(json.dumps({"error": "You are already in a game."}))
+            await self.close()
+            return
+
+        self.queue.append(self.user)
+
+        if len(self.queue) == 1:
+            asyncio.create_task(self.tournament())
+
+        await self.user.set_channel_name(self.channel_name)
+
+        await self.channel_layer.group_add("tournament", self.channel_name)
+
+        await self.channel_layer.group_send(
+            "tournament", {"type": "update.message", "users": repr(self.queue)}
+        )
+
+    async def tournament(self):
+        if len(self.queue) == 0:
+            await self.send(json.dumps({"message": "Queue is empty"}))
+            return
+
+        tournament = await self.create_tournament(self.queue[0])
+        self.tournaments.append(tournament)
+
+        while len(self.queue) < 32 and datetime.now() < tournament.starting_at:
+            await asyncio.sleep(1)
+
+        for player in self.queue:
+            tournament.users.add(player)
+        self.queue = []
+        tournament.starting_at = datetime.now()
+        tournament.state = Tournament.State.PLAYING
+        await tournament.asave()
+
+        players = await self.get_tournament_players(tournament)
+        await self.run_tournament(self, tournament, players)
+
+    async def run_tournament(self, tournament, players):
+        n_rounds = math.ceil(math.log2(len(players)))
+        tree = [[] for _ in range(n_rounds)]
+        current_round = 0
+        tree[current_round].extend(players)
+
+        while current_round < n_rounds - 1:
+            next_round = current_round + 1
+            for i in range(0, len(tree[current_round]), 2):
+                if i + 1 < len(tree[current_round]):
+                    player1 = tree[current_round][i]
+                    player2 = tree[current_round][i + 1]
+                    game = await self.start_game(player1, player2)
+                    winner = await self.wait_for_game_winner(game)
+                    tree[next_round].append(winner)
+
+    async def start_game(self, player1, player2):
+        await asyncio.sleep(2)
+        game = await Game.objects.acreate(
+            uuid=uuid.uuid4(), region=self.region, state=Game.State.WAITING
+        )
+        await game.users.aadd(player1)
+        await game.users.aadd(player2)
+        await game.asave()
+        await self.channel_layer.send(
+            await player1.get_channel_name(),
+            {"type": "game.start", "game_id": str(game.uuid)},
+        )
+        await self.channel_layer.send(
+            await player2.get_channel_name(),
+            {"type": "game.start", "game_id": str(game.uuid)},
+        )
+
+        player1.status = User.Status.GAME
+        player1.channel_name = None
+        await player1.asave()
+        player2.status = User.Status.GAME
+        player2.channel_name = None
+        await player2.asave()
+
+        return game
