@@ -12,6 +12,7 @@ import "./components/navbar.js";
 import { closeMMSocket, closeTMSocket, closePongSocket, closeSocketClick, initMMSocket, initTMSocket, initPongSocket, initSocketClick } from "./components/socket.js";
 import { ft_callback_title, ft_callback_view } from "./views/ft_callback.js";
 import { regular_queue_title, regular_queue_view } from "./views/regular_queue.js";
+import { tournament_queue_title, tournament_queue_view } from "./views/tournament_queue.js";
 import { user_profile_title, user_profile_view } from "./views/user_profile.js";
 import { channels_title, channels_view } from "./views/channels.js";
 import { channels_id_title, channels_id_view } from "./views/channels_id.js";
@@ -43,7 +44,7 @@ const routes = {
 	"/chat": { title: chat_title, render: chat_view, auth: "yes" },
 	"/play": { title: play_title, render: play_view, auth: "yes" },
 	"/play/regular": { title: regular_queue_title, render: regular_queue_view, auth: "yes", constructor: initMMSocket, destructor: closeMMSocket },
-	// "/play/tournament": { title: tournament_queue_title, render: tournament_queue_view, auth: "yes", constructor: initTMSocket, destructor: closeTMSocket },
+	"/play/tournament": { title: tournament_queue_title, render: tournament_queue_view, auth: "yes", constructor: initTMSocket, destructor: closeTMSocket },
 	"/channels/:id": { title: channels_id_title, render: channels_id_view, auth: "yes" },
 	"/channels": { title: channels_title, render: channels_view, auth: "yes" },
 	"/pong/:uuid": { title: pong_title, render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket }, // AI will go here with game id "ai"

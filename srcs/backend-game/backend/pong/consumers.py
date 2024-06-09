@@ -865,17 +865,19 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
 class TournamentConsumer(AsyncWebsocketConsumer):
     tournaments = []
 
-    queue: list[User] = []
+    queue = []
 
     @database_sync_to_async
     def create_tournament(self, user):
         return Tournament.objects.create(
-            name="Tournament n" + len(Tournament.objects.all()),
+            name="Tournament n" + str(len(Tournament.objects.all())),
             description="Regular Tournament",
             author=user,
             created_at=datetime.now(),
             starting_at=datetime.now() + timedelta(minutes=5),
+            ended_at=datetime.now() + timedelta(hours=2),
             state=Tournament.State.STARTING,
+            region=user.region,
         )
 
     # @database_sync_to_async
@@ -920,6 +922,19 @@ class TournamentConsumer(AsyncWebsocketConsumer):
 
         await self.channel_layer.group_add("tournament", self.channel_name)
 
+        users = []
+        for user in self.queue:
+            users.append(user.username)
+        # time_in_queue = tournament.starting_at
+        await self.channel_layer.group_send(
+            "tournament",
+            {
+                "type": "update.message",
+                "users": users,
+                # "time_left": (time_in_queue - datetime.now()).strftime("%H:%M:%S"),
+            },
+        )
+
     async def tournament(self):
         if len(self.queue) == 0:
             await self.send(json.dumps({"message": "Queue is empty"}))
@@ -929,15 +944,6 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         self.tournaments.append(tournament)
 
         while len(self.queue) < 32 and datetime.now() < tournament.starting_at:
-            time_in_queue = tournament.starting_at
-            await self.channel_layer.group_send(
-                "tournament",
-                {
-                    "type": "update.message",
-                    "users": repr(self.queue),
-                    "time_left": time_in_queue - datetime.now(),
-                },
-            )
             await asyncio.sleep(1)
 
         for player in self.queue:
@@ -1022,12 +1028,43 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             text_data=json.dumps({"type": "game.start", "game_id": game_id})
         )
 
+    async def disconnect(self, close_code):
+        try:
+            self.queue.remove(self.user)
+        except (ValueError, AttributeError):
+            return
+
+        await self.user.set_channel_name(None)
+
+        await self.channel_layer.group_discard("matchmaking", self.channel_name)
+
+        users = []
+        for user in self.queue:
+            users.append(user.username)
+        # time_in_queue = tournament.starting_at
+        await self.channel_layer.group_send(
+            "tournament",
+            {
+                "type": "update.message",
+                "users": users,
+                # "time_left": (time_in_queue - datetime.now()).strftime("%H:%M:%S"),
+            },
+        )
+
+        await self.channel_layer.group_send(
+            "matchmaking", {"type": "update.message", "users": users}
+        )
+
     async def update_message(self, event):
         users = event["users"]
-        time_left = event["time_left"]
+        # time_left = event["time_left"]
 
         await self.send(
             text_data=json.dumps(
-                {"type": "update.message", "users": repr(users), "time_left": time_left}
+                {
+                    "type": "update.message",
+                    "users": users,
+                    # "time_left": time_left
+                }
             )
         )

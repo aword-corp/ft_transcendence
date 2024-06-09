@@ -20,6 +20,7 @@ class PongGame extends HTMLElement {
 		this.handleKeyUp = this.handleKeyUp.bind(this);
 		this.handleSocketMessage = this.handleSocketMessage.bind(this);
 
+		this.name = (JSON.parse(atob(localStorage.getItem("access-token").split('.')[1]))).username;
 
 		document.addEventListener("keydown", this.handleKeyDown);
 		document.addEventListener("keyup", this.handleKeyUp);
@@ -28,7 +29,6 @@ class PongGame extends HTMLElement {
 
 	}
 
-	static name = undefined;
 
 	handleKeyDown(event) {
 		let message;
