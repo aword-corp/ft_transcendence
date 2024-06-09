@@ -13,6 +13,8 @@ import { closeMMSocket, closeTMSocket, closePongSocket, closeSocketClick, initMM
 import { ft_callback_title, ft_callback_view } from "./views/ft_callback.js";
 import { regular_queue_title, regular_queue_view } from "./views/regular_queue.js";
 import { user_profile_title, user_profile_view } from "./views/user_profile.js";
+import { channels_title, channels_view } from "./views/channels.js";
+import { channels_id_title, channels_id_view } from "./views/channels_id.js";
 
 function logout() {
 	localStorage.removeItem("access-token");
@@ -42,6 +44,8 @@ const routes = {
 	"/play": { title: play_title, render: play_view, auth: "yes" },
 	"/play/regular": { title: regular_queue_title, render: regular_queue_view, auth: "yes", constructor: initMMSocket, destructor: closeMMSocket },
 	// "/play/tournament": { title: tournament_queue_title, render: tournament_queue_view, auth: "yes", constructor: initTMSocket, destructor: closeTMSocket },
+	"/channels/:id": { title: channels_id_title, render: channels_id_view, auth: "yes" },
+	"/channels": { title: channels_title, render: channels_view, auth: "yes" },
 	"/pong/:uuid": { title: pong_title, render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket }, // AI will go here with game id "ai"
 	"/auth/login": { title: login_title, render: login_view, auth: "no_only" },
 	"/auth/ft/callback": { title: ft_callback_title, render: ft_callback_view, auth: "no_only" },

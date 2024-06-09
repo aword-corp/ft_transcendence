@@ -27,7 +27,7 @@ class Navbar extends HTMLElement {
 				<a href="/" data-link id="Home">Home</a>
 				<a href="/play" data-link id="Play">Play</a>
 				<a href="/clicks" data-link id="Clicks">Clicks</a>
-				<a href="/chat" data-link id="Chat">Chat</a>
+				<a href="/channels" data-link id="Channels">Chat</a>
 				<a href="/leaderboard" data-link id="Leaderboard">Leaderboard</a>
 				<a href="/pong" data-link id="pong">Pong</a>
 			</div>

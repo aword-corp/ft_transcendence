@@ -716,7 +716,11 @@ def channel(request):
             status=status.HTTP_200_OK,
         )
     elif request.method == "PUT":
-        if "name" not in request.data or not len(request.data["name"]):
+        if (
+            "name" not in request.data
+            or not isinstance(request.data["name"], str)
+            or not len(request.data["name"])
+        ):
             return Response(
                 {"error": "You tried to create a channel with an empty name."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -745,7 +749,7 @@ def channel(request):
                     "topic": channel.topic,
                 }
             },
-            status=status.HTTP_200_OK,
+            status=status.HTTP_201_CREATED,
         )
 
 
@@ -774,6 +778,7 @@ def channel_id(request, id: int):
                         else None,
                         "channel_type": channel.channel_type,
                         "topic": channel.topic,
+                        "users": [user.username for user in channel.users.all()],
                     }
                 },
                 status=status.HTTP_200_OK,
@@ -787,8 +792,37 @@ def channel_id(request, id: int):
                     channel.description = value[:256]
                 elif key == "topic" and isinstance(value, str):
                     channel.topic = value[:512]
+                elif key == "users" and (
+                    isinstance(value, list)
+                    and all(isinstance(item, str) for item in value)
+                ):
+                    for username in value:
+                        try:
+                            user = User.objects.get(username=username)
+                            if user.msg_default_response != user.Message_Request.BLOCK:
+                                channel.users.add(user)
+                        except User.DoesNotExist:
+                            pass
             channel.save()
-            return Response({"details": "ok"}, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    "channel": {
+                        "name": channel.name,
+                        "description": channel.description,
+                        "avatar_url": channel.avatar_url.url
+                        if channel.avatar_url
+                        else None,
+                        "created_at": channel.created_at,
+                        "created_by": channel.created_by.username
+                        if channel.created_by
+                        else None,
+                        "channel_type": channel.channel_type,
+                        "topic": channel.topic,
+                        "users": [user.username for user in channel.users.all()],
+                    }
+                },
+                status=status.HTTP_200_OK,
+            )
 
         elif request.method == "DELETE":
             if channel.created_by.id != request.user.id:
@@ -842,7 +876,11 @@ def channel_messages(request, id: int):
             )
 
         elif request.method == "POST":
-            if "content" not in request.data or not len(request.data["content"]):
+            if (
+                "content" not in request.data
+                or not isinstance(request.data["content"], str)
+                or not len(request.data["content"])
+            ):
                 return Response(
                     {"error": "You tried to send an empty message."},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -916,7 +954,11 @@ def channel_messages_id(request, channel_id: int, message_id: int):
                         status=status.HTTP_401_UNAUTHORIZED,
                     )
 
-                if "content" not in request.data or not len(request.data["content"]):
+                if (
+                    "content" not in request.data
+                    or not isinstance(request.data["content"], str)
+                    or not len(request.data["content"])
+                ):
                     return Response(
                         {"error": "You tried to edit a message to be empty."},
                         status=status.HTTP_400_BAD_REQUEST,
@@ -929,7 +971,16 @@ def channel_messages_id(request, channel_id: int, message_id: int):
 
             message.save()
             return Response(
-                {"details": "ok."},
+                {
+                    "message": {
+                        "content": message.content,
+                        "author": message.author.username,
+                        "created_at": message.created_at,
+                        "seen_by": [user.username for user in message.seen_by.all()],
+                        "edited": message.edited,
+                        "is_pin": message.is_pin,
+                    }
+                },
                 status=status.HTTP_200_OK,
             )
 
