@@ -27,6 +27,22 @@ export function closeMMSocket() {
 }
 
 
+export var tmSocket = undefined;
+
+export function initTMSocket() {
+	if (tmSocket)
+		return;
+	tmSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/pong/tournament');
+}
+
+export function closeTMSocket() {
+	if (tmSocket && (tmSocket.readyState === WebSocket.OPEN || tmSocket.readyState === WebSocket.CONNECTING))
+		tmSocket.close();
+	tmSocket = undefined;
+}
+
+
+
 export var pongSocket = undefined;
 
 export function initPongSocket(params) {

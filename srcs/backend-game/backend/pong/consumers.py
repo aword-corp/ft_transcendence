@@ -920,10 +920,6 @@ class TournamentConsumer(AsyncWebsocketConsumer):
 
         await self.channel_layer.group_add("tournament", self.channel_name)
 
-        await self.channel_layer.group_send(
-            "tournament", {"type": "update.message", "users": repr(self.queue)}
-        )
-
     async def tournament(self):
         if len(self.queue) == 0:
             await self.send(json.dumps({"message": "Queue is empty"}))
@@ -933,6 +929,15 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         self.tournaments.append(tournament)
 
         while len(self.queue) < 32 and datetime.now() < tournament.starting_at:
+            time_in_queue = tournament.starting_at
+            await self.channel_layer.group_send(
+                "tournament",
+                {
+                    "type": "update.message",
+                    "users": repr(self.queue),
+                    "time_left": time_in_queue - datetime.now(),
+                },
+            )
             await asyncio.sleep(1)
 
         for player in self.queue:
@@ -1008,3 +1013,21 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             await asyncio.sleep(1)
             game = await Game.objects.get(id=game.id)
         return game.winner
+
+    async def game_start(self, event):
+        game_id = event["game_id"]
+        print(event["game_id"])
+
+        await self.send(
+            text_data=json.dumps({"type": "game.start", "game_id": game_id})
+        )
+
+    async def update_message(self, event):
+        users = event["users"]
+        time_left = event["time_left"]
+
+        await self.send(
+            text_data=json.dumps(
+                {"type": "update.message", "users": repr(users), "time_left": time_left}
+            )
+        )
