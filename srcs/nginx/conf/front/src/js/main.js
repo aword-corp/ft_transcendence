@@ -41,7 +41,7 @@ const routes = {
 	"/chat": { title: chat_title, render: chat_view, auth: "yes" },
 	"/play": { title: play_title, render: play_view, auth: "yes" },
 	"/play/regular": { title: regular_queue_title, render: regular_queue_view, auth: "yes", constructor: initMMSocket, destructor: closeMMSocket },
-	"/play/tournament": { title: tournament_queue_title, render: tournament_queue_view, auth: "yes", constructor: initTMSocket, destructor: closeTMSocket },
+	// "/play/tournament": { title: tournament_queue_title, render: tournament_queue_view, auth: "yes", constructor: initTMSocket, destructor: closeTMSocket },
 	"/pong/:uuid": { title: pong_title, render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket }, // AI will go here with game id "ai"
 	"/auth/login": { title: login_title, render: login_view, auth: "no_only" },
 	"/auth/ft/callback": { title: ft_callback_title, render: ft_callback_view, auth: "no_only" },

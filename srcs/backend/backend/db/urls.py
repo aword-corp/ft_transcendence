@@ -20,8 +20,10 @@ from .views import (
     UserFriendRequestReject,
     UserFriendRequestRemove,
     UserUnBlock,
-    channel_username,
+    channel,
     channel_id,
+    channel_messages,
+    channel_messages_id,
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -65,10 +67,12 @@ urlpatterns = [
     ),
     path("user/block/<str:name>", UserBlock, name="user_block"),
     path("user/unblock/<str:name>", UserUnBlock, name="user_unblock"),
+    path("channels", channel, name="channel"),
+    path("channels/<int:id>", channel_id, name="channel_id"),
+    path("channels/<int:id>/messages", channel_messages, name="channel_id_messages"),
     path(
-        "channels/private/<int:id>",
-        channel_username,
-        name="get_private_channel_with_id",
+        "channels/<int:channel_id>/messages/<int:message_id>",
+        channel_messages_id,
+        name="channel_id_message_id",
     ),
-    path("channels/private/<str:name>", channel_id, name="get_private_channel"),
 ]

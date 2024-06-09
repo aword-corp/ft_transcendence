@@ -28,8 +28,7 @@ class PongGame extends HTMLElement {
 
 	}
 
-	let name = (JSON.parse(atob(localStorage.getItem("access-token").split('.')[1]))).username;
-
+	static name = undefined;
 
 	handleKeyDown(event) {
 		let message;
@@ -83,7 +82,7 @@ class PongGame extends HTMLElement {
 			let player2 = data.position.player2;
 			let ball = data.position.ball;
 
-			if self.name == player2.name {
+			if (this.name == player2.name) {
 				self.mirror(player1, player2, ball);
 			}
 
