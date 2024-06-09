@@ -909,19 +909,24 @@ def channel_messages_id(request, channel_id: int, message_id: int):
             )
 
         elif request.method == "PATCH":
-            if message.author.id != request.user.id:
-                return Response(
-                    {"error": "You are not allowed to edit this message."},
-                    status=status.HTTP_401_UNAUTHORIZED,
-                )
+            if "content" in request.data:
+                if message.author.id != request.user.id:
+                    return Response(
+                        {"error": "You are not allowed to edit this message."},
+                        status=status.HTTP_401_UNAUTHORIZED,
+                    )
 
-            if "content" not in request.data or not len(request.data["content"]):
-                return Response(
-                    {"error": "You tried to edit a message to be empty."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                if "content" not in request.data or not len(request.data["content"]):
+                    return Response(
+                        {"error": "You tried to edit a message to be empty."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
-            message.content = request.data["content"][:2048]
+                message.content = request.data["content"][:2048]
+
+            if "is_pin" in request.data and isinstance(request.data["is_pin"], bool):
+                message.is_pin = request.data["is_pin"]
+
             message.save()
             return Response(
                 {"details": "ok."},

@@ -358,7 +358,8 @@ class GroupChannel(models.Model):
         User, related_name="channel_created_by", on_delete=models.CASCADE, null=True
     )
     users = models.ManyToManyField(User, related_name="channel_users")
-    topic = models.CharField(max_length=512)
+    operators = models.ManyToManyField(User, related_name="channel_operators")
+    topic = models.CharField(max_length=512, null=True)
 
     class Type(models.IntegerChoices):
         DM = 1, _("Direct Channel")
