@@ -17,8 +17,6 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-CSRF_TRUSTED_ORIGINS = [os.getenv("URL")]
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
@@ -30,9 +28,6 @@ SECRET_KEY = os.getenv(
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True if os.getenv("dev") else False
-
-ALLOWED_HOSTS = [os.getenv("HOST")]
-
 
 # Application definition
 
@@ -47,8 +42,8 @@ INSTALLED_APPS = [
     "django_countries",
     "rest_framework",
     "rest_framework_simplejwt",
-    "custom_auth",
     "channels",
+    "corsheaders",
     "home",
     "db",
     "storages",
@@ -59,6 +54,7 @@ INSTALLED_APPS = [
 CHANNEL_LAYERS = {}
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -68,8 +64,18 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+CORS_ORIGIN_ALLOW_ALL = True
+
+CSRF_TRUSTED_ORIGINS = ["https://*"]
+
+ALLOWED_HOSTS = ["*"]
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "db.authentication.CustomAuthBackend",
+]
+
 REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
@@ -81,6 +87,7 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_LIFETIME": timedelta(days=30),
     "SLIDING_TOKEN_REFRESH_LIFETIME_LATE_USER": timedelta(days=1),
     "SLIDING_TOKEN_LIFETIME_LATE_USER": timedelta(days=30),
+    "TOKEN_OBTAIN_SERIALIZER": "db.serializers.MyTokenObtainPairSerializer",
 }
 
 ROOT_URLCONF = "backend.urls"
@@ -182,3 +189,18 @@ else:
     AWS_S3_VERIFY = True
     AWS_QUERYSTRING_AUTH = False
     AWS_S3_CUSTOM_DOMAIN = os.getenv("S3_HOST")
+
+FT_API_URL = (
+    os.getenv("FT_API_DEV_URL") if os.getenv("dev") else os.getenv("FT_API_URL")
+)
+FT_API_UID = (
+    os.getenv("FT_API_DEV_UID") if os.getenv("dev") else os.getenv("FT_API_UID")
+)
+FT_API_SECRET = (
+    os.getenv("FT_API_DEV_SECRET") if os.getenv("dev") else os.getenv("FT_API_SECRET")
+)
+FT_REDIRECT = (
+    os.getenv("FT_DEV_REDIRECT_URI")
+    if os.getenv("dev")
+    else os.getenv("FT_REDIRECT_URI")
+)

@@ -1,0 +1,16 @@
+Django
+psycopg
+daphne
+channels
+channels_redis
+djangorestframework
+django-storages
+boto3
+Pillow
+django-countries
+pyotp
+qrcode
+djangorestframework_simplejwt
+gunicorn
+django-cors-headers
+requests

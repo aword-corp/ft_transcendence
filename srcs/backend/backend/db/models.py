@@ -1,15 +1,17 @@
+from time import time_ns
 from django.db import models
 from django.conf import settings
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 from datetime import date, timedelta
-from time import time_ns
-from typing import Optional, List
+from typing import List, Optional
 import uuid
 import pyotp
 import qrcode
 import qrcode.image.svg
 from operator import itemgetter
+from django.utils.translation import gettext_lazy as _
+
 
 class time_cache:
     def __init__(self, time=1):
@@ -19,11 +21,15 @@ class time_cache:
     def __call__(self, fun):
         def wrapped(*args):
             now = time_ns() // 1e9
-            if not fun in self.cache or now - self.cache[fun]['last_call'] > self.time:
-                self.cache[fun] = {'last_result': fun(*args), 'last_call': now}
+            if fun not in self.cache or now > self.cache[fun]["next_call"]:
+                self.cache[fun] = {
+                    "last_result": fun(*args),
+                    "next_call": now + self.time,
+                }
             else:
                 print(f"{fun.__name__} call, using last result")
-            return self.cache[fun]['last_result']
+            return self.cache[fun]["last_result"]
+
         return wrapped
 
 
@@ -49,6 +55,8 @@ class Device(models.Model):
 
 
 class PongUserManager(BaseUserManager):
+    use_in_migrations = True
+
     def create_user(
         self,
         email: str,
@@ -58,9 +66,10 @@ class PongUserManager(BaseUserManager):
         country_code: str,
         language: str,
         birth_date: date,
-        # device_os: str,
-        # device_client: str,
     ):
+        if not email:
+            raise ValueError("Email is Required")
+
         user = self.model(
             email=self.normalize_email(email),
             username=username,
@@ -69,12 +78,6 @@ class PongUserManager(BaseUserManager):
             language=language,
             birth_date=birth_date,
         )
-        # device: Device = Device(
-        #     os=device_os,
-        #     client=device_client,
-        # )
-        # device.save()
-        # user.devices.add(device)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -88,8 +91,6 @@ class PongUserManager(BaseUserManager):
         country_code: str,
         language: str,
         birth_date: str,
-        # device_os: str,
-        # device_client: str,
     ):
         user = self.create_user(
             email=email,
@@ -99,8 +100,6 @@ class PongUserManager(BaseUserManager):
             country_code=country_code,
             language=language,
             birth_date=birth_date,
-            # device_os=device_os,
-            # device_client=device_client,
         )
         user.grade = 4
         user.save(using=self._db)
@@ -119,9 +118,7 @@ class UserTwoFactorAuthData(models.Model):
 
     def generate_qr_code(self, name: Optional[str] = None) -> str:
         totp = pyotp.TOTP(self.otp_secret)
-        qr_uri = totp.provisioning_uri(
-            name=name, issuer_name="Styleguide Example Admin 2FA Demo"
-        )
+        qr_uri = totp.provisioning_uri(name=name, issuer_name=f"acorp.games: {name}")
 
         image_factory = qrcode.image.svg.SvgPathImage
         qr_code_image = qrcode.make(qr_uri, image_factory=image_factory)
@@ -149,18 +146,50 @@ class User(AbstractBaseUser):
         max_length=320,
         unique=True,
     )
-    region = models.CharField(max_length=6)
+
+    class Region(models.TextChoices):
+        EU_WE = "eu-we", _("Europe West")
+        EU_EA = "eu-ea", _("Europe East")
+        EU_NO = "eu-no", _("Europe North")
+        NA_WE = "na-we", _("North America West")
+        NA_CE = "na-ce", _("North America Central")
+        NA_EA = "na-ea", _("North America East")
+        CE_AM = "ce-am", _("Central America")
+        SO_AM = "so-am", _("South America")
+        NO_AF = "no-af", _("North Africa")
+        SO_AF = "so-af", _("South Africa")
+        MI_EA = "mi-ea", _("Middle East")
+        AS_CN = "as-cn", _("China")
+        AS_IN = "as-in", _("India")
+        AS_SG = "as-sg", _("Singapore")
+        AS_KR = "as-kr", _("Korea")
+        AS_JP = "as-jp", _("Japan")
+        OC_PA = "oc-pa", _("Oceania")
+
+    region = models.CharField(choices=Region.choices, max_length=6)
     country_code = models.CharField(max_length=3)
-    language = models.CharField(max_length=5)
+
+    class Language(models.TextChoices):
+        FR_FR = "FR-FR", _("Français")
+        EN_US = "EN-US", _("English (United States)")
+        CH_ZH = "CH-ZH", _("中文")
+
+    language = models.CharField(choices=Language.choices, max_length=5)
     avatar_url = models.ImageField(
         max_length=256, null=True, upload_to="medias/users/avatar/"
     )
     banner_url = models.ImageField(
         max_length=256, null=True, upload_to="medias/users/banner/"
     )
-    birth_date = models.DateField()
-    GRADE_CHOICES = [(1, "User"), (2, "Premium"), (3, "Moderator"), (4, "Admin")]
-    grade = models.SmallIntegerField(choices=GRADE_CHOICES, default=1)
+    birth_date = models.DateField(null=True)
+
+    class Grade(models.IntegerChoices):
+        USER = 1, _("User")
+        PREMIUM = 2, _("Premium")
+        MODERATOR = 3, _("Moderator")
+        ADMIN = 4, ("Admin")
+
+    grade = models.SmallIntegerField(choices=Grade.choices, default=Grade.USER)
 
     # Stats
     created_at = models.DateTimeField(auto_now_add=True)
@@ -170,20 +199,28 @@ class User(AbstractBaseUser):
     badges = models.ManyToManyField(Badge, related_name="user_badges")
 
     # Social
-    friendrequests = models.ManyToManyField("self", symmetrical=True)
+    friendrequests = models.ManyToManyField(
+        "self", symmetrical=False, related_name="user_friend_requests"
+    )
     friends = models.ManyToManyField("self", symmetrical=True)
-    blocked = models.ManyToManyField("self")
+    blocked = models.ManyToManyField(
+        "self", symmetrical=False, related_name="user_blocked_users"
+    )
     verified = models.BooleanField(default=False)
-    STATUS_CHOICES = [
-        (1, "Offline"),
-        (2, "Playing"),
-        (3, "Spectating"),
-        (4, "Online"),
-        (5, "Away"),
-        (6, "Focus"),
-        (7, "Invisible"),
-    ]
-    status = models.SmallIntegerField(choices=STATUS_CHOICES, default=4)
+
+    class Status(models.IntegerChoices):
+        OFF = 1, _("Offline")
+        GAME = 2, _("Playing")
+        SPEC = 3, _("Spectating")
+        ON = 4, _("Online")
+        AWAY = 5, _("Away")
+        FOCUS = 6, _("Focus")
+
+    status = models.SmallIntegerField(choices=Status.choices, default=Status.ON)
+
+    is_invisible = models.BooleanField(default=False)
+
+    channel_name = models.CharField(max_length=128, null=True)
 
     # Settings / Cosmetic
     paddle_type = models.SmallIntegerField(default=1)
@@ -192,13 +229,32 @@ class User(AbstractBaseUser):
     win_effect = models.SmallIntegerField(default=1)
 
     # Settings / Privacy
-    FRIEND_REQUEST_CHOICES = [(1, "Wait"), (2, "Reject"), (3, "Accept")]
+
+    class Friend_Request(models.IntegerChoices):
+        WAIT = 1, _("Wait")
+        REJECT = 2, _("Reject")
+        ACCEPT = 3, _("Accept")
+
     friend_default_response = models.SmallIntegerField(
-        choices=FRIEND_REQUEST_CHOICES, default=1
+        choices=Friend_Request.choices, default=Friend_Request.WAIT
     )
-    MSG_REQUEST_CHOICES = [(1, "Confirm"), (2, "Accept"), (3, "Block")]
+
+    class Message_Request(models.IntegerChoices):
+        CONFIRM = 1, _("Confirm")
+        ACCEPT = 2, _("Accept")
+        BLOCK = 3, _("Block")
+
     msg_default_response = models.SmallIntegerField(
-        choices=MSG_REQUEST_CHOICES, default=1
+        choices=Message_Request.choices, default=Message_Request.CONFIRM
+    )
+
+    class Friend_Display(models.IntegerChoices):
+        FRIENDS = 1, _("Friends")
+        PUBLIC = 2, _("Public")
+        PRIVATE = 3, _("Private")
+
+    display_friends = models.SmallIntegerField(
+        choices=Friend_Display.choices, default=Friend_Display.FRIENDS
     )
     devices = models.ManyToManyField(Device, related_name="user_devices")
     vc_auto_join = models.BooleanField(default=False)
@@ -206,6 +262,7 @@ class User(AbstractBaseUser):
     msg_sound = models.BooleanField(default=True)
     duel_sound = models.BooleanField(default=True)
     has_2fa = models.BooleanField(default=False)
+    has_ft = models.BooleanField(default=False)
 
     objects = PongUserManager()
 
@@ -220,7 +277,7 @@ class User(AbstractBaseUser):
 
     @staticmethod
     @database_sync_to_async
-    def get_user(login: str, password: str) -> Optional['User']:
+    def get_user(login: str, password: str) -> Optional["User"]:
         try:
             user = User.objects.get(username=login)
             return user if user.check_password(password) else None
@@ -237,14 +294,27 @@ class User(AbstractBaseUser):
 
     @staticmethod
     @database_sync_to_async
-    @time_cache(time = timedelta(seconds=10))
-    def get_leaderboard() -> List['User']:
+    @time_cache(time=timedelta(minutes=5))
+    def get_leaderboard() -> List["User"]:
         print("---------Get leaderboard call---------")
-        leaderboard = sorted(
-            User.objects.values(),
-            key = itemgetter("elo")
-        )
+        leaderboard = sorted(User.objects.values(), key=itemgetter("elo"))
         return leaderboard
+
+    @database_sync_to_async
+    def set_channel_name(self, channel_name: str) -> None:
+        self.channel_name = channel_name
+
+    @database_sync_to_async
+    def is_in_queue(self):
+        return bool(self.channel_name)
+
+    @database_sync_to_async
+    def get_channel_name(self) -> str:
+        return self.channel_name
+
+    @database_sync_to_async
+    def is_friend(self, user: "User"):
+        return user.friends.filter(id=self.id).exists()
 
 
 class GlobalChat(models.Model):
@@ -275,15 +345,21 @@ class Messages(models.Model):
     original_content = models.CharField(max_length=2048)
 
 
-class PrivateMessage(models.Model):
-    name = models.CharField(max_length=64)
+class GroupChannel(models.Model):
+    name = models.CharField(max_length=64, null=True)
     description = models.CharField(max_length=256, null=True)
     avatar_url = models.ImageField(
         max_length=256, null=True, upload_to="medias/groups/avatar/"
     )
-    users = models.ManyToManyField(User, related_name="channel_users")
     messages = models.ManyToManyField(Messages, related_name="channel_messages")
     created_at = models.DateTimeField(auto_now_add=True)
+    users = models.ManyToManyField(User, related_name="channel_users")
+
+    class Type(models.IntegerChoices):
+        DM = 1, _("Direct Channel")
+        GROUP = 2, _("Group Channel")
+
+    channel_type = models.SmallIntegerField(choices=Type.choices)
 
 
 class Report(models.Model):
@@ -292,8 +368,13 @@ class Report(models.Model):
     )
     reason = models.CharField(max_length=2048)
     created_at = models.DateTimeField(auto_now_add=True)
-    REPORT_CHOICES = [(1, "Pending"), (2, "Escalated"), (3, "Closed")]
-    state = models.SmallIntegerField(choices=REPORT_CHOICES, default=1)
+
+    class Type(models.IntegerChoices):
+        PENDING = 1, _("Pending")
+        ESCALATED = 2, _("Escalated")
+        CLOSED = 3, _("Closed")
+
+    state = models.SmallIntegerField(choices=Type.choices, default=Type.PENDING)
 
 
 class ChatReport(Report):
@@ -312,20 +393,21 @@ class Game(models.Model):
     loser = models.ForeignKey(
         User, related_name="game_losers", on_delete=models.SET_NULL, null=True
     )
-    ball_speed = models.FloatField()
-    ball_size = models.FloatField()
-    paddle_speed = models.FloatField()
-    paddle_size = models.FloatField()
+    ball_speed = models.FloatField(default=1.0)
+    ball_size = models.FloatField(default=1.0)
+    paddle_speed = models.FloatField(default=1.0)
+    paddle_size = models.FloatField(default=1.0)
     region = models.CharField(max_length=6)
     score_winner = models.IntegerField(default=0)
     score_loser = models.IntegerField(default=0)
-    STATE_CHOICES = [
-        (1, "Starting"),
-        (2, "Waiting"),
-        (3, "Playing"),
-        (4, "Ended"),
-    ]
-    state = models.SmallIntegerField(choices=STATE_CHOICES, default=1)
+
+    class State(models.IntegerChoices):
+        STARTING = 1, _("Starting")
+        WAITING = 2, _("Waiting")
+        PLAYING = 3, _("Playing")
+        ENDED = 4, _("Ended")
+
+    state = models.SmallIntegerField(choices=State.choices, default=State.STARTING)
 
     @staticmethod
     @database_sync_to_async
@@ -354,11 +436,12 @@ class Tournament(models.Model):
     starting_at = models.DateTimeField(auto_now_add=False)
     ended_at = models.DateTimeField(auto_now_add=False)
     region = models.CharField(max_length=6)
-    STATE_CHOICES = [
-        (1, "Waiting"),
-        (2, "Starting"),
-        (3, "Playing"),
-        (4, "Break"),
-        (5, "Ended"),
-    ]
-    state = models.SmallIntegerField(choices=STATE_CHOICES, default=1)
+
+    class State(models.IntegerChoices):
+        STARTING = 1, _("Starting")
+        WAITING = 2, _("Waiting")
+        PLAYING = 3, _("Playing")
+        BREAK = 4, _("Break")
+        ENDED = 5, _("Ended")
+
+    state = models.SmallIntegerField(choices=State.choices, default=State.STARTING)

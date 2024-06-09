@@ -1,8 +1,11 @@
 services:
   nginx:
-    build: nginx
+    image: acorp/nginx
+    build: 
+      context: nginx/
+      dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8443:8443"
     volumes:
       - static:/var/www
     networks:
@@ -12,7 +15,10 @@ services:
       - .env
 
   postgresql:
-    build: postgresql
+    image: acorp/postgresql
+    build: 
+      context: postgresql/
+      dockerfile: Dockerfile
     networks:
       - tiktok
     volumes:
@@ -27,7 +33,10 @@ services:
       retries: 20
 
   redis:
-    build: redis
+    image: acorp/redis
+    build: 
+      context: redis/
+      dockerfile: Dockerfile
     networks:
       - tiktok
     restart: always
@@ -40,7 +49,10 @@ services:
       retries: 20
 
   backend:
-    build: backend
+    image: acorp/backend
+    build: 
+      context: backend/
+      dockerfile: Dockerfile
     volumes:
       - static:/var/www
     networks:
@@ -49,7 +61,7 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: curl -s --raw localhost:8000 | grep "Transcendance"
+      test: curl -s --raw localhost:8000/ | grep "ok"
       interval: 10s
       timeout: 5s
       retries: 20
@@ -60,9 +72,38 @@ services:
         condition: service_healthy
 
   backend-game:
-    build: backend-game
+    image: acorp/backend-game
+    build: 
+      context: backend-game/
+      dockerfile: Dockerfile
     networks:
       - tiktok
+    restart: always
+    env_file:
+      - .env
+    environment:
+      dev: true
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+  
+  coturn:
+    image: acorp/coturn
+    build: 
+      context: coturn/
+      dockerfile: Dockerfile
+    networks:
+      - tiktok
+    ports:
+      - "3478:3478"
+      - "3478:3478/udp"
+      - "5349:5349"
+      - "5349:5349/udp"
+      - "49152:49152/udp"
     restart: always
     env_file:
       - .env

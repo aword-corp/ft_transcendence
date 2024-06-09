@@ -1,8 +1,7 @@
 const countSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/click/');
 
 countSocket.onmessage = function (e) {
-	document.getElementById('count').innerText = e.data
-	;
+	document.getElementById('count').innerText = e.data;
 };
 
 function onClickMe() {
@@ -13,10 +12,9 @@ const chatSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'w
 
 chatSocket.onmessage = function (e) {
 	const data = JSON.parse(e.data);
-	if (!data || !data.message || data.error)
-	{
+	if (!data || !data.message || data.error) {
 		console.log("Error: " + (data ? (data.error ? data.error : "No message") : "No data"));
-		return ;
+		return;
 	}
 	let div = document.createElement("div");
 	div.innerText = data.message;

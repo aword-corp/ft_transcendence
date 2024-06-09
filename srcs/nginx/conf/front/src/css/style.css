@@ -1,0 +1,113 @@
+:root {
+    --primary: #222831;
+    --secondary: #30475e;
+    --secondary-light: #3a5a7a;
+    --accent: #f05454;
+    --neutral: #eeeeee;
+
+    font-size: 12px;
+}
+
+* {
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "JetBrains Mono", monospace;
+    font-optical-sizing: auto;
+    font-style: normal;
+}
+
+body {
+    color: var(--neutral);
+    padding: 1rem clamp(1.5rem, 6vw, 3rem);
+    background-color: var(--primary);
+}
+
+.navbar {
+    display: flex;
+}
+
+.right-nav {
+    margin-left: auto;
+}
+
+.navbar a {
+    margin-right: .75em;
+    padding: 0.25rem;
+    font-weight: 600;
+    color: var(--accent);
+    transition: opacity .1s, background-color .1s, background-color .1s;
+    text-decoration: none;
+}
+
+main {
+    margin: 3rem 0;
+}
+
+h1 {
+    font-size: 2.3rem;
+    margin-bottom: .5rem;
+}
+
+click-counter button {
+    font-weight: 600;
+    border: 2px solid var(--neutral);
+    border-radius: 5px;
+    color: var(--neutral);
+    background-color: var(--secondary);
+    display: grid;
+    place-items: center;
+    transition: opacity .1s, background-color .1s;
+}
+
+click-counter button:active {
+    background-color: var(--secondary-light);
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.auth-form input, select {
+    text-align: center;
+}
+
+.auth-form button {
+    padding: 5px;
+}
+
+.hidden {
+    display: none;
+}
+
+.leaderboard-align-text {
+    text-align: center;
+}
+
+.pongCanvas {
+    margin-top: 20px;
+    width: 90vw;
+    height: 90vh;
+    max-width: 800px;
+    max-height: 600px;
+    background-color: grey;
+}
+
+@media (min-width: 1000px) {
+    * {
+        font-size: 18px;
+    }
+
+    click-counter button {
+        cursor: pointer;
+    }
+
+    click-counter button:hover {
+        background-color: var(--secondary-light);
+    }
+
+    click-counter button:active {
+        opacity: .7;
+    }
+}
