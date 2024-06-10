@@ -1,24 +1,25 @@
 from db.models import User
-from typing import List
+from typing import List, Optional, Callable
 import random
 import math
 import sys
+import json
 
 
 class Paddle:
 	def __init__(
-		self, x, y, up: bool, down: bool, speed, height, half_height, width, score, user: User
+		self, x, y, up: bool, down: bool, speed, height, half_height, width, score, user: Optional[User]
 	):
 		self.x = x
 		self.y = y
-		self.up: bool = up
-		self.down: bool = down
+		self.up = up
+		self.down = down
 		self.speed = speed
 		self.height = height
 		self.half_height = half_height
 		self.width = width
 		self.score = score
-		self.user: User = user
+		self.user = user
 
 
 class Ball:
@@ -33,21 +34,13 @@ class Ball:
 perr = lambda x, *args, **kwargs: print(x, *args, **kwargs, file = sys.stderr)
 BIAS = 1
 
-# Calculate neuron activation for an input
-def compute(weights, _input):
-	activation = 0
-	for i, weight in zip(_input + [BIAS], weights):
-		activation += i * weight
-	return activation
-
 def sigmoid(activation):
 	return 1.0 / (1.0 + math.exp(-activation))
 
 class Network:
-	def __init__(self, n_inputs: int, n_hidden: int, n_outputs: int, neuron_per_hidden: List[int], activation) -> None:
+	def __init__(self, n_inputs: int, n_hidden: int, n_outputs: int, neuron_per_hidden: List[int], activation: Callable) -> None:
 		self.layers = []
 		self.activation = activation
-		x = 0
 
 		for layer in range(n_hidden):
 			hidden_layer = []
@@ -58,7 +51,6 @@ class Network:
 				weights = []
 				for _ in range(n + 1):
 					weights.append(random.random())
-					x += 1
 				hidden_layer.append({"weights": weights})
 			self.layers.append(hidden_layer)
 
@@ -70,34 +62,49 @@ class Network:
 			weights = []
 			for _ in range(n + 1):
 				weights.append(random.random())
-				x += 1
 			output_layer.append({"weights": weights})
 		self.layers.append(output_layer)
-	
-	def save_state(self, path): # TODO 
-		print(self.layers)
-		with open(path, "wb") as out:
-			for layer in self.layers:
-				pass
-			pass
+
+	def serialize(self, path = ".", filename = "network.json") -> None:
+		if not path.endswith('/'):
+			path += '/'
+
+		data = {
+			"layers": self.layers
+		}
+		with open(path + filename, "w") as out_file:
+			json.dump(data, out_file, indent=4)
 	
 	@staticmethod
-	def from_states(path): # TODO
-		pass
+	def deserialize(path) -> 'Network':
+		with open(path, "r") as in_file:
+			data = json.load(in_file)
+			layers = data["layers"]
+			activation = sigmoid
+			network = Network(0, 0, 0, [], activation)
+			network.layers = layers
+			return network
+	
+	# Compute neuron activation for an input
+	def compute(self, weights, _input) -> int:
+		activation = 0
+		for i, weight in zip(_input + [BIAS], weights):
+			activation += i * weight
+		return activation
 
 	# Forward propagate input to the network output
-	def forward_propagate(self, inputs: List[int]) -> List[int]:
+	def forward_propagate(self, inputs) -> List[float]:
 		for layer in self.layers:
 			new_inputs = []
 			for neuron in layer:
-				activation = compute(neuron['weights'], inputs)
+				activation = self.compute(neuron['weights'], inputs)
 				neuron['output'] = self.activation(activation)
 				new_inputs.append(neuron['output'])
 			inputs = new_inputs
 		return inputs
 
 	# Backpropagate error and store in neurons
-	def backward_propagate(self, expected: List[int]) -> None:
+	def backward_propagate(self, expected) -> None:
 		# Output layer
 		for k, neuron in enumerate(self.layers[-1]):
 			output = neuron['output']
@@ -110,7 +117,7 @@ class Network:
 				neuron['delta'] = output * (1.0 - output) * sum(n['delta'] * n['weights'][j] for n in self.layers[i + 1])
 
 	# Update the network's weights
-	def update_weights(self, l_rate, _input):
+	def update_weights(self, l_rate, _input) -> None:
 		# First layer must use input
 		for neuron in self.layers[0]:
 			for j in range(len(neuron['weights']) - 1):
@@ -124,7 +131,7 @@ class Network:
 				neuron['weights'][-1] += -l_rate * neuron['delta'] # BIAS weight
 
 	# Train the network for a fixed number of epochs
-	def train(self, train, l_rate, n_epoch):
+	def train(self, train, l_rate, n_epoch) -> None:
 		for epoch in range(n_epoch):
 			sum_error = 0
 			for _input, expected in train:
@@ -136,10 +143,8 @@ class Network:
 			# if sum_error < 2.6:
 			#     break
 
-	def predict(self, data: List[int]) -> List[int]:
+	def predict(self, data) -> List[float]:
 		outputs = self.forward_propagate(data)
 		return outputs
 
-
-network = Network(5, 0, 2, [], sigmoid)
-
+brain = Network(5, 0, 2, [], sigmoid)

@@ -7,7 +7,7 @@ from math import pi, cos, sin
 import asyncio
 import uuid
 from datetime import datetime, timedelta
-from .ai.ai import Paddle, Ball, network
+from .ai.ai import Paddle, Ball, brain
 import math
 import time
 # from colorama import Fore, Back, Style
@@ -520,8 +520,8 @@ class PongAIConsumer(AsyncWebsocketConsumer):
         while player1.score < 5 and player2.score < 5:
             # Update player2 if he can be updated
             now = time.time_ns()
-            if now - ai_last_fetch >= ONE_SECOND_NS / 1000:
-                up, down = network.predict(
+            if now - ai_last_fetch >= ONE_SECOND_NS / 1000: # TODO Remove division
+                up, down = brain.predict(
                     [ball.x, ball.y, ball.dx, ball.dy, player2.y]
                 )
                 print("AI", up, down)
