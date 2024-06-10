@@ -768,7 +768,7 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             return
 
         self.elo_range[self.user.id] = 60
-        self.elo_range_timer[self.user.id] = datetime.datetime.now()
+        self.elo_range_timer[self.user.id] = datetime.now()
         self.queue.append(self.user)
         self.region = self.user.region
 
@@ -785,7 +785,7 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
 
     async def matchmaking(self):
         while len(self.queue) > 0:
-            now = datetime.datetime.now()
+            now = datetime.now()
             for player in self.queue:
                 potential_matches = [
                     opps

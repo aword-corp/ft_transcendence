@@ -22,6 +22,10 @@ class PongGame extends HTMLElement {
 
 		this.name = (JSON.parse(atob(localStorage.getItem("access-token").split('.')[1]))).username;
 
+		this.up = false;
+
+		this.down = false;
+
 		document.addEventListener("keydown", this.handleKeyDown);
 		document.addEventListener("keyup", this.handleKeyUp);
 
@@ -29,46 +33,33 @@ class PongGame extends HTMLElement {
 
 	}
 
-
 	handleKeyDown(event) {
-		let message;
-		switch (event.key) {
-			case "w":
-				message = JSON.stringify({ "action": "UP_PRESS_KEYDOWN" });
-				break;
-			case "s":
-				message = JSON.stringify({ "action": "DOWN_PRESS_KEYDOWN" });
-				break;
-			case "ArrowUp":
-				message = JSON.stringify({ "action": "UP_PRESS_KEYDOWN" });
-				break;
-			case "ArrowDown":
-				message = JSON.stringify({ "action": "DOWN_PRESS_KEYDOWN" });
-				break;
+		if (event.code === "KeyW" || event.code === "KeyZ" || event.code === "ArrowUp") {
+			if (!this.up) {
+				pongSocket.send(JSON.stringify({ "action": "UP_PRESS_KEYDOWN" }));
+				this.up = true;
+			}
 		}
-		if (message) {
-			pongSocket.send(message);
+		else if (event.code === "KeyS" || event.code === "ArrowDown") {
+			if (!this.down) {
+				pongSocket.send(JSON.stringify({ "action": "DOWN_PRESS_KEYDOWN" }));
+				this.down = true;
+			}
 		}
 	}
 
 	handleKeyUp(event) {
-		let message;
-		switch (event.key) {
-			case "w":
-				message = JSON.stringify({ "action": "UP_PRESS_KEYUP" });
-				break;
-			case "s":
-				message = JSON.stringify({ "action": "DOWN_PRESS_KEYUP" });
-				break;
-			case "ArrowUp":
-				message = JSON.stringify({ "action": "UP_PRESS_KEYUP" });
-				break;
-			case "ArrowDown":
-				message = JSON.stringify({ "action": "DOWN_PRESS_KEYUP" });
-				break;
+		if (event.code === "KeyW" || event.code === "KeyZ" || event.code === "ArrowUp") {
+			if (this.up) {
+				pongSocket.send(JSON.stringify({ "action": "UP_PRESS_KEYUP" }));
+				this.up = false;
+			}
 		}
-		if (message) {
-			pongSocket.send(message);
+		else if (event.code === "KeyS" || event.code === "ArrowDown") {
+			if (this.down) {
+				pongSocket.send(JSON.stringify({ "action": "DOWN_PRESS_KEYUP" }));
+				this.down = false;
+			}
 		}
 	}
 
@@ -82,11 +73,7 @@ class PongGame extends HTMLElement {
 			let player2 = data.position.player2;
 			let ball = data.position.ball;
 
-			if (this.name == player2.name) {
-				self.mirror(player1, player2, ball);
-			}
-
-			this.drawBall();
+			this.drawBall(ball);
 			this.drawPaddle(player1);
 			this.drawPaddle(player2);
 			this.drawCentralLine();
