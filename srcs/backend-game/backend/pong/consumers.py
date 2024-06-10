@@ -54,7 +54,7 @@ class CountConsumer(AsyncWebsocketConsumer):
 
 
 class PongConsumer(AsyncWebsocketConsumer):
-    acceleration = 1.2
+    acceleration = 1.05
     games = {}
 
     async def connect(self):
@@ -116,9 +116,9 @@ class PongConsumer(AsyncWebsocketConsumer):
                 "ball": Ball(
                     0.5,
                     0.5,
-                    0.002 * self.game.ball_speed,
-                    0.002 * self.game.ball_speed,
-                    0.002 * self.game.ball_speed,
+                    0.004 * self.game.ball_speed,
+                    0.004 * self.game.ball_speed,
+                    0.004 * self.game.ball_speed,
                     0.0128 * self.game.ball_size,
                 ),
                 "started": False,
@@ -132,9 +132,11 @@ class PongConsumer(AsyncWebsocketConsumer):
                 self.games[self.game_id][self.user.id] = Paddle(
                     0.03 if len(self.games[self.game_id]["users"]) == 0 else 0.97,
                     0.5,
-                    0,
-                    0.008 * self.game.paddle_speed,
+                    False,
+                    False,
+                    0.016 * self.game.paddle_speed,
                     0.166 * self.game.paddle_size,
+                    0.083 * self.game.paddle_size,
                     0.0125 * self.game.paddle_size,
                     0,
                     self.user,
@@ -162,17 +164,13 @@ class PongConsumer(AsyncWebsocketConsumer):
         if "action" in data and self.user.id in self.games[self.game_id]:
             action = data["action"]
             if action == "UP_PRESS_KEYDOWN":
-                self.games[self.game_id][self.user.id].dy = -self.games[self.game_id][
-                    self.user.id
-                ].speed
+                self.games[self.game_id][self.user.id].up = True
             elif action == "DOWN_PRESS_KEYDOWN":
-                self.games[self.game_id][self.user.id].dy = self.games[self.game_id][
-                    self.user.id
-                ].speed
+                self.games[self.game_id][self.user.id].down = True
             elif action == "UP_PRESS_KEYUP":
-                self.games[self.game_id][self.user.id].dy = 0
+                self.games[self.game_id][self.user.id].up = False
             elif action == "DOWN_PRESS_KEYUP":
-                self.games[self.game_id][self.user.id].dy = 0
+                self.games[self.game_id][self.user.id].down = False
             else:
                 await self.send(text_data="Invalid move")
 
@@ -199,8 +197,8 @@ class PongConsumer(AsyncWebsocketConsumer):
             )
 
     async def game_loop(self, game_id):
-        player1 = self.games[game_id][self.games[game_id]["users"][0].id]
-        player2 = self.games[game_id][self.games[game_id]["users"][1].id]
+        player1: Paddle = self.games[game_id][self.games[game_id]["users"][0].id]
+        player2: Paddle = self.games[game_id][self.games[game_id]["users"][1].id]
         ball = self.games[game_id]["ball"]
         await asyncio.sleep(3)
         self.game.state = Game.State.PLAYING
@@ -208,12 +206,18 @@ class PongConsumer(AsyncWebsocketConsumer):
         while player1.score < 5 and player2.score < 5:
             wait = False
             # update paddle position
-            player1.y += player1.dy
+            if player1.up and not player1.down:
+                player1.y -= player1.speed
+            if player1.down and not player1.up:
+                player1.y += player1.speed
             if player1.y < 0:
                 player1.y = 0
             if player1.y + player1.height > 1:
                 player1.y = 1 - player1.height
-            player2.y += player2.dy
+            if player2.up and not player2.down:
+                player2.y -= player2.speed
+            if player2.down and not player2.up:
+                player2.y += player2.speed
             if player2.y < 0:
                 player2.y = 0
             if player2.y + player2.height > 1:
@@ -274,8 +278,8 @@ class PongConsumer(AsyncWebsocketConsumer):
                 and ball.y - ball.radius <= player1.y + player1.height
             ):
                 # ball.temperature += 0.05
-                ballPosPaddle = (player1.y + player1.height / 2) - ball.y
-                relPos = ballPosPaddle / (player1.height / 2)
+                ballPosPaddle = (player1.y + player1.half_height) - ball.y
+                relPos = ballPosPaddle / (player1.half_height)
                 bounceAngle = relPos * maxAngle
 
                 speed = (ball.dx**2 + ball.dy**2) ** 0.5 * self.acceleration
@@ -291,8 +295,8 @@ class PongConsumer(AsyncWebsocketConsumer):
                 and ball.y - ball.radius <= player2.y + player2.height
             ):
                 # ball.temperature += 0.05
-                ballPosPaddle = (player2.y + player2.height / 2) - ball.y
-                relPos = ballPosPaddle / (player2.height / 2)
+                ballPosPaddle = (player2.y + player2.half_height) - ball.y
+                relPos = ballPosPaddle / (player2.half_height)
                 bounceAngle = relPos * maxAngle
 
                 speed = (ball.dx**2 + ball.dy**2) ** 0.5 * self.acceleration
@@ -325,7 +329,7 @@ class PongConsumer(AsyncWebsocketConsumer):
                     },
                 },
             )
-            await asyncio.sleep(3 if wait else 0.0078125)
+            await asyncio.sleep(3 if wait else 0.016)
         if player1.score > player2.score:
             self.game.winner = player1.user
             self.game.loser = player2.user
@@ -444,7 +448,8 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 self.games[self.user.id][self.user.id] = Paddle(
                     0.03 if len(self.games[self.user.id]["users"]) == 0 else 0.97,
                     0.5,
-                    0,
+                    False,
+                    False,
                     0.008 * self.game.paddle_speed,
                     0.166 * self.game.paddle_size,
                     0.0125 * self.game.paddle_size,
