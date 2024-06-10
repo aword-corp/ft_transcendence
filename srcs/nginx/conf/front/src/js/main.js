@@ -48,6 +48,7 @@ const routes = {
 	"/channels/:id": { title: channels_id_title, render: channels_id_view, auth: "yes" },
 	"/channels": { title: channels_title, render: channels_view, auth: "yes" },
 	"/pong/:uuid": { title: pong_title, render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket }, // AI will go here with game id "ai"
+	"/pong/:uuid/iframe": { title: pong_title, render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket }, // AI will go here with game id "ai"
 	"/auth/login": { title: login_title, render: login_view, auth: "no_only" },
 	"/auth/ft/callback": { title: ft_callback_title, render: ft_callback_view, auth: "no_only" },
 	"/auth/register": { title: register_title, render: register_view, auth: "no_only" },
@@ -176,7 +177,9 @@ export function router() {
 		if (view.constructor)
 			view.constructor(params);
 		app.innerHTML = view.render(params);
-		if (!isAuth())
+		if (location.pathname.contains("iframe"))
+			document.getElementById("nav").innerHTML = "";
+		else if (!isAuth())
 			document.getElementById("nav").innerHTML = "<anon-nav-bar class=\"navbar\"></anon-nav-bar>";
 		else
 			document.getElementById("nav").innerHTML = "<nav-bar class=\"navbar\"></nav-bar>";
