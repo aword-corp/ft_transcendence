@@ -1015,10 +1015,8 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         )
 
         player1.status = User.Status.GAME
-        player1.tournament_channel_name = None
         await player1.asave()
         player2.status = User.Status.GAME
-        player2.tournament_channel_name = None
         await player2.asave()
 
         return game
@@ -1058,6 +1056,8 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             return
 
         await self.user.set_tournament_channel_name(None)
+
+        await self.user.asave()
 
         await self.channel_layer.group_discard("tournament", self.channel_name)
 
