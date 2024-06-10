@@ -21,3 +21,8 @@ urlpatterns = [
     path("", include("db.urls")),
     path("pong/", include("pong.urls")),
 ]
+
+handler400 = "db.views.error_400_view"
+handler403 = "db.views.error_403_view"
+handler404 = "db.views.error_404_view"
+handler500 = "db.views.error_500_view"

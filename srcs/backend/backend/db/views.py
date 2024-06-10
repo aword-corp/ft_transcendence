@@ -63,6 +63,46 @@ def HomeView(request):
     )
 
 
+@api_view(
+    ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"]
+)
+def error_400_view(request, exception):
+    return Response(
+        {"error": "Bad request."},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+@api_view(
+    ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"]
+)
+def error_403_view(request, exception):
+    return Response(
+        {"error": "Forbidden."},
+        status=status.HTTP_403_FORBIDDEN,
+    )
+
+
+@api_view(
+    ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"]
+)
+def error_404_view(request, exception):
+    return Response(
+        {"error": "Not found."},
+        status=status.HTTP_404_NOT_FOUND,
+    )
+
+
+@api_view(
+    ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"]
+)
+def error_500_view(request):
+    return Response(
+        {"error": "Internal server error."},
+        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+
+
 @api_view(["POST"])
 @permission_classes([IsNotAuthenticated])
 @throttle_classes([FivePerMinuteUserThrottle])
