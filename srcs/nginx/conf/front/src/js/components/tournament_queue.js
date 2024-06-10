@@ -20,7 +20,9 @@ class TournamentQueue extends HTMLElement {
 				history.pushState("", "", "/pong/" + data.game_id);
 				router();
 			} else if (data.type == "update.message") {
-				console.log(data.users, data.time_left);
+				data.users.forEach((user) => {
+					console.log(user);
+				});
 			} else {
 				console.log("whatever");
 			}

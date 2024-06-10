@@ -343,6 +343,7 @@ class Messages(models.Model):
     seen_by = models.ManyToManyField(User, related_name="message_seen_by")
     edited = models.BooleanField(default=False)
     original_content = models.CharField(max_length=2048)
+    is_pin = models.BooleanField(default=False)
 
 
 class GroupChannel(models.Model):
@@ -353,7 +354,12 @@ class GroupChannel(models.Model):
     )
     messages = models.ManyToManyField(Messages, related_name="channel_messages")
     created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User, related_name="channel_created_by", on_delete=models.CASCADE, null=True
+    )
     users = models.ManyToManyField(User, related_name="channel_users")
+    operators = models.ManyToManyField(User, related_name="channel_operators")
+    topic = models.CharField(max_length=512, null=True)
 
     class Type(models.IntegerChoices):
         DM = 1, _("Direct Channel")
@@ -366,6 +372,7 @@ class Report(models.Model):
     user = models.ForeignKey(
         User, related_name="reported_users", on_delete=models.SET_NULL, null=True
     )
+    username = models.CharField(max_length=64)
     reason = models.CharField(max_length=2048)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -381,6 +388,7 @@ class ChatReport(Report):
     message = models.ForeignKey(
         Messages, related_name="reported_messages", on_delete=models.SET_NULL, null=True
     )
+    message_content = models.CharField(max_length=2048)
 
 
 class Game(models.Model):

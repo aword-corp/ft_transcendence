@@ -10,7 +10,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework import status
 from rest_framework.throttling import UserRateThrottle
 from django.contrib.auth import authenticate, login as django_login
-from .models import User, UserTwoFactorAuthData, Count, GroupChannel
+from .models import User, UserTwoFactorAuthData, Count, GroupChannel, Messages
 from django.core.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 import pyotp
@@ -689,9 +689,160 @@ def channel_username(request, name: str):
         )
 
 
-@api_view(["GET"])
+@api_view(["GET", "PUT"])
+@permission_classes([IsAuthenticated])
+def channel(request):
+    if request.method == "GET":
+        return Response(
+            {
+                "channels": [
+                    {
+                        "id": channel.id,
+                        "name": channel.name,
+                        "description": channel.description,
+                        "avatar_url": channel.avatar_url.url
+                        if channel.avatar_url
+                        else None,
+                        "created_at": channel.created_at,
+                        "created_by": channel.created_by.username
+                        if channel.created_by
+                        else None,
+                        "channel_type": channel.channel_type,
+                        "topic": channel.topic,
+                    }
+                    for channel in GroupChannel.objects.filter(users=request.user.id)
+                ]
+            },
+            status=status.HTTP_200_OK,
+        )
+    elif request.method == "PUT":
+        if (
+            "name" not in request.data
+            or not isinstance(request.data["name"], str)
+            or not len(request.data["name"])
+        ):
+            return Response(
+                {"error": "You tried to create a channel with an empty name."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        channel = GroupChannel.objects.create(
+            name=request.data["name"],
+            channel_type=GroupChannel.Type.GROUP,
+            created_by=request.user,
+        )
+        channel.users.add(request.user)
+        channel.save()
+        return Response(
+            {
+                "channel": {
+                    "id": channel.id,
+                    "name": channel.name,
+                    "description": channel.description,
+                    "avatar_url": channel.avatar_url.url
+                    if channel.avatar_url
+                    else None,
+                    "created_at": channel.created_at,
+                    "created_by": channel.created_by.username
+                    if channel.created_by
+                    else None,
+                    "channel_type": channel.channel_type,
+                    "topic": channel.topic,
+                }
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
 def channel_id(request, id: int):
+    try:
+        channel = GroupChannel.objects.get(id=id)
+        if request.method == "GET":
+            if not channel.users.filter(id=request.user.id).exists():
+                return Response(
+                    {"error": "You are not allowed to see this channel."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+            return Response(
+                {
+                    "channel": {
+                        "name": channel.name,
+                        "description": channel.description,
+                        "avatar_url": channel.avatar_url.url
+                        if channel.avatar_url
+                        else None,
+                        "created_at": channel.created_at,
+                        "created_by": channel.created_by.username
+                        if channel.created_by
+                        else None,
+                        "channel_type": channel.channel_type,
+                        "topic": channel.topic,
+                        "users": [user.username for user in channel.users.all()],
+                    }
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        elif request.method == "PATCH":
+            for key, value in request.data.items():
+                if key == "name" and isinstance(value, str):
+                    channel.name = value[:64]
+                elif key == "description" and isinstance(value, str):
+                    channel.description = value[:256]
+                elif key == "topic" and isinstance(value, str):
+                    channel.topic = value[:512]
+                elif key == "users" and (
+                    isinstance(value, list)
+                    and all(isinstance(item, str) for item in value)
+                ):
+                    for username in value:
+                        try:
+                            user = User.objects.get(username=username)
+                            if user.msg_default_response != user.Message_Request.BLOCK:
+                                channel.users.add(user)
+                        except User.DoesNotExist:
+                            pass
+            channel.save()
+            return Response(
+                {
+                    "channel": {
+                        "name": channel.name,
+                        "description": channel.description,
+                        "avatar_url": channel.avatar_url.url
+                        if channel.avatar_url
+                        else None,
+                        "created_at": channel.created_at,
+                        "created_by": channel.created_by.username
+                        if channel.created_by
+                        else None,
+                        "channel_type": channel.channel_type,
+                        "topic": channel.topic,
+                        "users": [user.username for user in channel.users.all()],
+                    }
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        elif request.method == "DELETE":
+            if channel.created_by.id != request.user.id:
+                return Response(
+                    {"error": "You are not allowed to delete this channel."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+            channel.delete()
+            return Response({"details": "ok"}, status=status.HTTP_200_OK)
+
+    except GroupChannel.DoesNotExist:
+        return Response(
+            {"error": "Channel not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def channel_messages(request, id: int):
     try:
         channel = GroupChannel.objects.get(id=id)
         if not channel.users.filter(id=request.user.id).exists():
@@ -699,18 +850,16 @@ def channel_id(request, id: int):
                 {"error": "You are not allowed to see this channel."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-        return Response(
-            {
-                "channel": {
-                    "name": channel.name,
-                    "description": channel.description,
-                    "avatar_url": channel.avatar_url.url
-                    if channel.avatar_url
-                    else None,
-                    "created_at": channel.created_at,
-                    "channel_type": channel.channel_type,
+
+        if request.method == "GET":
+            for message in channel.messages.all():
+                message.seen_by.add(request.user)
+
+            return Response(
+                {
                     "messages": [
                         {
+                            "id": message.id,
                             "content": message.content,
                             "author": message.author.username,
                             "created_at": message.created_at,
@@ -718,13 +867,134 @@ def channel_id(request, id: int):
                                 user.username for user in message.seen_by.all()
                             ],
                             "edited": message.edited,
+                            "is_pin": message.is_pin,
                         }
                         for message in channel.messages.all()
                     ],
-                }
-            },
-            status=status.HTTP_200_OK,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        elif request.method == "POST":
+            if (
+                "content" not in request.data
+                or not isinstance(request.data["content"], str)
+                or not len(request.data["content"])
+            ):
+                return Response(
+                    {"error": "You tried to send an empty message."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            message = channel.messages.create(
+                content=request.data["content"][:2048],
+                original_content=request.data["content"][:2048],
+                author=request.user,
+            )
+            message.seen_by.add(request.user)
+            channel.save()
+            return Response(
+                {
+                    "id": message.id,
+                    "content": message.content,
+                    "author": message.author.username,
+                    "created_at": message.created_at,
+                    "seen_by": [user.username for user in message.seen_by.all()],
+                    "edited": message.edited,
+                    "is_pin": message.is_pin,
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+    except GroupChannel.DoesNotExist:
+        return Response(
+            {"error": "Channel not found."},
+            status=status.HTTP_404_NOT_FOUND,
         )
+
+
+@api_view(["GET", "PATCH", "DELETE"])
+@permission_classes([IsAuthenticated])
+def channel_messages_id(request, channel_id: int, message_id: int):
+    try:
+        channel = GroupChannel.objects.get(id=channel_id)
+        if not channel.users.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are not allowed to see this channel."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        message: Messages = channel.messages.filter(id=message_id).first()
+
+        if not message:
+            return Response(
+                {"error": "Message not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if request.method == "GET":
+            return Response(
+                {
+                    "message": {
+                        "content": message.content,
+                        "author": message.author.username,
+                        "created_at": message.created_at,
+                        "seen_by": [user.username for user in message.seen_by.all()],
+                        "edited": message.edited,
+                        "is_pin": message.is_pin,
+                    }
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        elif request.method == "PATCH":
+            if "content" in request.data:
+                if message.author.id != request.user.id:
+                    return Response(
+                        {"error": "You are not allowed to edit this message."},
+                        status=status.HTTP_401_UNAUTHORIZED,
+                    )
+
+                if (
+                    "content" not in request.data
+                    or not isinstance(request.data["content"], str)
+                    or not len(request.data["content"])
+                ):
+                    return Response(
+                        {"error": "You tried to edit a message to be empty."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                message.content = request.data["content"][:2048]
+
+            if "is_pin" in request.data and isinstance(request.data["is_pin"], bool):
+                message.is_pin = request.data["is_pin"]
+
+            message.save()
+            return Response(
+                {
+                    "message": {
+                        "content": message.content,
+                        "author": message.author.username,
+                        "created_at": message.created_at,
+                        "seen_by": [user.username for user in message.seen_by.all()],
+                        "edited": message.edited,
+                        "is_pin": message.is_pin,
+                    }
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        elif request.method == "DELETE":
+            if message.author.id != request.user.id:
+                return Response(
+                    {"error": "You are not allowed to delete this message."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+            message.delete()
+            return Response(
+                {"details": "ok."},
+                status=status.HTTP_200_OK,
+            )
 
     except GroupChannel.DoesNotExist:
         return Response(

@@ -20,6 +20,7 @@ class PongGame extends HTMLElement {
 		this.handleKeyUp = this.handleKeyUp.bind(this);
 		this.handleSocketMessage = this.handleSocketMessage.bind(this);
 
+		this.name = (JSON.parse(atob(localStorage.getItem("access-token").split('.')[1]))).username;
 
 		document.addEventListener("keydown", this.handleKeyDown);
 		document.addEventListener("keyup", this.handleKeyUp);
@@ -27,8 +28,6 @@ class PongGame extends HTMLElement {
 		pongSocket.addEventListener("message", this.handleSocketMessage);
 
 	}
-
-	let name = (JSON.parse(atob(localStorage.getItem("access-token").split('.')[1]))).username;
 
 
 	handleKeyDown(event) {
@@ -83,7 +82,7 @@ class PongGame extends HTMLElement {
 			let player2 = data.position.player2;
 			let ball = data.position.ball;
 
-			if self.name == player2.name {
+			if (this.name == player2.name) {
 				self.mirror(player1, player2, ball);
 			}
 
