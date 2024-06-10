@@ -24,6 +24,7 @@ from .views import (
     channel_id,
     channel_messages,
     channel_messages_id,
+    channel_username,
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -44,6 +45,7 @@ urlpatterns = [
     path("clicks", get_clicks, name="get_clicks"),
     path("leaderboard", get_leaderboard, name="get_leaderboard"),
     path("user/profile/<str:name>", UserProfileView, name="user_profile"),
+    path("user/profile/<str:name>/dm", channel_username, name="channel_username"),
     path("user/friends/list", SelfUserFriendsList, name="self_user_friends_list"),
     path("user/friends/list/<str:name>", UserFriendsList, name="user_friends_list"),
     path("user/friends/add/<str:name>", UserFriendsAdd, name="user_friends_add"),
