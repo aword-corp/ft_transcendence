@@ -21,6 +21,8 @@ import json
 import requests
 from django.conf import settings
 from django.core.cache import cache
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 
 class time_cache:
@@ -189,7 +191,7 @@ def ft_callback(request: Request):
                 {"detail": "Could not authenticate."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-        django_login(request, user, backend="db.authentication.FTAuthBackend")
+        django_login(request, user, backend="db.authentication.CustomAuthBackend")
         refresh = MyTokenObtainPairSerializer.get_token(user)
         access_token = str(refresh.access_token)
         return Response(
@@ -207,7 +209,7 @@ def ft_callback(request: Request):
         )
         user.set_unusable_password()
         user.save()
-        django_login(request, user, backend="db.authentication.FTAuthBackend")
+        django_login(request, user, backend="db.authentication.CustomAuthBackend")
         refresh = MyTokenObtainPairSerializer.get_token(user)
         access_token = str(refresh.access_token)
         return Response(
@@ -540,6 +542,34 @@ def UserFriendsAdd(request, name: str):
         else:
             user.friendrequests.add(request.user)
         user.save()
+        channel_layer = get_channel_layer()
+
+        channels = cache.get(f"user_{request.user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "friend.request.sent",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
+        channels = cache.get(f"user_{user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "friend.request.received",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
         return Response(
             {"details": "ok."},
             status=status.HTTP_200_OK,
@@ -570,6 +600,34 @@ def UserFriendsRemove(request, name: str):
         user.friends.remove(request.user)
         user.save()
         request.user.save()
+        channel_layer = get_channel_layer()
+
+        channels = cache.get(f"user_{request.user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "friend.remove.sent",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
+        channels = cache.get(f"user_{user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "friend.remove.received",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
         return Response(
             {"details": "ok."},
             status=status.HTTP_200_OK,
@@ -606,6 +664,34 @@ def UserFriendRequestAccept(request, name: str):
         user.friends.add(request.user)
         user.save()
         request.user.save()
+        channel_layer = get_channel_layer()
+
+        channels = cache.get(f"user_{request.user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "friend.accepted.sent",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
+        channels = cache.get(f"user_{user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "friend.accepted.received",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
         return Response(
             {"details": "ok."},
             status=status.HTTP_200_OK,
@@ -635,6 +721,35 @@ def UserFriendRequestReject(request, name: str):
             )
         request.user.friendrequests.remove(user)
         request.user.save()
+
+        channel_layer = get_channel_layer()
+
+        channels = cache.get(f"user_{request.user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "friend.request.rejected.sent",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
+        channels = cache.get(f"user_{user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "friend.request.rejected.received",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
         return Response(
             {"details": "ok."},
             status=status.HTTP_200_OK,
@@ -664,6 +779,35 @@ def UserFriendRequestRemove(request, name: str):
             )
         user.friendrequests.remove(request.user)
         user.save()
+
+        channel_layer = get_channel_layer()
+
+        channels = cache.get(f"user_{request.user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "friend.request.removed.sent",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
+        channels = cache.get(f"user_{user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "friend.request.removed.received",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
         return Response(
             {"details": "ok."},
             status=status.HTTP_200_OK,
@@ -709,6 +853,35 @@ def UserBlock(request, name: str):
         request.user.blocked.add(user)
         user.save()
         request.user.save()
+
+        channel_layer = get_channel_layer()
+
+        channels = cache.get(f"user_{request.user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "block.user.sent",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
+        channels = cache.get(f"user_{user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "block.user.received",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
         return Response(
             {"details": "ok."},
             status=status.HTTP_200_OK,
@@ -738,6 +911,35 @@ def UserUnBlock(request, name: str):
             )
         request.user.blocked.remove(user)
         request.user.save()
+
+        channel_layer = get_channel_layer()
+
+        channels = cache.get(f"user_{request.user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "unblock.user.sent",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
+        channels = cache.get(f"user_{user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "unblock.user.received",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
         return Response(
             {"details": "ok."},
             status=status.HTTP_200_OK,
@@ -780,6 +982,37 @@ def channel_username(request, name: str):
             channel = GroupChannel.objects.create(channel_type=GroupChannel.Type.DM)
             channel.users.add(user)
             channel.users.add(request.user)
+
+            channel_layer = get_channel_layer()
+
+            layer_channels = cache.get(f"user_{request.user.id}_channel")
+
+            if layer_channels:
+                for layer_channel in layer_channels:
+                    async_to_sync(channel_layer.send)(
+                        layer_channel,
+                        {
+                            "type": "dm.creation.sent",
+                            "from": request.user.username,
+                            "to": user.username,
+                            "channel_id": channel.id,
+                        },
+                    )
+
+            layer_channels = cache.get(f"user_{user.id}_channel")
+
+            if layer_channels:
+                for layer_channel in layer_channels:
+                    async_to_sync(channel_layer.send)(
+                        layer_channel,
+                        {
+                            "type": "dm.creation.received",
+                            "from": request.user.username,
+                            "to": user.username,
+                            "channel_id": channel.id,
+                        },
+                    )
+
         return Response({"channel_id": channel.id}, status=status.HTTP_200_OK)
 
     except User.DoesNotExist:
@@ -835,6 +1068,22 @@ def channel(request):
         )
         channel.users.add(request.user)
         channel.save()
+
+        channel_layer = get_channel_layer()
+
+        layer_channels = cache.get(f"user_{request.user.id}_channel")
+
+        if layer_channels:
+            for layer_channel in layer_channels:
+                async_to_sync(channel_layer.send)(
+                    layer_channel,
+                    {
+                        "type": "channel.creation.sent",
+                        "from": request.user.username,
+                        "channel_id": channel.id,
+                    },
+                )
+
         return Response(
             {
                 "channel": {
@@ -861,12 +1110,12 @@ def channel(request):
 def channel_id(request, id: int):
     try:
         channel = GroupChannel.objects.get(id=id)
+        if not channel.users.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are not allowed to see this channel."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         if request.method == "GET":
-            if not channel.users.filter(id=request.user.id).exists():
-                return Response(
-                    {"error": "You are not allowed to see this channel."},
-                    status=status.HTTP_401_UNAUTHORIZED,
-                )
             return Response(
                 {
                     "channel": {
@@ -918,6 +1167,23 @@ def channel_id(request, id: int):
                                 channel.users.add(user)
                         except User.DoesNotExist:
                             pass
+
+            channel_layer = get_channel_layer()
+
+            for user in channel.users.all():
+                layer_channels = cache.get(f"user_{user.id}_channel")
+
+                if layer_channels:
+                    for layer_channel in layer_channels:
+                        async_to_sync(channel_layer.send)(
+                            layer_channel,
+                            {
+                                "type": "channel.edit.sent",
+                                "from": request.user.username,
+                                "channel_id": channel.id,
+                            },
+                        )
+
             channel.save()
             return Response(
                 {
@@ -948,6 +1214,23 @@ def channel_id(request, id: int):
                     {"error": "You are not allowed to delete this channel."},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
+
+            channel_layer = get_channel_layer()
+
+            for user in channel.users.all():
+                layer_channels = cache.get(f"user_{user.id}_channel")
+
+                if layer_channels:
+                    for layer_channel in layer_channels:
+                        async_to_sync(channel_layer.send)(
+                            layer_channel,
+                            {
+                                "type": "channel.delete.sent",
+                                "from": request.user.username,
+                                "channel_id": channel.id,
+                            },
+                        )
+
             channel.delete()
             return Response({"details": "ok"}, status=status.HTTP_200_OK)
 
@@ -1021,6 +1304,24 @@ def channel_messages(request, id: int):
             )
             message.seen_by.add(request.user)
             message.save()
+
+            channel_layer = get_channel_layer()
+
+            for user in channel.users.all():
+                layer_channels = cache.get(f"user_{user.id}_channel")
+
+                if layer_channels:
+                    for layer_channel in layer_channels:
+                        async_to_sync(channel_layer.send)(
+                            layer_channel,
+                            {
+                                "type": "channel.message.sent",
+                                "from": request.user.username,
+                                "channel_id": channel.id,
+                                "message_id": message.id,
+                            },
+                        )
+
             channel.save()
             return Response(
                 {
@@ -1099,6 +1400,23 @@ def channel_messages_id(request, channel_id: int, message_id: int):
             if "is_pin" in request.data and isinstance(request.data["is_pin"], bool):
                 message.is_pin = request.data["is_pin"]
 
+            channel_layer = get_channel_layer()
+
+            for user in channel.users.all():
+                layer_channels = cache.get(f"user_{user.id}_channel")
+
+                if layer_channels:
+                    for layer_channel in layer_channels:
+                        async_to_sync(channel_layer.send)(
+                            layer_channel,
+                            {
+                                "type": "channel.message.edited",
+                                "from": request.user.username,
+                                "channel_id": channel.id,
+                                "message_id": message.id,
+                            },
+                        )
+
             message.save()
             return Response(
                 {
@@ -1120,6 +1438,24 @@ def channel_messages_id(request, channel_id: int, message_id: int):
                     {"error": "You are not allowed to delete this message."},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
+
+            channel_layer = get_channel_layer()
+
+            for user in channel.users.all():
+                layer_channels = cache.get(f"user_{user.id}_channel")
+
+                if layer_channels:
+                    for layer_channel in layer_channels:
+                        async_to_sync(channel_layer.send)(
+                            layer_channel,
+                            {
+                                "type": "channel.message.deleted",
+                                "from": request.user.username,
+                                "channel_id": channel.id,
+                                "message_id": message.id,
+                            },
+                        )
+
             message.delete()
             return Response(
                 {"details": "ok."},

@@ -12,6 +12,20 @@ export function closeSocketClick() {
 	countSocket = undefined;
 }
 
+export var updateSocket = undefined;
+
+export function initSocketUpdate() {
+	if (updateSocket)
+		return;
+	updateSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/api/ws/update/');
+}
+
+export function closeSocketUpdate() {
+	if (updateSocket && (updateSocket.readyState === WebSocket.OPEN || updateSocket.readyState === WebSocket.CONNECTING))
+		updateSocket.close();
+	updateSocket = undefined;
+}
+
 export var mmSocket = undefined;
 
 export function initMMSocket() {

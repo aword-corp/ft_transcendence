@@ -96,7 +96,6 @@ TEMPLATES = [
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "db.authentication.CustomAuthBackend",
-    "db.authentication.FTAuthBackend",
 ]
 
 ASGI_APPLICATION = "backend.asgi.application"

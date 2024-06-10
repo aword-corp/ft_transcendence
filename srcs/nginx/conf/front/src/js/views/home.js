@@ -14,6 +14,9 @@ export function home_view() {
 				src="/static/assets/mushoku-s01-e21.vtt"
 				default />
 		</video>
+		<video controls width=640>
+			<source src="/static/assets/oshi_no_ko-s01-e01.webm" />
+		</video>
 		`
 	);
 }

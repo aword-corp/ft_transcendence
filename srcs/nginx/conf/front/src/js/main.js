@@ -9,7 +9,7 @@ import { profile_view, profile_title } from "./views/profile.js";
 import { setup_2fa_view, setup_2fa_title } from "./views/setup_2fa.js";
 import { leaderboard_view, leaderboard_title } from "./views/leaderboard.js";
 import "./components/navbar.js";
-import { closeMMSocket, closeTMSocket, closePongSocket, closeSocketClick, initMMSocket, initTMSocket, initPongSocket, initSocketClick } from "./components/socket.js";
+import { closeMMSocket, closeTMSocket, closePongSocket, closeSocketClick, initMMSocket, initTMSocket, initPongSocket, initSocketClick, initSocketUpdate, closeSocketUpdate } from "./components/socket.js";
 import { ft_callback_title, ft_callback_view } from "./views/ft_callback.js";
 import { regular_queue_title, regular_queue_view } from "./views/regular_queue.js";
 import { tournament_queue_title, tournament_queue_view } from "./views/tournament_queue.js";
@@ -130,10 +130,12 @@ function isAuth() {
 function checkAccess(view) {
 
 	if (isAuth()) {
+		initSocketUpdate();
 		if (view.auth == "no_only")
 			return (false);
 		return (true);
 	}
+	closeSocketUpdate();
 	if (view.auth == "yes")
 		return (false);
 	return (true);
@@ -207,3 +209,5 @@ window.addEventListener("click", e => {
 
 window.addEventListener("popstate", router);
 window.addEventListener("DOMContentLoaded", router);
+
+initSocketUpdate();
