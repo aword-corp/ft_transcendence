@@ -8,8 +8,9 @@ from math import pi, cos, sin
 import asyncio
 import uuid
 from datetime import datetime, timedelta
-from .ai.ai import AiPlayer, Paddle, Ball
+from .ai.ai import Paddle, Ball, network
 import math
+import time
 
 
 class DefaultConsumer(AsyncWebsocketConsumer):
@@ -413,9 +414,8 @@ class PongConsumer(AsyncWebsocketConsumer):
         await self.close()
 
 
-# TODO No data save in DB
 class PongAIConsumer(AsyncWebsocketConsumer):
-    acceleration = 1.2
+    acceleration = 1.05
     games = {}
 
     async def connect(self):
@@ -425,54 +425,51 @@ class PongAIConsumer(AsyncWebsocketConsumer):
         else:
             await self.send(json.dumps({"error": "You need to be logged in."}))
             await self.close()
+            return
 
-        if self.user.id not in self.games:
-            self.game.state = Game.State.STARTING
-            await self.game.asave()
+        if self.user.id not in self.games or self.games[self.user.id]["state"] == 2:
             self.games[self.user.id] = {
                 "ball": Ball(
                     0.5,
                     0.5,
-                    0.002 * self.game.ball_speed,
-                    0.002 * self.game.ball_speed,
-                    0.002 * self.game.ball_speed,
-                    0.0128 * self.game.ball_size,
+                    0.004,
+                    0.004,
+                    0.004,
+                    0.0128,
                 ),
-                "started": False,
-                "users": [],
+                "state": 0
             }
+        
+            self.games[self.user.id][self.user.id] = Paddle(
+                0.03,
+                0.5,
+                False,
+                False,
+                0.016,
+                0.166,
+                0.083,
+                0.0125,
+                0,
+                self.user,
+            )
 
-        try:
-            if self.user.id not in self.games[
-                self.user.id
-            ] and await self.game.users.aget(id=self.user.id):
-                self.games[self.user.id][self.user.id] = Paddle(
-                    0.03 if len(self.games[self.user.id]["users"]) == 0 else 0.97,
-                    0.5,
-                    False,
-                    False,
-                    0.008 * self.game.paddle_speed,
-                    0.166 * self.game.paddle_size,
-                    0.0125 * self.game.paddle_size,
-                    0,
-                    self.user,
-                )
-                self.games[self.user.id]["users"].append(self.user)
-
-            if (
-                len(self.games[self.user.id]["users"]) == 2
-                and not self.games[self.user.id]["started"]
-            ):
-                self.games[self.user.id]["started"] = True
-                asyncio.create_task(self.game_loop(self.user.id))
-
-        except User.DoesNotExist:
-            pass
-
-        await self.channel_layer.group_add(self.game_channel, self.channel_name)
+            self.games[self.user.id]["bot"] = Paddle(
+                1 - 0.03,
+                0.5,
+                False,
+                False,
+                0.016,
+                0.166,
+                0.083,
+                0.0125,
+                0,
+                None,
+            )
+    
+            asyncio.create_task(self.game_loop())
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(self.game_channel, self.channel_name)
+        pass
 
     async def receive(self, text_data):
         data = json.loads(text_data)
@@ -480,63 +477,50 @@ class PongAIConsumer(AsyncWebsocketConsumer):
         if "action" in data and self.user.id in self.games[self.user.id]:
             action = data["action"]
             if action == "UP_PRESS_KEYDOWN":
-                self.games[self.user.id][self.user.id].dy = -self.games[self.user.id][
-                    self.user.id
-                ].speed
+                self.games[self.user.id][self.user.id].up = True
             elif action == "DOWN_PRESS_KEYDOWN":
-                self.games[self.user.id][self.user.id].dy = self.games[self.user.id][
-                    self.user.id
-                ].speed
+                self.games[self.user.id][self.user.id].down = True
             elif action == "UP_PRESS_KEYUP":
-                self.games[self.user.id][self.user.id].dy = 0
+                self.games[self.user.id][self.user.id].up = False
             elif action == "DOWN_PRESS_KEYUP":
-                self.games[self.user.id][self.user.id].dy = 0
+                self.games[self.user.id][self.user.id].down = False
             else:
                 await self.send(text_data="Invalid move")
 
-        if "message" in data:
-            message = data["message"]
-            await self.channel_layer.group_send(
-                self.game_channel,
-                {
-                    "type": "broadcast.message",
-                    "message": {
-                        "user": self.user.display_name
-                        if self.user.display_name
-                        else self.user.username,
-                        "message": message,
-                    },
-                },
-            )
+    async def game_loop(self):
+        player1: Paddle = self.games[self.user.id][self.user.id]
+        player2: Paddle = self.games[self.user.id]["bot"]
+        ball: Ball = self.games[self.user.id]["ball"]
+        self.games[self.user.id]["state"] = 1
 
-    async def game_loop(self, user_id):
-        player1: Paddle = self.games[user_id][self.games[user_id]["users"][0].id]
-        player2 = AiPlayer(
-            "AI",
-            0.03 if len(self.games[self.user.id]["users"]) == 0 else 0.97,
-            0.5,
-            0,
-            0.008 * self.game.paddle_speed,
-            0.166 * self.game.paddle_size,
-            0.0125 * self.game.paddle_size,
-            0,
-        )
-
-        ball: Ball = self.games[user_id]["ball"]
+        ai_last_fetch = 0
+        ONE_SECOND_NS = 1_000_000_000
 
         await asyncio.sleep(3)
-
-        self.game.state = Game.State.PLAYING
-        await self.game.asave()
         while player1.score < 5 and player2.score < 5:
+            # Update player2 if he can be updated
+            now = time.time_ns()
+            if now - ai_last_fetch >= ONE_SECOND_NS / 1000:
+                up, down = network.predict([ball.x, ball.y, ball.dx, ball.dy, player2.y])
+                print("AI", up, down)
+                player2.up = up > 0.5 and up > down
+                player2.down = down > 0.5 and down > up
+                ai_last_fetch = now
+
             wait = False
             # update paddle position
-            player1.y += player1.dy
+            if player1.up and not player1.down:
+                player1.y -= player1.speed
+            if player1.down and not player1.up:
+                player1.y += player1.speed
             if player1.y < 0:
                 player1.y = 0
             if player1.y + player1.height > 1:
                 player1.y = 1 - player1.height
-            player2.y += player2.dy
+            if player2.up and not player2.down:
+                player2.y -= player2.speed
+            if player2.down and not player2.up:
+                player2.y += player2.speed
             if player2.y < 0:
                 player2.y = 0
             if player2.y + player2.height > 1:
@@ -561,13 +545,10 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 player2.y = 0.5
                 player2.score += 1
                 wait = True if player2.score < 5 else False
-                await self.channel_layer.group_send(
-                    self.game_channel,
-                    {
+                await self.send(json.dumps({
                         "type": "broadcast.score",
                         "score": {"player1": player1.score, "player2": player2.score},
-                    },
-                )
+                    }))
             elif ball.x + ball.radius > 1:
                 ball.x = 0.5
                 ball.y = 0.5
@@ -577,13 +558,10 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 player2.y = 0.5
                 player1.score += 1
                 wait = True if player1.score < 5 else False
-                await self.channel_layer.group_send(
-                    self.game_channel,
-                    {
+                await self.send(json.dumps({
                         "type": "broadcast.score",
                         "score": {"player1": player1.score, "player2": player2.score},
-                    },
-                )
+                    }))
             # check ball collision with paddles
             maxAngle = pi / 4
 
@@ -597,8 +575,8 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 and ball.y - ball.radius <= player1.y + player1.height
             ):
                 # ball.temperature += 0.05
-                ballPosPaddle = (player1.y + player1.height / 2) - ball.y
-                relPos = ballPosPaddle / (player1.height / 2)
+                ballPosPaddle = (player1.y + player1.half_height) - ball.y
+                relPos = ballPosPaddle / (player1.half_height)
                 bounceAngle = relPos * maxAngle
 
                 speed = (ball.dx**2 + ball.dy**2) ** 0.5 * self.acceleration
@@ -614,8 +592,8 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 and ball.y - ball.radius <= player2.y + player2.height
             ):
                 # ball.temperature += 0.05
-                ballPosPaddle = (player2.y + player2.height / 2) - ball.y
-                relPos = ballPosPaddle / (player2.height / 2)
+                ballPosPaddle = (player2.y + player2.half_height) - ball.y
+                relPos = ballPosPaddle / (player2.half_height)
                 bounceAngle = relPos * maxAngle
 
                 speed = (ball.dx**2 + ball.dy**2) ** 0.5 * self.acceleration
@@ -623,9 +601,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 ball.dy = speed * -sin(bounceAngle)
 
             # sending the new positions to all clients in the game
-            await self.channel_layer.group_send(
-                self.game_channel,
-                {
+            await self.send(json.dumps({
                     "type": "broadcast.pos",
                     "position": {
                         "ball": {"x": ball.x, "y": ball.y, "radius": ball.radius},
@@ -635,6 +611,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                             "width": player1.width,
                             "height": player1.height,
                             "score": player1.score,
+                            "name": player1.user.username,
                         },
                         "player2": {
                             "x": player2.x,
@@ -642,34 +619,19 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                             "width": player2.width,
                             "height": player2.height,
                             "score": player2.score,
+                            "name": None,
                         },
                     },
-                },
-            )
-            await asyncio.sleep(3 if wait else 0.0078125)
+                }))
+            await asyncio.sleep(3 if wait else 0.016)
 
-        player1.user.status = User.Status.ON
-        await player1.user.asave()
-        self.game.state = self.game.State.ENDED
-
-        del self.games[user_id]
-
-        await self.game.asave()
-
-        await self.channel_layer.group_send(
-            self.game_channel,
-            {
+        self.games[self.user.id]["state"] = 2
+        await self.send(json.dumps({
                 "type": "broadcast.result",
                 "result": {"player1": player1.score, "player2": player2.score},
-            },
-        )
+            }))
 
-        await asyncio.sleep(300)
-
-        await self.channel_layer.group_send(
-            self.game_channel,
-            {"type": "discard.everyone"},
-        )
+        await self.close()
 
     async def broadcast_pos(self, event):
         position = event["position"]
