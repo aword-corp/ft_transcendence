@@ -1,5 +1,4 @@
 import json
-from typing import List
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -27,6 +26,25 @@ class DefaultConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         pass
 
+
+class UserConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        await self.accept()
+
+        await self.channel_layer.group_add("user", self.channel_name)
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard("user", self.channel_name)
+
+    async def receive(self, text_data):
+        await self.channel_layer.group_send(
+            "user", {"type": "user.message", "message": text_data}
+        )
+
+    async def user_message(self, event):
+        message = event["message"]
+
+        await self.send(text_data=message)
 
 class CountConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async

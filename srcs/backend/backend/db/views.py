@@ -649,6 +649,15 @@ def UserBlock(request, name: str):
             user.friendrequests.remove(request.user)
         if request.user.friendrequests.filter(id=user.id).exists():
             request.user.friendrequests.remove(user)
+        for channel in (
+            GroupChannel.objects.filter(users=request.user).filter(users=user).all()
+        ):
+            channel.users.remove(request.user)
+            if channel.users.count() == 0:
+                channel.delete()
+            elif channel.created_by.id == request.user.id:
+                channel.created_by = channel.users.first()
+            channel.save()
         request.user.blocked.add(user)
         user.save()
         request.user.save()
@@ -710,14 +719,17 @@ def channel_username(request, name: str):
             .first()
         )
         if not channel:
-            if user.msg_default_response == User.Message_Request.BLOCK:
+            if (
+                user.msg_default_response == User.Message_Request.BLOCK
+                and not user.friends.filter(id=request.user.id).exists()
+            ):
                 return Response(
                     {
                         "error": "You cannot start a private message channel with this user."
                     },
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
-            channel = GroupChannel.objects.create()
+            channel = GroupChannel.objects.create(channel_type=GroupChannel.Type.DM)
             channel.users.add(user)
             channel.users.add(request.user)
         return Response({"channel_id": channel.id}, status=status.HTTP_200_OK)
@@ -839,7 +851,12 @@ def channel_id(request, id: int):
                     for username in value:
                         try:
                             user = User.objects.get(username=username)
-                            if user.msg_default_response != user.Message_Request.BLOCK:
+                            if not user.blocked.filter(
+                                id=request.user.id
+                            ).exists() and (
+                                user.msg_default_response != user.Message_Request.BLOCK
+                                or user.friends.filter(id=request.user.id).exists()
+                            ):
                                 channel.users.add(user)
                         except User.DoesNotExist:
                             pass
@@ -931,6 +948,7 @@ def channel_messages(request, id: int):
                 author=request.user,
             )
             message.seen_by.add(request.user)
+            message.save()
             channel.save()
             return Response(
                 {
