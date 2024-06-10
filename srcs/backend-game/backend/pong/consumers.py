@@ -927,14 +927,15 @@ class TournamentConsumer(AsyncWebsocketConsumer):
 
     async def run_tournament(self, tournament, players):
         n_rounds = math.ceil(math.log2(len(players)))
+        print(f"Number of rounds = {n_rounds}")
         current_round = 0
 
         while current_round < n_rounds:
-            tree = [[player for player in players]]
+            tree = []
             for i in range(0, len(players), 2):
                 if i + 1 < len(players):
-                    player1 = tree[current_round][i]
-                    player2 = tree[current_round][i + 1]
+                    player1 = players[i]
+                    player2 = players[i + 1]
                     game = await self.start_game(player1, player2)
                     tree.append(game)
                 else:
@@ -956,10 +957,10 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         await game.users.aadd(player1)
         await game.users.aadd(player2)
         await game.asave()
-        print(player1)
-        print(player1.channel_name)
-        print(player2)
-        print(player2.channel_name)
+        # print(player1)
+        # print(player1.channel_name)
+        # print(player2)
+        # print(player2.channel_name)
         await self.channel_layer.send(
             await player1.get_channel_name(),
             {"type": "game.start", "game_id": str(game.uuid)},
@@ -986,12 +987,14 @@ class TournamentConsumer(AsyncWebsocketConsumer):
                 winners.append(winner)
             else:
                 winners.append(game)
+        print(f"Winners : {winners}")
         return winners
 
     async def wait_game_winner(self, game: Game):
         while game.state != Game.State.ENDED:
             await asyncio.sleep(1)
-        return game.winner
+            game = await Game.objects.aget(id=game.id)
+        return await game.get_winner()
 
     async def game_start(self, event):
         game_id = event["game_id"]

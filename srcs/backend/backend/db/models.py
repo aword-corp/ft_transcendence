@@ -428,6 +428,10 @@ class Game(models.Model):
 
         return None
 
+    @database_sync_to_async
+    def get_winner(self) -> Optional[User]:
+        return self.winner
+
 
 class Tournament(models.Model):
     name = models.CharField(max_length=256)
