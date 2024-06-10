@@ -220,7 +220,8 @@ class User(AbstractBaseUser):
 
     is_invisible = models.BooleanField(default=False)
 
-    channel_name = models.CharField(max_length=128, null=True)
+    mm_channel_name = models.CharField(max_length=128, null=True)
+    tournament_channel_name = models.CharField(max_length=128, null=True)
 
     # Settings / Cosmetic
     paddle_type = models.SmallIntegerField(default=1)
@@ -301,16 +302,28 @@ class User(AbstractBaseUser):
         return leaderboard
 
     @database_sync_to_async
-    def set_channel_name(self, channel_name: str) -> None:
-        self.channel_name = channel_name
+    def set_mm_channel_name(self, mm_channel_name: str) -> None:
+        self.mm_channel_name = mm_channel_name
 
     @database_sync_to_async
-    def is_in_queue(self):
-        return bool(self.channel_name)
+    def is_in_mm_queue(self):
+        return bool(self.mm_channel_name)
 
     @database_sync_to_async
-    def get_channel_name(self) -> str:
-        return self.channel_name
+    def get_mm_channel_name(self) -> str:
+        return self.mm_channel_name
+
+    @database_sync_to_async
+    def set_tournament_channel_name(self, tournament_channel_name: str) -> None:
+        self.tournament_channel_name = tournament_channel_name
+
+    @database_sync_to_async
+    def is_in_tournament_queue(self):
+        return bool(self.tournament_channel_name)
+
+    @database_sync_to_async
+    def get_tournament_channel_name(self) -> str:
+        return self.tournament_channel_name
 
     @database_sync_to_async
     def is_friend(self, user: "User"):

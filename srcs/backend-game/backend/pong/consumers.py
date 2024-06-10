@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from .ai.ai import Paddle, Ball, network
 import math
 import time
-from colorama import Fore, Back, Style
+# from colorama import Fore, Back, Style
 
 
 class DefaultConsumer(AsyncWebsocketConsumer):
@@ -769,7 +769,7 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        if bool(self.user.channel_name):
+        if bool(self.user.mm_channel_name):
             await self.send(json.dumps({"error": "You are already in a queue."}))
             await self.close()
             return
@@ -779,6 +779,9 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
+        await self.user.set_mm_channel_name(self.channel_name)
+        await self.user.asave()
+
         self.elo_range[self.user.id] = 60
         self.elo_range_timer[self.user.id] = datetime.now()
         self.queue.append(self.user)
@@ -786,8 +789,6 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
 
         if len(self.queue) == 1:
             asyncio.create_task(self.matchmaking())
-
-        await self.user.set_channel_name(self.channel_name)
 
         await self.channel_layer.group_add("matchmaking", self.channel_name)
 
@@ -834,14 +835,14 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             await game.users.aadd(user)
             await game.asave()
             await self.channel_layer.send(
-                await user.get_channel_name(),
+                await user.get_mm_channel_name(),
                 {"type": "game.start", "game_id": str(game.uuid)},
             )
             await self.channel_layer.group_discard(
-                "matchmaking", await user.get_channel_name()
+                "matchmaking", await user.get_mm_channel_name()
             )
             user.status = User.Status.GAME
-            user.channel_name = None
+            user.mm_channel_name = None
             await user.asave()
 
     async def disconnect(self, close_code):
@@ -850,7 +851,7 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
         except (ValueError, AttributeError):
             return
 
-        await self.user.set_channel_name(None)
+        await self.user.set_mm_channel_name(None)
 
         await self.channel_layer.group_discard("matchmaking", self.channel_name)
 
@@ -911,7 +912,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        if bool(self.user.channel_name):
+        if bool(self.user.tournament_channel_name):
             await self.send(json.dumps({"error": "You are already in a queue."}))
             await self.close()
             return
@@ -921,7 +922,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        await self.user.set_channel_name(self.channel_name)
+        await self.user.set_tournament_channel_name(self.channel_name)
         await self.user.asave()
 
         self.queue.append(self.user)
@@ -1005,19 +1006,19 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         # print(player2)
         # print(player2.channel_name)
         await self.channel_layer.send(
-            await player1.get_channel_name(),
+            player1.tournament_channel_name,
             {"type": "game.start", "game_id": str(game.uuid)},
         )
         await self.channel_layer.send(
-            await player2.get_channel_name(),
+            player2.tournament_channel_name,
             {"type": "game.start", "game_id": str(game.uuid)},
         )
 
         player1.status = User.Status.GAME
-        player1.channel_name = None
+        player1.tournament_channel_name = None
         await player1.asave()
         player2.status = User.Status.GAME
-        player2.channel_name = None
+        player2.tournament_channel_name = None
         await player2.asave()
 
         return game
@@ -1030,10 +1031,10 @@ class TournamentConsumer(AsyncWebsocketConsumer):
                 winners.append(winner)
             else:
                 winners.append(game)
-        print(Fore.GREEN)
+        # print(Fore.GREEN)
         print(winners)
-        print(Style.RESET_ALL)
-        print(await winners[0].get_channel_name())
+        # print(Style.RESET_ALL)
+        print(await winners[0].get_tournament_channel_name())
         return winners
 
     async def wait_game_winner(self, game: Game):
@@ -1056,9 +1057,9 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         except (ValueError, AttributeError):
             return
 
-        await self.user.set_channel_name(None)
+        await self.user.set_tournament_channel_name(None)
 
-        await self.channel_layer.group_discard("matchmaking", self.channel_name)
+        await self.channel_layer.group_discard("tournament", self.channel_name)
 
         users = []
         for user in self.queue:
@@ -1074,7 +1075,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         )
 
         await self.channel_layer.group_send(
-            "matchmaking", {"type": "update.message", "users": users}
+            "tournament", {"type": "update.message", "users": users}
         )
 
     async def update_message(self, event):
