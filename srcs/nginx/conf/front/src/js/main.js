@@ -177,7 +177,7 @@ export function router() {
 		if (view.constructor)
 			view.constructor(params);
 		app.innerHTML = view.render(params);
-		if (location.pathname.contains("iframe"))
+		if (location.pathname.includes("iframe"))
 			document.getElementById("nav").innerHTML = "";
 		else if (!isAuth())
 			document.getElementById("nav").innerHTML = "<anon-nav-bar class=\"navbar\"></anon-nav-bar>";

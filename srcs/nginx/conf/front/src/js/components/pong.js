@@ -5,7 +5,16 @@ class PongGame extends HTMLElement {
 		super();
 
 		this.innerHTML = `
-			<canvas id="pongCanvas" class="pongCanvas"></canvas>
+			<canvas tabindex='1' id="pongCanvas" class="pongCanvas"></canvas>
+			<div id="chat">
+			</div>
+			<form id="send_message">
+				<p>
+					<label for="id_message">message:</label>
+					<input id="id_message" type=text name="message" required>
+				</p>
+				<button type="submit">send</button>
+			</form>
 		`;
 
 		this.canvas = document.getElementById("pongCanvas");
@@ -26,10 +35,26 @@ class PongGame extends HTMLElement {
 
 		this.down = false;
 
-		document.addEventListener("keydown", this.handleKeyDown);
-		document.addEventListener("keyup", this.handleKeyUp);
+		this.canvas.addEventListener("keydown", this.handleKeyDown);
+		this.canvas.addEventListener("keyup", this.handleKeyUp);
+		this.canvas.addEventListener("focusout", (event) => {
+			pongSocket.send(JSON.stringify({ "action": "UP_PRESS_KEYUP" }));
+			this.up = false;
+			pongSocket.send(JSON.stringify({ "action": "DOWN_PRESS_KEYUP" }));
+			this.down = false;
+		});
 
 		pongSocket.addEventListener("message", this.handleSocketMessage);
+
+		let send_message_form = document.getElementById("send_message");
+
+		send_message_form.addEventListener("submit", (event) => {
+			event.preventDefault();
+			const formData = new FormData(send_message_form);
+			pongSocket.send(JSON.stringify({ "message": formData.get("message") }));
+			event.target.reset();
+		});
+
 
 	}
 
@@ -85,7 +110,7 @@ class PongGame extends HTMLElement {
 		}
 
 		else if (data.type == "broadcast.message") {
-			console.log(data.message);
+			this.querySelector("#chat").innerHTML += `<p>${JSON.stringify(data.message)}</p>`;
 		}
 	}
 

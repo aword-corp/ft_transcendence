@@ -176,25 +176,26 @@ class PongConsumer(AsyncWebsocketConsumer):
 
         if "message" in data:
             message = data["message"]
-            await self.channel_layer.group_send(
-                self.game_channel,
-                {
-                    "type": "broadcast.message",
-                    "message": {
-                        "user": {
-                            "name": self.user.username,
-                            "avatar_url": self.user.avatar_url.url
-                            if self.user.avatar_url
-                            else None,
-                            "display_name": self.user.display_name,
-                            "grade": self.user.grade,
-                            "verified": self.user.verified,
+            if isinstance(message, str) and len(message) > 0:
+                await self.channel_layer.group_send(
+                    self.game_channel,
+                    {
+                        "type": "broadcast.message",
+                        "message": {
+                            "user": {
+                                "name": self.user.username,
+                                "avatar_url": self.user.avatar_url.url
+                                if self.user.avatar_url
+                                else None,
+                                "display_name": self.user.display_name,
+                                "grade": self.user.grade,
+                                "verified": self.user.verified,
+                            },
+                            "message": message,
+                            "is_player": self.user.id in self.games[self.game_id],
                         },
-                        "message": message,
-                        "is_player": self.user.id in self.games[self.game_id],
                     },
-                },
-            )
+                )
 
     async def game_loop(self, game_id):
         player1: Paddle = self.games[game_id][self.games[game_id]["users"][0].id]
