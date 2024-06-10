@@ -20,6 +20,7 @@ from datetime import timedelta
 import json
 import requests
 from django.conf import settings
+from django.core.cache import cache
 
 
 class time_cache:
