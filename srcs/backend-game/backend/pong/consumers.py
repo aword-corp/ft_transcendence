@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from .ai.ai import Paddle, Ball, network
 import math
 import time
+from colorama import Fore, Back, Style
 
 
 class DefaultConsumer(AsyncWebsocketConsumer):
@@ -1029,7 +1030,10 @@ class TournamentConsumer(AsyncWebsocketConsumer):
                 winners.append(winner)
             else:
                 winners.append(game)
-        print(f"Winners : {winners}")
+        print(Fore.GREEN)
+        print(winners)
+        print(Style.RESET_ALL)
+        print(await winners[0].get_channel_name())
         return winners
 
     async def wait_game_winner(self, game: Game):
