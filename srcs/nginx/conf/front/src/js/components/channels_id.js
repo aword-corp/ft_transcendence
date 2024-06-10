@@ -21,24 +21,24 @@ class Channel extends HTMLElement {
 			if (response.status != 200) {
 				this.innerText = "";
 			}
-			response.json().then((json) => {
-				if (json.error) {
+			response.json().then((channel_json) => {
+				if (channel_json.error) {
 					this.innerHTML = `
 						<div>
 							<h1>Error</h1>
-							<p>${json.error}</p>
+							<p>${channel_json.error}</p>
 						</div>
 						`;
 				}
-				else if (json.channel) {
+				else if (channel_json.channel) {
 					this.innerHTML += `
 						<div>
-							<h1>${json.channel.name}</h1>
-							<p>${json.channel.description}</p>
-							<p>${json.channel.created_at}</p>
-							<p>${json.channel.topic}</p>
+							<h1>${channel_json.channel.name}</h1>
+							<p>${channel_json.channel.description}</p>
+							<p>${channel_json.channel.created_at}</p>
+							<p>${channel_json.channel.topic}</p>
 					`;
-					json.channel.users.forEach((user) => {
+					channel_json.channel.users.forEach((user) => {
 						this.innerHTML += `
 							<p>${user}</p>
 						`;
@@ -55,17 +55,17 @@ class Channel extends HTMLElement {
 							},
 						}
 					).then((response) => {
-						response.json().then((json) => {
-							if (json.error) {
+						response.json().then((messages_json) => {
+							if (messages_json.error) {
 								this.innerHTML = `
 										<div>
 											<h1>Error</h1>
-											<p>${json.error}</p>
+											<p>${messages_json.error}</p>
 										</div>
 									`;
 							}
-							else if (json.messages) {
-								json.messages.forEach((message) => {
+							else if (messages_json.messages) {
+								messages_json.messages.forEach((message) => {
 									this.innerHTML += `
 										<div>
 											<p>${message.author}</p>
@@ -85,13 +85,6 @@ class Channel extends HTMLElement {
 										<p>
 											<label for="id_message">message:</label>
 											<input id="id_message" type=text name="message" required>
-										</p>
-										<button type="submit">send</button>
-									</form>
-									<form id="add_user">
-										<p>
-											<label for="id_user">user:</label>
-											<input id="id_user" type=text name="user" required>
 										</p>
 										<button type="submit">send</button>
 									</form>
@@ -132,40 +125,53 @@ class Channel extends HTMLElement {
 									sendMessage(this.getAttribute("id"));
 								});
 
-								let add_user_form = document.getElementById("add_user");
 
-								async function addUser(id) {
-									const formData = new FormData(add_user_form);
-									let request = {};
-									request.users = [formData.get("user")];
-									const response = await fetch(`/api/channels/${id}`, {
-										method: "PATCH",
-										headers: {
-											Accept: "application/json, text/plain",
-											"Content-Type": "application/json;charset=UTF-8",
-											'Authorization': `Bearer ${localStorage.getItem("access-token")}`,
-										},
-										body: JSON.stringify(request),
-									});
-									const json = await response.json();
-									const status = response.status;
-									if (status !== 200) {
-										this.innerHTML = `
+								if (channel_json.channel.channel_type === 2) {
+									this.innerHTML += `
+										<form id="add_user">
+											<p>
+												<label for="id_user">user:</label>
+												<input id="id_user" type=text name="user" required>
+											</p>
+											<button type="submit">add user</button>
+										</form>
+									`;
+									let add_user_form = document.getElementById("add_user");
+
+									async function addUser(id) {
+										const formData = new FormData(add_user_form);
+										let request = {};
+										request.users = [formData.get("user")];
+										const response = await fetch(`/api/channels/${id}`, {
+											method: "PATCH",
+											headers: {
+												Accept: "application/json, text/plain",
+												"Content-Type": "application/json;charset=UTF-8",
+												'Authorization': `Bearer ${localStorage.getItem("access-token")}`,
+											},
+											body: JSON.stringify(request),
+										});
+										const json = await response.json();
+										const status = response.status;
+										if (status !== 200) {
+											this.innerHTML = `
 											<div>
 												<h1>Error</h1>
 												<p>${json.error}</p>
 											</div>
 										`;
+										}
+										else {
+											router();
+										}
 									}
-									else {
-										router();
-									}
+
+									add_user_form.addEventListener("submit", (event) => {
+										event.preventDefault();
+										addUser(this.getAttribute("id"));
+									});
 								}
 
-								add_user_form.addEventListener("submit", (event) => {
-									event.preventDefault();
-									addUser(this.getAttribute("id"));
-								});
 							}
 						});
 					});

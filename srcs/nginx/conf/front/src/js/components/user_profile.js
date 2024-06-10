@@ -70,6 +70,7 @@ class UserProfile extends HTMLElement {
 							<p>${user.elo}</p>
 							<p>${user.status}</p>
 							${social_html}
+							${user.can_dm ? `<button id="dm_user">Direct messages</button>` : ""}
 							<p id="error"></p>
 						</div>
 					`;
@@ -225,6 +226,31 @@ class UserProfile extends HTMLElement {
 								document.getElementById("error").innerText = block_json.error;
 							else
 								router();
+						}
+					}
+
+					if (document.getElementById("dm_user")) {
+						document.getElementById("dm_user").onclick = async function dm_user() {
+							this.disabled = true;
+							const response = await fetch(
+								`/api/user/profile/${user.username}/dm`,
+								{
+									method: "GET",
+									headers: {
+										'Accept': 'application/json, text/plain',
+										'Content-Type': 'application/json;charset=UTF-8',
+										'Authorization': `Bearer ${localStorage.getItem("access-token")}`,
+									},
+								}
+							);
+							const dm_json = await response.json();
+							this.disabled = false;
+							if (dm_json.error)
+								document.getElementById("error").innerText = dm_json.error;
+							else if (dm_json.channel_id) {
+								history.pushState("", "", `/channels/${dm_json.channel_id}`);
+								router();
+							}
 						}
 					}
 

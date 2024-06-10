@@ -328,6 +328,37 @@ def get_clicks(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def UserProfileView(request, name: str):
+    if request.user.username == name:
+        return Response(
+            {
+                "user": {
+                    "display_name": request.user.display_name,
+                    "username": request.user.username,
+                    "bio": request.user.bio,
+                    "region": request.user.get_region_display(),
+                    "country_code": request.user.country_code,
+                    "language": request.user.get_language_display(),
+                    "avatar_url": request.user.avatar_url.url
+                    if request.user.avatar_url
+                    else None,
+                    "banner_url": request.user.banner_url.url
+                    if request.user.banner_url
+                    else None,
+                    "grade": request.user.get_grade_display(),
+                    "created_at": request.user.created_at,
+                    "xp": int(request.user.xp),
+                    "elo": int(request.user.elo),
+                    "status": request.user.get_status_display(),
+                    "is_friend": False,
+                    "has_friend_request": False,
+                    "sent_friend_request": False,
+                    "has_dms": False,
+                    "can_dm": False,
+                    "is_blocked": False,
+                }
+            },
+            status=status.HTTP_200_OK,
+        )
     try:
         user = User.objects.get(username=name)
         if user.blocked.filter(id=request.user.id).exists():
@@ -365,6 +396,11 @@ def UserProfileView(request, name: str):
                     .filter(users=user)
                     .distinct()
                     .exists(),
+                    "can_dm": (
+                        user.msg_default_response != User.Message_Request.BLOCK
+                        or user.friends.filter(id=request.user.id).exists()
+                    )
+                    and not request.user.blocked.filter(id=user.id).exists(),
                     "is_blocked": request.user.blocked.filter(id=user.id).exists(),
                 }
             },
@@ -381,7 +417,18 @@ def UserProfileView(request, name: str):
 @permission_classes([IsAuthenticated])
 def SelfUserFriendsList(request):
     return Response(
-        {"friends": [user.username for user in request.user.friends.all()]},
+        {
+            "friends": [
+                {
+                    "name": user.username,
+                    "avatar_url": user.avatar_url.url if user.avatar_url else None,
+                    "display_name": user.display_name,
+                    "grade": user.grade,
+                    "verified": user.verified,
+                }
+                for user in request.user.friends.all()
+            ]
+        },
         status=status.HTTP_200_OK,
     )
 
@@ -750,7 +797,9 @@ def channel(request):
                 "channels": [
                     {
                         "id": channel.id,
-                        "name": channel.name,
+                        "name": channel.name
+                        if channel.channel_type == GroupChannel.Type.GROUP
+                        else channel.users.exclude(id=request.user.id).first().username,
                         "description": channel.description,
                         "avatar_url": channel.avatar_url.url
                         if channel.avatar_url
@@ -761,6 +810,7 @@ def channel(request):
                         else None,
                         "channel_type": channel.channel_type,
                         "topic": channel.topic,
+                        "users": [user.username for user in channel.users.all()],
                     }
                     for channel in GroupChannel.objects.filter(users=request.user.id)
                 ]
@@ -819,7 +869,10 @@ def channel_id(request, id: int):
             return Response(
                 {
                     "channel": {
-                        "name": channel.name,
+                        "id": channel.id,
+                        "name": channel.name
+                        if channel.channel_type == GroupChannel.Type.GROUP
+                        else channel.users.exclude(id=request.user.id).first().username,
                         "description": channel.description,
                         "avatar_url": channel.avatar_url.url
                         if channel.avatar_url
@@ -844,9 +897,13 @@ def channel_id(request, id: int):
                     channel.description = value[:256]
                 elif key == "topic" and isinstance(value, str):
                     channel.topic = value[:512]
-                elif key == "users" and (
-                    isinstance(value, list)
-                    and all(isinstance(item, str) for item in value)
+                elif (
+                    key == "users"
+                    and (
+                        isinstance(value, list)
+                        and all(isinstance(item, str) for item in value)
+                    )
+                    and channel.channel_type == GroupChannel.Type.GROUP
                 ):
                     for username in value:
                         try:
@@ -864,7 +921,10 @@ def channel_id(request, id: int):
             return Response(
                 {
                     "channel": {
-                        "name": channel.name,
+                        "id": channel.id,
+                        "name": channel.name
+                        if channel.channel_type == GroupChannel.Type.GROUP
+                        else channel.users.exclude(id=request.user.id).first().username,
                         "description": channel.description,
                         "avatar_url": channel.avatar_url.url
                         if channel.avatar_url
@@ -941,6 +1001,17 @@ def channel_messages(request, id: int):
                 return Response(
                     {"error": "You tried to send an empty message."},
                     status=status.HTTP_400_BAD_REQUEST,
+                )
+            if (
+                channel.channel_type == GroupChannel.Type.DM
+                and channel.users.exclude(id=request.user.id)
+                .first()
+                .blocked.filter(id=request.user.id)
+                .exists()
+            ):
+                return Response(
+                    {"error": "You are blocked."},
+                    status=status.HTTP_401_UNAUTHORIZED,
                 )
             message = channel.messages.create(
                 content=request.data["content"][:2048],

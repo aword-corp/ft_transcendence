@@ -46,6 +46,7 @@ class UserConsumer(AsyncWebsocketConsumer):
 
         await self.send(text_data=message)
 
+
 class CountConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def increment_count(self):
@@ -455,9 +456,9 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                     0.004,
                     0.0128,
                 ),
-                "state": 0
+                "state": 0,
             }
-        
+
             self.games[self.user.id][self.user.id] = Paddle(
                 0.03,
                 0.5,
@@ -483,7 +484,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 0,
                 None,
             )
-    
+
             asyncio.create_task(self.game_loop())
 
     async def disconnect(self, close_code):
@@ -519,7 +520,9 @@ class PongAIConsumer(AsyncWebsocketConsumer):
             # Update player2 if he can be updated
             now = time.time_ns()
             if now - ai_last_fetch >= ONE_SECOND_NS / 1000:
-                up, down = network.predict([ball.x, ball.y, ball.dx, ball.dy, player2.y])
+                up, down = network.predict(
+                    [ball.x, ball.y, ball.dx, ball.dy, player2.y]
+                )
                 print("AI", up, down)
                 player2.up = up > 0.5 and up > down
                 player2.down = down > 0.5 and down > up
@@ -563,10 +566,17 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 player2.y = 0.5
                 player2.score += 1
                 wait = True if player2.score < 5 else False
-                await self.send(json.dumps({
-                        "type": "broadcast.score",
-                        "score": {"player1": player1.score, "player2": player2.score},
-                    }))
+                await self.send(
+                    json.dumps(
+                        {
+                            "type": "broadcast.score",
+                            "score": {
+                                "player1": player1.score,
+                                "player2": player2.score,
+                            },
+                        }
+                    )
+                )
             elif ball.x + ball.radius > 1:
                 ball.x = 0.5
                 ball.y = 0.5
@@ -576,10 +586,17 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 player2.y = 0.5
                 player1.score += 1
                 wait = True if player1.score < 5 else False
-                await self.send(json.dumps({
-                        "type": "broadcast.score",
-                        "score": {"player1": player1.score, "player2": player2.score},
-                    }))
+                await self.send(
+                    json.dumps(
+                        {
+                            "type": "broadcast.score",
+                            "score": {
+                                "player1": player1.score,
+                                "player2": player2.score,
+                            },
+                        }
+                    )
+                )
             # check ball collision with paddles
             maxAngle = pi / 4
 
@@ -619,35 +636,43 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 ball.dy = speed * -sin(bounceAngle)
 
             # sending the new positions to all clients in the game
-            await self.send(json.dumps({
-                    "type": "broadcast.pos",
-                    "position": {
-                        "ball": {"x": ball.x, "y": ball.y, "radius": ball.radius},
-                        "player1": {
-                            "x": player1.x,
-                            "y": player1.y,
-                            "width": player1.width,
-                            "height": player1.height,
-                            "score": player1.score,
-                            "name": player1.user.username,
+            await self.send(
+                json.dumps(
+                    {
+                        "type": "broadcast.pos",
+                        "position": {
+                            "ball": {"x": ball.x, "y": ball.y, "radius": ball.radius},
+                            "player1": {
+                                "x": player1.x,
+                                "y": player1.y,
+                                "width": player1.width,
+                                "height": player1.height,
+                                "score": player1.score,
+                                "name": player1.user.username,
+                            },
+                            "player2": {
+                                "x": player2.x,
+                                "y": player2.y,
+                                "width": player2.width,
+                                "height": player2.height,
+                                "score": player2.score,
+                                "name": None,
+                            },
                         },
-                        "player2": {
-                            "x": player2.x,
-                            "y": player2.y,
-                            "width": player2.width,
-                            "height": player2.height,
-                            "score": player2.score,
-                            "name": None,
-                        },
-                    },
-                }))
+                    }
+                )
+            )
             await asyncio.sleep(3 if wait else 0.016)
 
         self.games[self.user.id]["state"] = 2
-        await self.send(json.dumps({
-                "type": "broadcast.result",
-                "result": {"player1": player1.score, "player2": player2.score},
-            }))
+        await self.send(
+            json.dumps(
+                {
+                    "type": "broadcast.result",
+                    "result": {"player1": player1.score, "player2": player2.score},
+                }
+            )
+        )
 
         await self.close()
 
@@ -895,15 +920,14 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
+        await self.user.set_channel_name(self.channel_name)
+        await self.user.asave()
+
         self.queue.append(self.user)
 
         print(f"Number of users in queue {len(self.queue)}")
         if len(self.queue) == 1:
             asyncio.create_task(self.tournament())
-
-        print(f"Channel name before {self.user.channel_name}")
-        await self.user.set_channel_name(self.channel_name)
-        print(f"Channel name after {self.user.channel_name}")
 
         await self.channel_layer.group_add("tournament", self.channel_name)
 
