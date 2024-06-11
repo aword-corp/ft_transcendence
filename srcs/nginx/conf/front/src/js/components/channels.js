@@ -9,6 +9,8 @@ class Channels extends HTMLElement {
 
 		this.refreshChannels();
 
+		this.is_creating = false;
+
 		updateSocket.onmessage = (e) => {
 			var data = JSON.parse(e.data);
 			if (data.type.includes("channel") || data.type.includes("dm") || data.type.includes("block")) {
@@ -68,8 +70,14 @@ class Channels extends HTMLElement {
 
 					form.addEventListener("submit", (event) => {
 						event.preventDefault();
+						if (this.is_creating)
+							return;
+						this.is_creating = true;
 						document.getElementById("create_channel_button").disabled = true;
-						this.onSubmit(form).then(() => document.getElementById("create_channel_button").disabled = false);
+						this.onSubmit(form).then(() => {
+							document.getElementById("create_channel_button").disabled = false;
+							this.is_creating = false;
+						});
 					});
 
 				}

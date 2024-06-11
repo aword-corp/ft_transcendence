@@ -8,6 +8,10 @@ class Channel extends HTMLElement {
 		this.innerHTML = `
 		`;
 
+		this.sending_message = false;
+
+		this.adding_user = false;
+
 		this.refreshChannel(this.getAttribute("id"));
 
 		updateSocket.onmessage = (e) => {
@@ -123,14 +127,26 @@ class Channel extends HTMLElement {
 
 								document.getElementById("send_message").addEventListener("submit", (event) => {
 									event.preventDefault();
+									if (this.sending_message)
+										return;
+									this.sending_message = true;
 									document.getElementById("send_message_button").disabled = true;
-									this.sendMessage(channel_id).then(() => document.getElementById("send_message_button").disabled = false);
+									this.sendMessage(channel_id).then(() => {
+										document.getElementById("send_message_button").disabled = false;
+										this.sending_message = false;
+									});
 								});
 
 								document.getElementById("add_user").addEventListener("submit", (event) => {
 									event.preventDefault();
+									if (this.adding_user)
+										return;
+									this.adding_user = true;
 									document.getElementById("add_user_button").disabled = true;
-									this.addUser(channel_id).then(() => document.getElementById("add_user_button").disabled = false);
+									this.addUser(channel_id).then(() => {
+										document.getElementById("add_user_button").disabled = false;
+										this.adding_user = false;
+									});
 								});
 
 								if (channel_json.channel.cant_send) {
