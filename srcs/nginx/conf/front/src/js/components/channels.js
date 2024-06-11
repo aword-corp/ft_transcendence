@@ -90,6 +90,7 @@ class Channels extends HTMLElement {
 		const formData = new FormData(form);
 		let request = {};
 		request.name = formData.get("name");
+		form.reset();
 		const response = await fetch(`/api/channels`, {
 			method: "PUT",
 			headers: {

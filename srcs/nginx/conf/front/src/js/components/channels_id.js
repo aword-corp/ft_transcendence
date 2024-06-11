@@ -168,6 +168,7 @@ class Channel extends HTMLElement {
 		const formData = new FormData(document.getElementById("send_message"));
 		let request = {};
 		request.content = formData.get("message");
+		document.getElementById("send_message").reset();
 		const response = await fetch(`/api/channels/${id}/messages`, {
 			method: "POST",
 			headers: {
@@ -193,6 +194,7 @@ class Channel extends HTMLElement {
 		const formData = new FormData(document.getElementById("add_user"));
 		let request = {};
 		request.users = [formData.get("user")];
+		document.getElementById("add_user").reset();
 		const response = await fetch(`/api/channels/${id}`, {
 			method: "PATCH",
 			headers: {
