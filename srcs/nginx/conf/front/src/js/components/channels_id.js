@@ -121,6 +121,8 @@ class Channel extends HTMLElement {
 									});
 								}
 
+								this.innerHTML = new_html;
+
 								if (channel_json.channel.channel_type === 2) {
 									new_html += `
 										<form id="add_user">
