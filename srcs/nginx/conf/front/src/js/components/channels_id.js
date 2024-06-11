@@ -124,15 +124,13 @@ class Channel extends HTMLElement {
 								document.getElementById("send_message").addEventListener("submit", (event) => {
 									event.preventDefault();
 									document.getElementById("send_message_button").disabled = true;
-									this.sendMessage(channel_id);
-									document.getElementById("send_message_button").disabled = false;
+									this.sendMessage(channel_id).then(() => document.getElementById("send_message_button").disabled = false);
 								});
 
 								document.getElementById("add_user").addEventListener("submit", (event) => {
 									event.preventDefault();
 									document.getElementById("add_user_button").disabled = true;
-									this.addUser(channel_id);
-									document.getElementById("add_user_button").disabled = false;
+									this.addUser(channel_id).then(() => document.getElementById("add_user_button").disabled = false);
 								});
 
 								if (channel_json.channel.cant_send) {

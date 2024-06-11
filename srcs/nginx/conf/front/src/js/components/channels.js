@@ -58,7 +58,7 @@ class Channels extends HTMLElement {
 								<label for="id_name">name:</label>
 								<input id="id_name" type=text name="name" required>
 							</p>
-							<button type="submit">create</button>
+							<button id="create_channel_button" type="submit">create</button>
 						</form>
 						`;
 
@@ -68,7 +68,8 @@ class Channels extends HTMLElement {
 
 					form.addEventListener("submit", (event) => {
 						event.preventDefault();
-						this.onSubmit(form);
+						document.getElementById("create_channel_button").disabled = true;
+						this.onSubmit(form).then(() => document.getElementById("create_channel_button").disabled = false);
 					});
 
 				}
