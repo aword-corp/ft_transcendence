@@ -521,12 +521,14 @@ class PongAIConsumer(AsyncWebsocketConsumer):
             # Update player2 if he can be updated
             now = time.time_ns()
             if now - ai_last_fetch >= ONE_SECOND_NS / 1000: # TODO Remove division
-                up, down = brain.predict(
-                    [ball.x, ball.y, ball.dx, ball.dy, player2.y]
-                )
+                _input = [ball.x, ball.y, ball.dx, ball.dy, player2.y]
+                up, down = brain.predict(_input)
                 print("AI", up, down)
                 player2.up = up > 0.5 and up > down
                 player2.down = down > 0.5 and down > up
+                excpected = [1, 1] # TODO May be [1, 0] [0, 1] [0, 0] following ball x y dx dy
+                brain.backward_propagate(excpected)
+                brain.update_weights(0.5, _input)
                 ai_last_fetch = now
 
             wait = False
