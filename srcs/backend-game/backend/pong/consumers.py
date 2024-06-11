@@ -1,4 +1,5 @@
 import json
+from typing import List
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -26,26 +27,6 @@ class DefaultConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         pass
-
-
-class UserConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        await self.accept()
-
-        await self.channel_layer.group_add("user", self.channel_name)
-
-    async def disconnect(self, close_code):
-        await self.channel_layer.group_discard("user", self.channel_name)
-
-    async def receive(self, text_data):
-        await self.channel_layer.group_send(
-            "user", {"type": "user.message", "message": text_data}
-        )
-
-    async def user_message(self, event):
-        message = event["message"]
-
-        await self.send(text_data=message)
 
 
 class CountConsumer(AsyncWebsocketConsumer):
@@ -86,6 +67,7 @@ class PongConsumer(AsyncWebsocketConsumer):
         else:
             await self.send(json.dumps({"error": "You need to be logged in."}))
             await self.close()
+            return
 
         self.game_id = self.scope["url_route"]["kwargs"]["id"]
         self.game_channel = str(self.game_id).replace("-", "_")
@@ -94,6 +76,23 @@ class PongConsumer(AsyncWebsocketConsumer):
         except Game.DoesNotExist:
             await self.send(json.dumps({"error": "Game does not exist."}))
             await self.close()
+            return
+
+        if self.user not in self.game.users:
+            if self.user.is_spectating:
+                await self.send(
+                    json.dumps({"error": "You are already spectating a game."})
+                )
+                await self.close()
+                return
+
+            elif self.user.is_playing:
+                await self.send(json.dumps({"error": "You are already in a game."}))
+                await self.close()
+                return
+
+            self.user.is_spectating = True
+            await self.user.asave()
 
         if self.game.state == self.game.State.ENDED:
             winner = self.game.winner
@@ -177,6 +176,10 @@ class PongConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.game_channel, self.channel_name)
 
     async def disconnect(self, close_code):
+        if self.user.is_spectating:
+            self.user.is_spectating = False
+            await self.user.asave()
+
         await self.channel_layer.group_discard(self.game_channel, self.channel_name)
 
     async def receive(self, text_data):
@@ -378,9 +381,9 @@ class PongConsumer(AsyncWebsocketConsumer):
             changeB = 32 * (1 - expectedB)
             new_elo_B = player2.user.elo + changeB
             player2.user.elo = new_elo_B
-        player1.user.status = User.Status.ON
+        player1.user.is_playing = False
         await player1.user.asave()
-        player2.user.status = User.Status.ON
+        player2.user.is_playing = False
         await player2.user.asave()
         self.game.state = self.game.State.ENDED
         await self.game.asave()
@@ -520,13 +523,16 @@ class PongAIConsumer(AsyncWebsocketConsumer):
         while player1.score < 5 and player2.score < 5:
             # Update player2 if he can be updated
             now = time.time_ns()
-            if now - ai_last_fetch >= ONE_SECOND_NS / 1000: # TODO Remove division
+            if now - ai_last_fetch >= ONE_SECOND_NS / 1000:  # TODO Remove division
                 _input = [ball.x, ball.y, ball.dx, ball.dy, player2.y]
                 up, down = brain.predict(_input)
                 print("AI", up, down)
                 player2.up = up > 0.5 and up > down
                 player2.down = down > 0.5 and down > up
-                excpected = [1, 1] # TODO May be [1, 0] [0, 1] [0, 0] following ball x y dx dy
+                excpected = [
+                    1,
+                    1,
+                ]  # TODO May be [1, 0] [0, 1] [0, 0] following ball x y dx dy
                 brain.backward_propagate(excpected)
                 brain.update_weights(0.5, _input)
                 ai_last_fetch = now
@@ -713,46 +719,6 @@ class PongAIConsumer(AsyncWebsocketConsumer):
         await self.close()
 
 
-class ChatConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        await self.accept()
-        if self.scope["user"].is_authenticated:
-            await self.channel_layer.group_add("chat", self.channel_name)
-            self.user = self.scope["user"]
-        else:
-            await self.send(json.dumps({"error": "You need to be logged in."}))
-            await self.close()
-
-        self.game_id = self.scope["url_route"]["kwargs"]["id"]
-        try:
-            self.game: Game = await Game.get_game(self.game_id)
-        except Game.DoesNotExist:
-            await self.send(json.dumps({"error": "Game does not exist."}))
-            await self.close()
-            return
-
-        await self.channel_layer.group_add(self.game_id, self.channel_name)
-
-    async def disconnect(self, close_code):
-        await self.channel_layer.group_discard("chat", self.channel_name)
-
-    async def receive(self, text_data):
-        await self.channel_layer.group_send(
-            "chat", {"type": "chat.message", "message": text_data[:512]}
-        )
-
-    async def chat_message(self, event):
-        message = event["message"]
-        user_id = event["user_id"]
-        username = event["username"]
-
-        await self.send(
-            text_data=json.dumps(
-                {"user_id": user_id, "username": username, "message": message}
-            )
-        )
-
-
 class MatchmakingConsumer(AsyncWebsocketConsumer):
     queue: list[User] = []
 
@@ -776,8 +742,13 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        if self.user.status == User.Status.GAME:
+        if self.user.is_playing:
             await self.send(json.dumps({"error": "You are already in a game."}))
+            await self.close()
+            return
+
+        if self.user.is_spectating:
+            await self.send(json.dumps({"error": "You are already spectating a game."}))
             await self.close()
             return
 
@@ -827,13 +798,31 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
                         self.elo_range_timer[player.id] = now
             await asyncio.sleep(1)
 
-    async def start_game(self, users):
+    async def start_game(self, users: List[User]):
         await asyncio.sleep(3)
+        can_start = True
+
+        for user in users:
+            if not bool(self.user.mm_channel_name):
+                can_start = False
+
+        if not can_start:
+            for _ in range(2):
+                user = users.pop()
+                if bool(self.user.mm_channel_name):
+                    await self.queue.append(user)
+                    await self.channel_layer.group_send(
+                        "matchmaking",
+                        {"type": "update.message", "users": repr(self.queue)},
+                    )
+            return
+
         game = await Game.objects.acreate(
             uuid=uuid.uuid4(), region=self.region, state=Game.State.WAITING
         )
+
         for _ in range(2):
-            user = users.pop()
+            user: User = users.pop()
             await game.users.aadd(user)
             await game.asave()
             await self.channel_layer.send(
@@ -843,7 +832,7 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_discard(
                 "matchmaking", await user.get_mm_channel_name()
             )
-            user.status = User.Status.GAME
+            user.is_playing = True
             user.mm_channel_name = None
             await user.asave()
 
@@ -854,6 +843,8 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             return
 
         await self.user.set_mm_channel_name(None)
+
+        await self.user.asave()
 
         await self.channel_layer.group_discard("matchmaking", self.channel_name)
 
@@ -919,8 +910,13 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        if self.user.status == User.Status.GAME:
-            await self.send(json.dumps({"error": "You are already in a game."}))
+        if self.user.is_playing:
+            await self.send(json.dumps({"error": "You are already playing."}))
+            await self.close()
+            return
+
+        if self.user.is_spectating:
+            await self.send(json.dumps({"error": "You are spectating a game."}))
             await self.close()
             return
 
@@ -1016,9 +1012,9 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             {"type": "game.start", "game_id": str(game.uuid)},
         )
 
-        player1.status = User.Status.GAME
+        player1.is_playing = True
         await player1.asave()
-        player2.status = User.Status.GAME
+        player2.is_playing = True
         await player2.asave()
 
         return game

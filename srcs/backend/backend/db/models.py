@@ -208,18 +208,20 @@ class User(AbstractBaseUser):
     )
     verified = models.BooleanField(default=False)
 
-    class Status(models.IntegerChoices):
-        OFF = 1, _("Offline")
-        GAME = 2, _("Playing")
-        SPEC = 3, _("Spectating")
-        ON = 4, _("Online")
-        AWAY = 5, _("Away")
-        FOCUS = 6, _("Focus")
-
-    status = models.SmallIntegerField(choices=Status.choices, default=Status.ON)
-
+    # Status
     is_invisible = models.BooleanField(default=False)
 
+    is_focused = models.BooleanField(default=False)
+
+    is_away = models.BooleanField(default=False)
+
+    is_playing = models.BooleanField(default=False)
+
+    is_spectating = models.BooleanField(default=False)
+
+    is_online = models.BooleanField(default=False)
+
+    # Channels
     mm_channel_name = models.CharField(max_length=128, null=True)
     tournament_channel_name = models.CharField(max_length=128, null=True)
 

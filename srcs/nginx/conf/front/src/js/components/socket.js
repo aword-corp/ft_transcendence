@@ -7,7 +7,7 @@ export function initSocketClick() {
 }
 
 export function closeSocketClick() {
-	if (countSocket && (countSocket.readyState === WebSocket.OPEN || countSocket.readyState === WebSocket.CONNECTING))
+	if (countSocket && countSocket.readyState === WebSocket.OPEN)
 		countSocket.close();
 	countSocket = undefined;
 }
@@ -21,7 +21,7 @@ export function initSocketUpdate() {
 }
 
 export function closeSocketUpdate() {
-	if (updateSocket && (updateSocket.readyState === WebSocket.OPEN || updateSocket.readyState === WebSocket.CONNECTING))
+	if (updateSocket && updateSocket.readyState === WebSocket.OPEN)
 		updateSocket.close();
 	updateSocket = undefined;
 }
@@ -35,7 +35,7 @@ export function initMMSocket() {
 }
 
 export function closeMMSocket() {
-	if (mmSocket && (mmSocket.readyState === WebSocket.OPEN || mmSocket.readyState === WebSocket.CONNECTING))
+	if (mmSocket && mmSocket.readyState === WebSocket.OPEN)
 		mmSocket.close();
 	mmSocket = undefined;
 }
@@ -50,12 +50,10 @@ export function initTMSocket() {
 }
 
 export function closeTMSocket() {
-	if (tmSocket && (tmSocket.readyState === WebSocket.OPEN || tmSocket.readyState === WebSocket.CONNECTING))
+	if (tmSocket && tmSocket.readyState === WebSocket.OPEN)
 		tmSocket.close();
 	tmSocket = undefined;
 }
-
-
 
 export var pongSocket = undefined;
 
@@ -66,7 +64,7 @@ export function initPongSocket(params) {
 }
 
 export function closePongSocket() {
-	if (pongSocket && (pongSocket.readyState === WebSocket.OPEN || pongSocket.readyState === WebSocket.CONNECTING))
+	if (pongSocket && pongSocket.readyState === WebSocket.OPEN)
 		pongSocket.close();
 	pongSocket = undefined;
 }

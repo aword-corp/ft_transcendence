@@ -130,7 +130,6 @@ function isAuth() {
 function checkAccess(view) {
 
 	if (isAuth()) {
-		initSocketUpdate();
 		if (view.auth == "no_only")
 			return (false);
 		return (true);
@@ -171,6 +170,8 @@ export function router() {
 	// if (view === last_view)
 	// 	return;
 
+	initSocketUpdate();
+
 	if (last_view && last_view.destructor)
 		last_view.destructor();
 
@@ -209,5 +210,3 @@ window.addEventListener("click", e => {
 
 window.addEventListener("popstate", router);
 window.addEventListener("DOMContentLoaded", router);
-
-initSocketUpdate();

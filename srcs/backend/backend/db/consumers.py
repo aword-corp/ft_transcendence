@@ -29,10 +29,13 @@ class UpdateConsumer(AsyncWebsocketConsumer):
         else:
             await self.send(json.dumps({"error": "You need to be logged in."}))
             await self.close()
+            return
 
         channel = await cache.aget(f"user_{self.user.id}_channel")
 
         if not channel:
+            self.user.is_online = True
+            await self.user.asave()
             channel = []
 
         channel.append(self.channel_name)
@@ -45,6 +48,13 @@ class UpdateConsumer(AsyncWebsocketConsumer):
             return
         try:
             channel.remove(self.channel_name)
+
+            if not len(channel):
+                await cache.adelete(f"user_{self.user.id}_channel")
+                self.user.is_online = False
+                await self.user.asave()
+                return
+
             await cache.aset(f"user_{self.user.id}_channel", channel)
         except ValueError:
             pass
