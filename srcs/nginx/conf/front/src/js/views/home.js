@@ -17,6 +17,9 @@ export function home_view() {
 		<video controls width=640>
 			<source src="/static/assets/oshi_no_ko-s01-e01.webm" />
 		</video>
+		<video controls width=640>
+			<source src="/static/assets/nichijou-ed1.mp4" />
+		</video>
 		`
 	);
 }

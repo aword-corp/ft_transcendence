@@ -207,6 +207,7 @@ class PongConsumer(AsyncWebsocketConsumer):
                         "type": "broadcast.message",
                         "message": {
                             "user": {
+                                "id": self.user.id,
                                 "name": self.user.username,
                                 "avatar_url": self.user.avatar_url.url
                                 if self.user.avatar_url
@@ -426,6 +427,13 @@ class PongConsumer(AsyncWebsocketConsumer):
 
     async def broadcast_message(self, event):
         message = event["message"]
+
+        if self.user.blocked.filter(id=message["user"]["id"]).exists():
+            return
+
+        user = await User.objects.aget(id=message["user"]["id"])
+        if user.blocked.filter(id=self.user.id).exists():
+            return
 
         await self.send(
             text_data=json.dumps({"type": "broadcast.message", "message": message})

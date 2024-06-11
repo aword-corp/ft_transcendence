@@ -1,3 +1,4 @@
+import { updateSocket } from "./socket.js";
 import { router } from "../main.js";
 
 class Channel extends HTMLElement {
@@ -7,8 +8,19 @@ class Channel extends HTMLElement {
 		this.innerHTML = `
 		`;
 
+		this.refreshChannel(this.getAttribute("id"));
+
+		updateSocket.onmessage = (e) => {
+			var data = JSON.parse(e.data);
+			if (data.type.includes("channel") || data.type.includes("dm") || data.type.includes("block")) {
+				this.refreshChannel(this.getAttribute("id"));
+			}
+		};
+	}
+
+	refreshChannel(channel_id) {
 		fetch(
-			`/api/channels/${this.getAttribute("id")}`,
+			`/api/channels/${channel_id}`,
 			{
 				method: "GET",
 				headers: {
@@ -18,12 +30,14 @@ class Channel extends HTMLElement {
 				},
 			}
 		).then((response) => {
+			let new_html = "";
 			if (response.status != 200) {
-				this.innerText = "";
+				history.pushState("", "", "/");
+				router();
 			}
 			response.json().then((channel_json) => {
 				if (channel_json.error) {
-					this.innerHTML = `
+					new_html = `
 						<div>
 							<h1>Error</h1>
 							<p>${channel_json.error}</p>
@@ -31,21 +45,25 @@ class Channel extends HTMLElement {
 						`;
 				}
 				else if (channel_json.channel) {
-					this.innerHTML += `
+					new_html += `
 						<div>
-							<h1>${channel_json.channel.name}</h1>
-							<p>${channel_json.channel.description}</p>
-							<p>${channel_json.channel.created_at}</p>
-							<p>${channel_json.channel.topic}</p>
+							<h1>Channel name: ${channel_json.channel.name}</h1>
+							<p>Channel description: ${channel_json.channel.description}</p>
+							<p>Channel created at: ${channel_json.channel.created_at}</p>
+							<p>Channel topic: ${channel_json.channel.topic}</p>
+							<div id="user_list">
+								<p>Users:</p>
 					`;
 					channel_json.channel.users.forEach((user) => {
-						this.innerHTML += `
-							<p>${user}</p>
+						new_html += `
+							<a href="/profile/${user}" data-link id="Channel_Id">
+								${user}
+							</a>
 						`;
 					});
-					this.innerHTML += `</div>`;
+					new_html += `</div></div>`;
 					fetch(
-						`/api/channels/${this.getAttribute("id")}/messages`,
+						`/api/channels/${channel_id}/messages`,
 						{
 							method: "GET",
 							headers: {
@@ -57,7 +75,7 @@ class Channel extends HTMLElement {
 					).then((response) => {
 						response.json().then((messages_json) => {
 							if (messages_json.error) {
-								this.innerHTML = `
+								new_html = `
 										<div>
 											<h1>Error</h1>
 											<p>${messages_json.error}</p>
@@ -66,21 +84,25 @@ class Channel extends HTMLElement {
 							}
 							else if (messages_json.messages) {
 								messages_json.messages.forEach((message) => {
-									this.innerHTML += `
+									new_html += `
 										<div>
-											<p>${message.author}</p>
-											<p>${message.content}</p>
-											<p>${message.edited}</p>
-											<p>${message.created_at}</p>
-											<p>${message.is_pin}</p>
+											<p>author: ${message.author}</p>
+											<p>content: ${message.content}</p>
+											<p>edited: ${message.edited}</p>
+											<p>created at: ${message.created_at}</p>
+											<p>is pin: ${message.is_pin}</p>
+											<div id="seen_users">
+												<p>Seen by:</p>
 									`;
 									message.seen_by.forEach((seen) => {
-										this.innerHTML += `<p>${seen}</p>`;
+										new_html += `<a href="/profile/${seen}" data-link id="Channel_Id">
+														${seen}
+													</a>`;
 									});
-									this.innerHTML += `</div>`;
+									new_html += `</div></div>`;
 								});
 
-								this.innerHTML += `
+								new_html += `
 									<form id="send_message">
 										<p>
 											<label for="id_message">message:</label>
@@ -90,44 +112,10 @@ class Channel extends HTMLElement {
 									</form>
 								`;
 
-								let send_message_form = document.getElementById("send_message");
-
-								async function sendMessage(id) {
-									const formData = new FormData(send_message_form);
-									let request = {};
-									request.content = formData.get("message");
-									const response = await fetch(`/api/channels/${id}/messages`, {
-										method: "POST",
-										headers: {
-											Accept: "application/json, text/plain",
-											"Content-Type": "application/json;charset=UTF-8",
-											'Authorization': `Bearer ${localStorage.getItem("access-token")}`,
-										},
-										body: JSON.stringify(request),
-									});
-									const json = await response.json();
-									const status = response.status;
-									if (status !== 201) {
-										this.innerHTML = `
-											<div>
-												<h1>Error</h1>
-												<p>${json.error}</p>
-											</div>
-										`;
-									}
-									else {
-										router();
-									}
-								}
-
-								send_message_form.addEventListener("submit", (event) => {
-									event.preventDefault();
-									sendMessage(this.getAttribute("id"));
-								});
-
+								this.innerHTML = new_html;
 
 								if (channel_json.channel.channel_type === 2) {
-									this.innerHTML += `
+									new_html += `
 										<form id="add_user">
 											<p>
 												<label for="id_user">user:</label>
@@ -136,41 +124,20 @@ class Channel extends HTMLElement {
 											<button type="submit">add user</button>
 										</form>
 									`;
-									let add_user_form = document.getElementById("add_user");
 
-									async function addUser(id) {
-										const formData = new FormData(add_user_form);
-										let request = {};
-										request.users = [formData.get("user")];
-										const response = await fetch(`/api/channels/${id}`, {
-											method: "PATCH",
-											headers: {
-												Accept: "application/json, text/plain",
-												"Content-Type": "application/json;charset=UTF-8",
-												'Authorization': `Bearer ${localStorage.getItem("access-token")}`,
-											},
-											body: JSON.stringify(request),
-										});
-										const json = await response.json();
-										const status = response.status;
-										if (status !== 200) {
-											this.innerHTML = `
-											<div>
-												<h1>Error</h1>
-												<p>${json.error}</p>
-											</div>
-										`;
-										}
-										else {
-											router();
-										}
-									}
+									this.innerHTML = new_html;
 
-									add_user_form.addEventListener("submit", (event) => {
+									document.getElementById("add_user").addEventListener("submit", (event) => {
 										event.preventDefault();
-										addUser(this.getAttribute("id"));
+										this.addUser(channel_id);
 									});
+
 								}
+
+								document.getElementById("send_message").addEventListener("submit", (event) => {
+									event.preventDefault();
+									this.sendMessage(channel_id);
+								});
 
 							}
 						});
@@ -178,6 +145,56 @@ class Channel extends HTMLElement {
 				}
 			});
 		});
+	}
+
+	async sendMessage(id) {
+		const formData = new FormData(document.getElementById("send_message"));
+		let request = {};
+		request.content = formData.get("message");
+		const response = await fetch(`/api/channels/${id}/messages`, {
+			method: "POST",
+			headers: {
+				Accept: "application/json, text/plain",
+				"Content-Type": "application/json;charset=UTF-8",
+				'Authorization': `Bearer ${localStorage.getItem("access-token")}`,
+			},
+			body: JSON.stringify(request),
+		});
+		const json = await response.json();
+		const status = response.status;
+		if (status !== 201) {
+			this.innerHTML = `
+				<div>
+					<h1>Error</h1>
+					<p>${json.error}</p>
+				</div>
+			`;
+		}
+	}
+
+	async addUser(id) {
+		const formData = new FormData(document.getElementById("add_user"));
+		let request = {};
+		request.users = [formData.get("user")];
+		const response = await fetch(`/api/channels/${id}`, {
+			method: "PATCH",
+			headers: {
+				Accept: "application/json, text/plain",
+				"Content-Type": "application/json;charset=UTF-8",
+				'Authorization': `Bearer ${localStorage.getItem("access-token")}`,
+			},
+			body: JSON.stringify(request),
+		});
+		const json = await response.json();
+		const status = response.status;
+		if (status !== 200) {
+			this.innerHTML = `
+			<div>
+				<h1>Error</h1>
+				<p>${json.error}</p>
+			</div>
+		`;
+		}
 	}
 }
 customElements.define("channel-id", Channel);

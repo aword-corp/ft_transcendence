@@ -43,10 +43,10 @@ class UpdateConsumer(AsyncWebsocketConsumer):
         await cache.aset(f"user_{self.user.id}_channel", channel)
 
     async def disconnect(self, close_code):
-        channel = await cache.aget(f"user_{self.user.id}_channel")
-        if not channel:
-            return
         try:
+            channel = await cache.aget(f"user_{self.user.id}_channel")
+            if not channel:
+                return
             channel.remove(self.channel_name)
 
             if not len(channel):
@@ -56,7 +56,7 @@ class UpdateConsumer(AsyncWebsocketConsumer):
                 return
 
             await cache.aset(f"user_{self.user.id}_channel", channel)
-        except ValueError:
+        except (ValueError, AttributeError):
             pass
 
     async def receive(self, text_data):
@@ -138,4 +138,7 @@ class UpdateConsumer(AsyncWebsocketConsumer):
         await self.send(json.dumps(event))
 
     async def channel_message_deleted(self, event):
+        await self.send(json.dumps(event))
+
+    async def channel_view_sent(self, event):
         await self.send(json.dumps(event))

@@ -1,4 +1,5 @@
 import { router } from "../main.js";
+import { updateSocket } from "./socket.js";
 
 class UserProfile extends HTMLElement {
 	constructor() {
@@ -7,8 +8,20 @@ class UserProfile extends HTMLElement {
 		this.innerHTML = `
 		`;
 
+		this.refreshProfile(this.getAttribute("user"));
+
+		updateSocket.onmessage = (e) => {
+			var data = JSON.parse(e.data);
+			if (data.type.includes("friend") || data.type.includes("dm") || data.type.includes("block")) {
+				this.refreshProfile(this.getAttribute("user"));
+			}
+		};
+
+	}
+
+	refreshProfile(username) {
 		fetch(
-			`/api/user/profile/${this.getAttribute("user")}`,
+			`/api/user/profile/${username}`,
 			{
 				method: "GET",
 				headers: {
@@ -18,8 +31,9 @@ class UserProfile extends HTMLElement {
 				},
 			}
 		).then((response) => {
-			if (response.status != 200) {
-				this.innerText = "";
+			if (response.status === 404) {
+				history.pushState("", "", "/");
+				router();
 			}
 			response.json().then((json) => {
 				if (json.error) {
@@ -56,19 +70,21 @@ class UserProfile extends HTMLElement {
 					`;
 					this.innerHTML = `
 						<div>
+							<h1>User profile of ${user.display_name ? `${user.display_name} (${user.username})` : user.username}</h1>
 							<img src=${user.avatar_url ? user.avatar_url : ""} />
 							<img src=${user.banner_url ? user.banner_url : ""} />
-							<p>${user.display_name}</p>
-							<p>${user.username}</p>
-							<p>${user.bio}</p>
-							<p>${user.region}</p>
-							<p>${user.country_code}</p>
-							<p>${user.language}</p>
-							<p>${user.grade}</p>
-							<p>${user.created_at}</p>
-							<p>${user.xp}</p>
-							<p>${user.elo}</p>
-							<p>${user.status}</p>
+							<p>bio: ${user.bio}</p>
+							<p>region: ${user.region}</p>
+							<p>country: ${user.country_code}</p>
+							<p>language: ${user.language}</p>
+							<p>grade: ${user.grade}</p>
+							<p>created at: ${user.created_at}</p>
+							<p>xp: ${user.xp}</p>
+							<p>elo: ${user.elo}</p>
+							<p>online: ${user.is_online}</p>
+							<p>focused: ${user.is_focused}</p>
+							<p>spectating: ${user.is_spectating}</p>
+							<p>in game: ${user.is_playing}</p>
 							${social_html}
 							${user.can_dm ? `<button id="dm_user">Direct messages</button>` : ""}
 							<p id="error"></p>
@@ -92,8 +108,7 @@ class UserProfile extends HTMLElement {
 							this.disabled = false;
 							if (friend_json.error)
 								document.getElementById("error").innerText = friend_json.error;
-							else
-								router();
+
 						}
 					}
 					if (document.getElementById("cancel_friend_request")) {
@@ -114,8 +129,7 @@ class UserProfile extends HTMLElement {
 							this.disabled = false;
 							if (friend_json.error)
 								document.getElementById("error").innerText = friend_json.error;
-							else
-								router();
+
 						}
 					}
 					if (document.getElementById("reject_friend")) {
@@ -136,8 +150,7 @@ class UserProfile extends HTMLElement {
 							this.disabled = false;
 							if (friend_json.error)
 								document.getElementById("error").innerText = friend_json.error;
-							else
-								router();
+
 						}
 					}
 					if (document.getElementById("add_friend")) {
@@ -158,8 +171,7 @@ class UserProfile extends HTMLElement {
 							this.disabled = false;
 							if (friend_json.error)
 								document.getElementById("error").innerText = friend_json.error;
-							else
-								router();
+
 						}
 					}
 					if (document.getElementById("remove_friend")) {
@@ -180,8 +192,7 @@ class UserProfile extends HTMLElement {
 							this.disabled = false;
 							if (friend_json.error)
 								document.getElementById("error").innerText = friend_json.error;
-							else
-								router();
+
 						}
 					}
 					if (document.getElementById("unblock_user")) {
@@ -202,8 +213,7 @@ class UserProfile extends HTMLElement {
 							this.disabled = false;
 							if (block_json.error)
 								document.getElementById("error").innerText = block_json.error;
-							else
-								router();
+
 						}
 					}
 					if (document.getElementById("block_user")) {
@@ -224,8 +234,7 @@ class UserProfile extends HTMLElement {
 							this.disabled = false;
 							if (block_json.error)
 								document.getElementById("error").innerText = block_json.error;
-							else
-								router();
+
 						}
 					}
 

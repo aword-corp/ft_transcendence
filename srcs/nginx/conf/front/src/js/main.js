@@ -20,6 +20,7 @@ import { channels_id_title, channels_id_view } from "./views/channels_id.js";
 function logout() {
 	localStorage.removeItem("access-token");
 	localStorage.removeItem("refresh-token");
+	closeSocketUpdate();
 }
 
 function remove_2fa() {

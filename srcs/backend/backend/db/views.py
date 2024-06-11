@@ -351,7 +351,14 @@ def UserProfileView(request, name: str):
                     "created_at": request.user.created_at,
                     "xp": int(request.user.xp),
                     "elo": int(request.user.elo),
-                    "status": request.user.get_status_display(),
+                    "is_online": request.user.is_online
+                    and not request.user.is_invisible,
+                    "is_focused": request.user.is_focused
+                    and not request.user.is_invisible,
+                    "is_spectating": request.user.is_spectating
+                    and not request.user.is_invisible,
+                    "is_playing": request.user.is_playing
+                    and not request.user.is_invisible,
                     "is_friend": False,
                     "has_friend_request": False,
                     "sent_friend_request": False,
@@ -384,7 +391,10 @@ def UserProfileView(request, name: str):
                     "created_at": user.created_at,
                     "xp": int(user.xp),
                     "elo": int(user.elo),
-                    "status": user.get_status_display(),
+                    "is_online": user.is_online and not user.is_invisible,
+                    "is_focused": user.is_focused and not user.is_invisible,
+                    "is_spectating": user.is_spectating and not user.is_invisible,
+                    "is_playing": user.is_playing and not user.is_invisible,
                     "is_friend": user.friends.filter(id=request.user.id).exists(),
                     "has_friend_request": request.user.friendrequests.filter(
                         id=user.id
@@ -402,6 +412,13 @@ def UserProfileView(request, name: str):
                     "can_dm": (
                         user.msg_default_response != User.Message_Request.BLOCK
                         or user.friends.filter(id=request.user.id).exists()
+                        or GroupChannel.objects.filter(
+                            channel_type=GroupChannel.Type.DM
+                        )
+                        .filter(users=request.user)
+                        .filter(users=user)
+                        .distinct()
+                        .exists()
                     )
                     and not request.user.blocked.filter(id=user.id).exists(),
                     "is_blocked": request.user.blocked.filter(id=user.id).exists(),
@@ -983,6 +1000,8 @@ def channel_username(request, name: str):
             channel.users.add(user)
             channel.users.add(request.user)
 
+            channel.save()
+
             channel_layer = get_channel_layer()
 
             layer_channels = cache.get(f"user_{request.user.id}_channel")
@@ -1252,9 +1271,30 @@ def channel_messages(request, id: int):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+        has_seen = False
+
         if request.method == "GET":
             for message in channel.messages.all():
-                message.seen_by.add(request.user)
+                if not message.seen_by.filter(id=request.user.id).exists():
+                    message.seen_by.add(request.user)
+                    has_seen = True
+
+            if has_seen:
+                channel_layer = get_channel_layer()
+
+                for user in channel.users.all():
+                    layer_channels = cache.get(f"user_{user.id}_channel")
+
+                    if layer_channels:
+                        for layer_channel in layer_channels:
+                            async_to_sync(channel_layer.send)(
+                                layer_channel,
+                                {
+                                    "type": "channel.view.sent",
+                                    "from": request.user.username,
+                                    "channel_id": channel.id,
+                                },
+                            )
 
             return Response(
                 {
