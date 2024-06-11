@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from .ai.ai import Paddle, Ball, brain, get_hit
 import math
 import time
+from asgiref.sync import sync_to_async
+
 # from colorama import Fore, Back, Style
 
 
@@ -78,16 +80,11 @@ class PongConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        if self.user not in self.game.users:
+        if not await self.game.user_is_in_game(self.user):
             if self.user.is_spectating:
                 await self.send(
                     json.dumps({"error": "You are already spectating a game."})
                 )
-                await self.close()
-                return
-
-            elif self.user.is_playing:
-                await self.send(json.dumps({"error": "You are already in a game."}))
                 await self.close()
                 return
 
@@ -428,11 +425,10 @@ class PongConsumer(AsyncWebsocketConsumer):
     async def broadcast_message(self, event):
         message = event["message"]
 
-        if self.user.blocked.filter(id=message["user"]["id"]).exists():
+        if await User.is_blocked(self.user.id, message["user"]["id"]):
             return
 
-        user = await User.objects.aget(id=message["user"]["id"])
-        if user.blocked.filter(id=self.user.id).exists():
+        if await User.is_blocked(message["user"]["id"], self.user.id):
             return
 
         await self.send(

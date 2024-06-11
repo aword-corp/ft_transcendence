@@ -320,8 +320,17 @@ class User(AbstractBaseUser):
         return self.tournament_channel_name
 
     @database_sync_to_async
-    def is_friend(self, user: "User"):
+    def is_friend(self, user: "User") -> bool:
         return user.friends.filter(id=self.id).exists()
+
+    @staticmethod
+    @database_sync_to_async
+    def is_blocked(from_id: int, to_id: int) -> bool:
+        try:
+            user = User.objects.get(id=from_id)
+            return user.blocked.filter(id=to_id).exists()
+        except User.DoesNotExist:
+            return False
 
 
 class GlobalChat(models.Model):
@@ -438,6 +447,18 @@ class Game(models.Model):
     @database_sync_to_async
     def get_winner(self) -> Optional[User]:
         return self.winner
+
+    @database_sync_to_async
+    def get_loser(self) -> Optional[User]:
+        return self.loser
+
+    @database_sync_to_async
+    def get_users(self) -> List[User]:
+        return self.users.all()
+
+    @database_sync_to_async
+    def user_is_in_game(self, user: User) -> bool:
+        return self.users.filter(id=user.id).exists()
 
 
 class Tournament(models.Model):
