@@ -1,4 +1,5 @@
 import { router } from "../main.js";
+import { updateSocket } from "./socket.js";
 
 class Channels extends HTMLElement {
 	constructor() {
@@ -33,7 +34,7 @@ class Channels extends HTMLElement {
 				else if (json.channels) {
 					json.channels.forEach((channel) => {
 						this.innerHTML += `
-							<div>
+							<div id="channel_list">
 								<a href="/channels/${channel.id}" data-link id="Channel_Id">
 									${channel.name}
 								</a>
@@ -84,9 +85,23 @@ class Channels extends HTMLElement {
 						event.preventDefault();
 						onSubmit();
 					});
+
+					updateSocket.onmessage = (e) => {
+						var data = JSON.parse(e.data);
+						if (data.type.includes("channel")) {
+							if (data.type.includes("creation")) {
+								document.getElementById("channel_list").innerHTML += `
+									<a href="/channels/${channel.id}" data-link id="Channel_Id">
+										${channel.name}
+									</a>
+								`;
+							}
+						}
+					}
 				}
 			});
 		});
 	}
 }
+
 customElements.define("channel-list", Channels);

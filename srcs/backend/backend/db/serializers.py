@@ -8,7 +8,6 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            "id",
             "email",
             "username",
             "display_name",
@@ -20,23 +19,6 @@ class UserSerializer(serializers.ModelSerializer):
             "avatar_url",
             "banner_url",
             "birth_date",
-            "grade",
-            "created_at",
-            "xp",
-            "elo",
-            "verified",
-            "status",
-            "paddle_type",
-            "theme",
-            "goal_effect",
-            "win_effect",
-            "friend_default_response",
-            "msg_default_response",
-            "vc_auto_join",
-            "allow_duel",
-            "msg_sound",
-            "duel_sound",
-            "has_2fa",
         ]
 
     def validate_username(self, value):

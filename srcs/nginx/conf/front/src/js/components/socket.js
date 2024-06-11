@@ -26,6 +26,13 @@ export function closeSocketUpdate() {
 	updateSocket = undefined;
 }
 
+export function defaultSocketUpdateOnMessage(e) {
+	var data = JSON.parse(e.data);
+	if (data) {
+		console.log(data);
+	}
+}
+
 export var mmSocket = undefined;
 
 export function initMMSocket() {
