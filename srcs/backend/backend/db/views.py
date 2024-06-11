@@ -1474,7 +1474,6 @@ def channel_messages_id(request, channel_id: int, message_id: int):
 def get_leaderboard(request) -> Response:
     print("---------Get leaderboard call---------")
     leaderboard = sorted(User.objects.values(), key=itemgetter("elo"))
-    print(leaderboard)
 
     return Response(
         {

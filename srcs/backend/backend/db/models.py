@@ -295,14 +295,6 @@ class User(AbstractBaseUser):
 
         return None
 
-    @staticmethod
-    @database_sync_to_async
-    @time_cache(time=timedelta(minutes=5))
-    def get_leaderboard() -> List["User"]:
-        print("---------Get leaderboard call---------")
-        leaderboard = sorted(User.objects.values(), key=itemgetter("elo"))
-        return leaderboard
-
     @database_sync_to_async
     def set_mm_channel_name(self, mm_channel_name: str) -> None:
         self.mm_channel_name = mm_channel_name

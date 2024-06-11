@@ -31,11 +31,59 @@ class Ball:
 		self.speed = speed
 		self.radius = radius
 
-perr = lambda x, *args, **kwargs: print(x, *args, **kwargs, file = sys.stderr)
+# Predict y of ball when it reaches player2
+def get_hit(ball, opp, acceleration):
+	x = ball.x
+	y = ball.y
+	dx = ball.dx
+	dy = ball.dy
+	radius = ball.radius
+	speed = ball.speed
+	
+	while True:
+		old_x = x
+		x += dx
+		y += dy
+		if y - radius < 0:
+			y = radius
+			dy *= -1
+		elif y + radius > 1:
+			y = 1 - radius
+			dy *= -1
+
+		if x - radius < 0:
+			break
+		elif x + radius > 1:
+			break
+		# check ball collision with paddles
+		maxAngle = math.pi / 4
+		opp_y = y
+		wentThrough1 = (
+			old_x - radius > opp.width + opp.x
+			and x - radius <= opp.width + opp.x
+		)
+		if (
+			wentThrough1
+			and opp_y <= y + radius
+			and y - radius <= opp_y + opp.height
+		):
+			ballPosPaddle = (opp_y + opp.half_height) - y
+			relPos = ballPosPaddle / (opp.half_height)
+			bounceAngle = relPos * maxAngle
+
+			speed = (dx**2 + dy**2) ** 0.5 * acceleration
+			dx = speed * math.cos(bounceAngle)
+			dy = speed * -math.sin(bounceAngle)
+
+	return y
+
 BIAS = 1
 
 def sigmoid(activation):
 	return 1.0 / (1.0 + math.exp(-activation))
+
+def ReLU(activation):
+	return max(0, activation)
 
 class Network:
 	def __init__(self, n_inputs: int, n_hidden: int, n_outputs: int, neuron_per_hidden: List[int], activation: Callable) -> None:
@@ -131,20 +179,16 @@ class Network:
 				neuron['weights'][-1] += -l_rate * neuron['delta'] # BIAS weight
 
 	# Train the network for a fixed number of epochs
-	def train(self, train, l_rate, n_epoch) -> None:
+	def train(self, l_rate, n_epoch) -> None:
+		print("Training start")
 		for epoch in range(n_epoch):
-			sum_error = 0
-			for _input, expected in train:
-				outputs = self.forward_propagate(_input)
-				sum_error += sum((e - o) ** 2 for e, o in zip(expected, outputs))
-				self.backward_propagate(expected)
-				self.update_weights(l_rate, _input)
-			perr(f">epoch={str(epoch).zfill(len(str(n_epoch)))}, error={sum_error:.3f}")
-			# if sum_error < 2.6:
-			#     break
+			opp = Network(5, 0, 2, [], sigmoid)
+			pass
+		
 
 	def predict(self, data) -> List[float]:
 		outputs = self.forward_propagate(data)
 		return outputs
 
 brain = Network(5, 0, 2, [], sigmoid)
+# brain.train(0.5, 100)

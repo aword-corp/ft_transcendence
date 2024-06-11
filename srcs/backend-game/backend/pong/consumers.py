@@ -8,7 +8,7 @@ from math import pi, cos, sin
 import asyncio
 import uuid
 from datetime import datetime, timedelta
-from .ai.ai import Paddle, Ball, brain
+from .ai.ai import Paddle, Ball, brain, get_hit
 import math
 import time
 # from colorama import Fore, Back, Style
@@ -455,9 +455,9 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 "ball": Ball(
                     0.5,
                     0.5,
-                    0.004,
-                    0.004,
-                    0.004,
+                    0.002,
+                    0.002,
+                    0.002,
                     0.0128,
                 ),
                 "state": 0,
@@ -468,7 +468,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 0.5,
                 False,
                 False,
-                0.016,
+                0.008,
                 0.166,
                 0.083,
                 0.0125,
@@ -481,7 +481,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 0.5,
                 False,
                 False,
-                0.016,
+                0.008,
                 0.166,
                 0.083,
                 0.0125,
@@ -523,18 +523,26 @@ class PongAIConsumer(AsyncWebsocketConsumer):
         while player1.score < 5 and player2.score < 5:
             # Update player2 if he can be updated
             now = time.time_ns()
-            if now - ai_last_fetch >= ONE_SECOND_NS / 1000:  # TODO Remove division
+            if now - ai_last_fetch >= ONE_SECOND_NS / 50:  # TODO Remove division
                 _input = [ball.x, ball.y, ball.dx, ball.dy, player2.y]
                 up, down = brain.predict(_input)
                 print("AI", up, down)
                 player2.up = up > 0.5 and up > down
                 player2.down = down > 0.5 and down > up
+                hit_y: int = get_hit(ball, player1, self.acceleration)
+                hit_player2: bool = player2.y < hit_y < player2.y + player2.height
+                above: bool = hit_y < player2.y
+                under: bool = hit_y > player2.y + player2.height
+
                 excpected = [
-                    1,
-                    1,
-                ]  # TODO May be [1, 0] [0, 1] [0, 0] following ball x y dx dy
+                    0.0 if hit_player2 or under else 1.0,
+                    0.0 if hit_player2 or above else 1.0,
+                ]
+                print(excpected, hit_y, player2.y)
+
                 brain.backward_propagate(excpected)
                 brain.update_weights(0.5, _input)
+
                 ai_last_fetch = now
 
             wait = False
@@ -671,7 +679,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                     }
                 )
             )
-            await asyncio.sleep(3 if wait else 0.016)
+            await asyncio.sleep(3 if wait else 0.008)
 
         self.games[self.user.id]["state"] = 2
         await self.send(
