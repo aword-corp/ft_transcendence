@@ -102,17 +102,24 @@ class Channel extends HTMLElement {
 									new_html += `</div></div>`;
 								});
 
-								new_html += `
-									<form id="send_message">
-										<p>
-											<label for="id_message">message:</label>
-											<input id="id_message" type=text name="message" required>
-										</p>
-										<button type="submit">send</button>
-									</form>
-								`;
+								if (!channel_json.channel.cant_send) {
+									new_html += `
+										<form id="send_message">
+											<p>
+												<label for="id_message">message:</label>
+												<input id="id_message" type=text name="message" required>
+											</p>
+											<button type="submit">send</button>
+										</form>
+									`;
 
-								this.innerHTML = new_html;
+									this.innerHTML = new_html;
+
+									document.getElementById("send_message").addEventListener("submit", (event) => {
+										event.preventDefault();
+										this.sendMessage(channel_id);
+									});
+								}
 
 								if (channel_json.channel.channel_type === 2) {
 									new_html += `
@@ -133,12 +140,6 @@ class Channel extends HTMLElement {
 									});
 
 								}
-
-								document.getElementById("send_message").addEventListener("submit", (event) => {
-									event.preventDefault();
-									this.sendMessage(channel_id);
-								});
-
 							}
 						});
 					});

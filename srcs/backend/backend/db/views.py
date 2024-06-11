@@ -1149,6 +1149,14 @@ def channel_id(request, id: int):
                         "channel_type": channel.channel_type,
                         "topic": channel.topic,
                         "users": [user.username for user in channel.users.all()],
+                        "cant_send": any(
+                            user.blocked.filter(id=request.user.id)
+                            for user in channel.users.all()
+                        )
+                        or any(
+                            request.user.blocked.filter(id=user.id)
+                            for user in channel.users.all()
+                        ),
                     }
                 },
                 status=status.HTTP_200_OK,
@@ -1331,6 +1339,16 @@ def channel_messages(request, id: int):
             ):
                 return Response(
                     {"error": "You are blocked."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+            if (
+                channel.channel_type == GroupChannel.Type.DM
+                and request.user.blocked.filter(
+                    id=channel.users.exclude(id=request.user.id).first().id
+                ).exists()
+            ):
+                return Response(
+                    {"error": "You have blocked this user."},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
             message = channel.messages.create(
