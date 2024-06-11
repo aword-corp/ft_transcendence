@@ -516,7 +516,6 @@ def UserFriendsList(request, name: str):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-@throttle_classes([FivePerMinuteUserThrottle])
 def UserFriendsAdd(request, name: str):
     if name == request.user.username:
         return Response(
@@ -600,7 +599,6 @@ def UserFriendsAdd(request, name: str):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-@throttle_classes([FivePerMinuteUserThrottle])
 def UserFriendsRemove(request, name: str):
     if name == request.user.username:
         return Response(
@@ -658,7 +656,6 @@ def UserFriendsRemove(request, name: str):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-@throttle_classes([FivePerMinuteUserThrottle])
 def UserFriendRequestAccept(request, name: str):
     if name == request.user.username:
         return Response(
@@ -722,7 +719,6 @@ def UserFriendRequestAccept(request, name: str):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-@throttle_classes([FivePerMinuteUserThrottle])
 def UserFriendRequestReject(request, name: str):
     if name == request.user.username:
         return Response(
@@ -780,7 +776,6 @@ def UserFriendRequestReject(request, name: str):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-@throttle_classes([FivePerMinuteUserThrottle])
 def UserFriendRequestRemove(request, name: str):
     if name == request.user.username:
         return Response(
@@ -838,7 +833,6 @@ def UserFriendRequestRemove(request, name: str):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-@throttle_classes([FivePerMinuteUserThrottle])
 def UserBlock(request, name: str):
     if name == request.user.username:
         return Response(
@@ -915,7 +909,6 @@ def UserBlock(request, name: str):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-@throttle_classes([FivePerMinuteUserThrottle])
 def UserUnBlock(request, name: str):
     if name == request.user.username:
         return Response(
