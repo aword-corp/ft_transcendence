@@ -108,14 +108,14 @@ class Channel extends HTMLElement {
 											<label for="id_message">message:</label>
 											<input id="id_message" type=text name="message" required>
 										</p>
-										<button type="submit">send</button>
+										<button id="send_message_button" type="submit">send</button>
 									</form>
 									<form id="add_user">
 										<p>
 											<label for="id_user">user:</label>
 											<input id="id_user" type=text name="user" required>
 										</p>
-										<button type="submit">add user</button>
+										<button id="add_user_button" type="submit">add user</button>
 									</form>
 								`;
 
@@ -123,12 +123,16 @@ class Channel extends HTMLElement {
 
 								document.getElementById("send_message").addEventListener("submit", (event) => {
 									event.preventDefault();
+									document.getElementById("send_message_button").disabled = true;
 									this.sendMessage(channel_id);
+									document.getElementById("send_message_button").disabled = false;
 								});
 
 								document.getElementById("add_user").addEventListener("submit", (event) => {
 									event.preventDefault();
+									document.getElementById("add_user_button").disabled = true;
 									this.addUser(channel_id);
+									document.getElementById("add_user_button").disabled = false;
 								});
 
 								if (channel_json.channel.cant_send) {
