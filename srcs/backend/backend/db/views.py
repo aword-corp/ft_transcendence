@@ -859,7 +859,10 @@ def UserBlock(request, name: str):
         if request.user.friendrequests.filter(id=user.id).exists():
             request.user.friendrequests.remove(user)
         for channel in (
-            GroupChannel.objects.filter(users=request.user).filter(users=user).all()
+            GroupChannel.objects.filter(channel_type=GroupChannel.Type.GROUP)
+            .filter(users=request.user)
+            .filter(users=user)
+            .all()
         ):
             channel.users.remove(request.user)
             if channel.users.count() == 0:
