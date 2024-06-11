@@ -554,30 +554,6 @@ def UserFriendsAdd(request, name: str):
                         "type": "friend.request.sent",
                         "from": request.user.username,
                         "to": user.username,
-                        "friends": [
-                            {
-                                "name": user.username,
-                                "avatar_url": user.avatar_url.url
-                                if user.avatar_url
-                                else None,
-                                "display_name": user.display_name,
-                                "grade": user.grade,
-                                "verified": user.verified,
-                            }
-                            for user in request.user.friends.all()
-                        ],
-                        "friend_requests": [
-                            {
-                                "name": user.username,
-                                "avatar_url": user.avatar_url.url
-                                if user.avatar_url
-                                else None,
-                                "display_name": user.display_name,
-                                "grade": user.grade,
-                                "verified": user.verified,
-                            }
-                            for user in request.user.friendrequests.all()
-                        ],
                     },
                 )
 
@@ -591,30 +567,6 @@ def UserFriendsAdd(request, name: str):
                         "type": "friend.request.received",
                         "from": request.user.username,
                         "to": user.username,
-                        "friends": [
-                            {
-                                "name": user.username,
-                                "avatar_url": user.avatar_url.url
-                                if user.avatar_url
-                                else None,
-                                "display_name": user.display_name,
-                                "grade": user.grade,
-                                "verified": user.verified,
-                            }
-                            for user in user.friends.all()
-                        ],
-                        "friend_requests": [
-                            {
-                                "name": user.username,
-                                "avatar_url": user.avatar_url.url
-                                if user.avatar_url
-                                else None,
-                                "display_name": user.display_name,
-                                "grade": user.grade,
-                                "verified": user.verified,
-                            }
-                            for user in user.friendrequests.all()
-                        ],
                     },
                 )
 
