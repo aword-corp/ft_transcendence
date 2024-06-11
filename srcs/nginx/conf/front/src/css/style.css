@@ -94,6 +94,28 @@ click-counter button:active {
     background-color: grey;
 }
 
+/* Ensure the main container takes full height */
+html, body, #app {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Navbar should take its natural height */
+#nav {
+    flex-shrink: 0;
+}
+
+/* Ensure the Three.js container takes the remaining height of its parent */
+#three-container {
+    flex: 1;
+    position: relative;
+    width: 100%;
+}
+
+
 @media (min-width: 1000px) {
     * {
         font-size: 18px;

@@ -1,4 +1,4 @@
-import { home_view, home_title } from "./views/home.js";
+import { home_view, home_title, initThreeJS, transitionToFace } from "./views/home.js";
 import { clicks_view, clicks_title } from "./views/clicks.js";
 import { chat_view, chat_title } from "./views/chat.js";
 import { play_view, play_title } from "./views/play.js";
@@ -158,48 +158,86 @@ function getParams(pathname) {
 	return null;
 }
 
-export function router() {
-	let matchedRoute = getParams(location.pathname);
-	let view = matchedRoute ? matchedRoute.route : null;
-	let params = matchedRoute ? matchedRoute.params : {};
-	let action = actions[location.pathname];
-
-
-	// if (view === last_view)
-	// 	return;
-
-	if (last_view && last_view.destructor)
-		last_view.destructor();
-
-	if (view && checkAccess(view)) {
-		document.title = ` ACorp - ${view.title(params)} `;
-		if (view.constructor)
-			view.constructor(params);
-		app.innerHTML = view.render(params);
-		if (!isAuth())
-			document.getElementById("nav").innerHTML = "<anon-nav-bar class=\"navbar\"></anon-nav-bar>";
-		else
-			document.getElementById("nav").innerHTML = "<nav-bar class=\"navbar\"></nav-bar>";
-		last_view = view;
-	}
-	else if (action && checkAccess(action)) {
-		action.action();
-		last_view = view;
-		history.pushState("", "", "/");
-		router();
-	}
-	else {
-		history.replaceState("", "", "/");
-		router();
-	}
+const faceMapping = {
+    "/": 0,            // Front face
+    "/clicks": 1,      // Right face
+    "/chat": 2,        // Back face
+    "/play": 3,        // Left face
+    "/profile": 4,     // Top face
+    "/leaderboard": 5  // Bottom face
 };
 
+export function router() {
+    let matchedRoute = getParams(location.pathname);
+    let view = matchedRoute ? matchedRoute.route : null;
+    let params = matchedRoute ? matchedRoute.params : {};
+    let action = actions[location.pathname];
+
+    console.log("Routing to:", location.pathname);
+
+    if (last_view && last_view.destructor)
+        last_view.destructor();
+
+    if (view && checkAccess(view)) {
+        // Update the title
+        document.title = `ACorp - ${view.title(params)}`;
+
+        // Check if it's the home view and initialize Three.js if necessary
+        if (location.pathname === "/") {
+            if (view.constructor)
+                view.constructor(params);
+            app.innerHTML = view.render(params);
+            initThreeJS();
+        } else {
+            // Perform the transition animation
+            const targetFace = faceMapping[location.pathname];
+            console.log("Transitioning to face:", targetFace);
+
+            transitionToFace(targetFace, () => {
+                console.log("Animation complete, initializing view constructor");
+                if (view.constructor)
+                    view.constructor(params);
+            }).then(() => {
+                console.log("Transition complete, rendering view");
+                // Only update the innerHTML after the animation completes
+                app.innerHTML = view.render(params);
+
+                // Update the navigation bar
+                if (!isAuth())
+                    document.getElementById("nav").innerHTML = "<anon-nav-bar class='navbar'></anon-nav-bar>";
+                else
+                    document.getElementById("nav").innerHTML = "<nav-bar class='navbar'></nav-bar>";
+
+                last_view = view;
+            }).catch(error => {
+                console.error("Error during transition:", error);
+            });
+        }
+    } else if (action && checkAccess(action)) {
+        action.action();
+        last_view = view;
+        history.pushState("", "", "/");
+        router();
+    } else {
+        history.replaceState("", "", "/");
+        router();
+    }
+}
+
 window.addEventListener("click", e => {
-	if (e.target.matches("[data-link]")) {
-		e.preventDefault();
-		history.pushState("", "", e.target.href);
-		router();
-	}
+    if (e.target.matches("[data-link]")) {
+        e.preventDefault();
+        history.pushState("", "", e.target.href);
+        router();
+    }
+});
+
+window.addEventListener("click", e => {
+    if (e.target.matches("[data-link]")) {
+        e.preventDefault();
+        history.pushState("", "", e.target.href);
+        router();
+    }
 });
 
 window.addEventListener("popstate", router);

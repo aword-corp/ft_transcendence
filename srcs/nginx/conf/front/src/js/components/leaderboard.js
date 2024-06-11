@@ -4,6 +4,12 @@ class Leaderboard extends HTMLElement {
 	constructor() {
 		super();
 
+		this.innerHTML = `
+			<div class="container mt-5">
+				<div id="leaderboard" class="table-responsive"></div>
+			</div>
+		`;
+
 		fetch("/api/leaderboard", {
 			method: "GET",
 			headers: {
@@ -17,26 +23,21 @@ class Leaderboard extends HTMLElement {
 
 				if (objIsEmpty(leaderboardData)) {
 					leaderboardElement.innerText = "No data";
-					leaderboardElement.classList.add("leaderboard-align-text");
-					return ;
+					leaderboardElement.classList.add("text-center", "mt-3");
+					return;
 				}
 
 				leaderboardElement.innerHTML = '';
 
 				const table = document.createElement('table');
-				table.style.width = '100%';
-				table.style.borderCollapse = 'collapse';
+				table.classList.add('table', 'table-striped', 'table-bordered', 'table-hover');
 
-				const header = table.createTHead();
-				const headerRow = header.insertRow();
+				const thead = table.createTHead();
+				const headerRow = thead.insertRow();
 				const nameHeader = document.createElement('th');
 				nameHeader.textContent = 'Name';
-				nameHeader.style.border = '1px solid black';
-				nameHeader.style.padding = '8px';
 				const scoreHeader = document.createElement('th');
 				scoreHeader.textContent = 'Score';
-				scoreHeader.style.border = '1px solid black';
-				scoreHeader.style.padding = '8px';
 
 				headerRow.appendChild(nameHeader);
 				headerRow.appendChild(scoreHeader);
@@ -44,34 +45,25 @@ class Leaderboard extends HTMLElement {
 				const tbody = table.createTBody();
 				Object.entries(leaderboardData).forEach(([name, score]) => {
 					if (!name || !name.length)
-						return ;
+						return;
 					const row = tbody.insertRow();
 					const nameCell = row.insertCell();
 					const scoreCell = row.insertCell();
-	
+
 					const profile = document.createElement('a');
 					profile.textContent = name;
 					profile.href = `/profile/${name}`;
-					nameCell.appendChild(profile);
+					profile.classList.add('text-decoration-none');
 
-					nameCell.style.textAlign = 'center';
-					nameCell.style.border = '1px solid black';
-					nameCell.style.padding = '8px';
-					
+					nameCell.appendChild(profile);
+					nameCell.classList.add('text-center');
 					scoreCell.textContent = Math.trunc(score);
-					scoreCell.style.textAlign = 'center';
-					scoreCell.style.border = '1px solid black';
-					scoreCell.style.padding = '8px';
-					
+					scoreCell.classList.add('text-center');
 				});
 
 				leaderboardElement.appendChild(table);
 			});
 		});
-
-		this.innerHTML = `
-			<p id="leaderboard"></p>
-		`;
 	}
 }
 
