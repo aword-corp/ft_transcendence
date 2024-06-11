@@ -102,45 +102,41 @@ class Channel extends HTMLElement {
 									new_html += `</div></div>`;
 								});
 
-								if (!channel_json.channel.cant_send) {
-									new_html += `
-										<form id="send_message">
-											<p>
-												<label for="id_message">message:</label>
-												<input id="id_message" type=text name="message" required>
-											</p>
-											<button type="submit">send</button>
-										</form>
-									`;
-
-									this.innerHTML = new_html;
-
-									document.getElementById("send_message").addEventListener("submit", (event) => {
-										event.preventDefault();
-										this.sendMessage(channel_id);
-									});
-								}
+								new_html += `
+									<form id="send_message">
+										<p>
+											<label for="id_message">message:</label>
+											<input id="id_message" type=text name="message" required>
+										</p>
+										<button type="submit">send</button>
+									</form>
+									<form id="add_user">
+										<p>
+											<label for="id_user">user:</label>
+											<input id="id_user" type=text name="user" required>
+										</p>
+										<button type="submit">add user</button>
+									</form>
+								`;
 
 								this.innerHTML = new_html;
 
-								if (channel_json.channel.channel_type === 2) {
-									new_html += `
-										<form id="add_user">
-											<p>
-												<label for="id_user">user:</label>
-												<input id="id_user" type=text name="user" required>
-											</p>
-											<button type="submit">add user</button>
-										</form>
-									`;
+								document.getElementById("send_message").addEventListener("submit", (event) => {
+									event.preventDefault();
+									this.sendMessage(channel_id);
+								});
 
-									this.innerHTML = new_html;
+								document.getElementById("add_user").addEventListener("submit", (event) => {
+									event.preventDefault();
+									this.addUser(channel_id);
+								});
 
-									document.getElementById("add_user").addEventListener("submit", (event) => {
-										event.preventDefault();
-										this.addUser(channel_id);
-									});
+								if (channel_json.channel.cant_send) {
+									document.getElementById("send_message").remove();
+								}
 
+								if (channel_json.channel.channel_type === 1) {
+									document.getElementById("add_user").remove();
 								}
 							}
 						});
