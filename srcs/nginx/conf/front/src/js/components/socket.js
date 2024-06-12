@@ -190,7 +190,7 @@ export function initPongSocket(params) {
 			navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 				.then(function (stream) {
 					localStream = stream;
-					document.getElementById("local_stream").srcObject = localStream;
+					// document.getElementById("local_stream").srcObject = localStream;
 					makeCall();
 				})
 				.catch(function (err) {
@@ -200,7 +200,7 @@ export function initPongSocket(params) {
 			navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 				.then(function (stream) {
 					localStream = stream;
-					document.getElementById("local_stream").srcObject = localStream;
+					// document.getElementById("local_stream").srcObject = localStream;
 					answerCall();
 				})
 				.catch(function (err) {

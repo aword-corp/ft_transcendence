@@ -16,7 +16,6 @@ class PongGame extends HTMLElement {
 				<button type="submit">send</button>
 			</form>
 			<video autoplay id="peer_stream"></video>
-			<video autoplay id="local_stream"></video>
 		`;
 
 		this.canvas = document.getElementById("pongCanvas");
