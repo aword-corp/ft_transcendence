@@ -70,8 +70,9 @@ export var localStream = undefined;
 
 export var peerConnection = undefined;
 
+export var interval = undefined;
+
 async function makeCall() {
-	let interval = undefined;
 	const configuration = {
 		'iceServers': [{
 			'urls': 'turn:dev.acorp.games:3478',
@@ -233,6 +234,10 @@ export function closePongSocket() {
 			track.stop();
 		});
 		localStream = undefined;
+	}
+	if (interval) {
+		clearInterval(interval);
+		interval = undefined;
 	}
 	pongSocket = undefined;
 }

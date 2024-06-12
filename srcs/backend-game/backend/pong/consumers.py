@@ -393,7 +393,13 @@ class PongConsumer(AsyncWebsocketConsumer):
                 {
                     "type": "broadcast.pos",
                     "position": {
-                        "ball": {"x": ball.x, "y": ball.y, "radius": ball.radius},
+                        "ball": {
+                            "x": ball.x,
+                            "y": ball.y,
+                            "radius": ball.radius,
+                            "dx": ball.dx,
+                            "dy": ball.dy,
+                        },
                         "player1": {
                             "x": player1.x,
                             "y": player1.y,
@@ -565,6 +571,11 @@ class PongAIConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
+        if not brain:
+            await self.send(json.dumps({"error": "AI is not ready."}))
+            await self.close()
+            return
+
         if self.user.id not in self.games or self.games[self.user.id]["state"] == 2:
             self.games[self.user.id] = {
                 "ball": Ball(
@@ -640,18 +651,17 @@ class PongAIConsumer(AsyncWebsocketConsumer):
 
         await asyncio.sleep(3)
         while player1.score < 5 and player2.score < 5:
-
             # Update AI if it can be updated
             now = time.time_ns()
-            if now - ai_last_fetch >= ONE_SECOND_NS / 50: # TODO Remove division
+            if now - ai_last_fetch >= ONE_SECOND_NS / 50:  # TODO Remove division
                 _input = [ball.x, ball.y, ball.dx, ball.dy, player2.y]
                 # AI Move
 
                 # Test
-                move, = brain.predict(_input)
+                (move,) = brain.predict(_input)
                 print(f"AI {move = :.5f}")
-                player2.up = move > 2/3
-                player2.down = move < 1/3
+                player2.up = move > 2 / 3
+                player2.down = move < 1 / 3
 
                 # "Best" move
                 hit_y: int = get_hit(ball, player1) if ball.dx > 0 else ball.y
