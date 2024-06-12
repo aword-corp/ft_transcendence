@@ -125,6 +125,10 @@ async function makeCall() {
 		} else if (peerConnection.connectionState === 'closed' && interval) {
 			clearInterval(interval);
 			interval = undefined;
+		} else if (peerConnection.connectionState === 'disconnected' && !interval) {
+			interval = setInterval(() => {
+				pongSocket.send(JSON.stringify({ 'offer': offer }));
+			}, 2000);
 		}
 	});
 	peerConnection.addEventListener('track', async (event) => {
