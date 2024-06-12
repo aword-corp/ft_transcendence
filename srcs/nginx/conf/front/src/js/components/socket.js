@@ -80,20 +80,16 @@ async function makeCall() {
 		}], iceTransportPolicy: 'relay', 'sdpSemantics': 'unified-plan',
 	};
 	const peerConnection = new RTCPeerConnection(configuration);
-	console.log("peerConnection", peerConnection);
 	localStream.getTracks().forEach(track => {
-		console.log("track", track);
 		peerConnection.addTrack(track, localStream);
 	});
 	pongSocket.addEventListener('message', async event => {
 		const message = JSON.parse(event.data);
 		if (message.answer) {
-			console.log("message_answer", message);
 			const remoteDesc = new RTCSessionDescription(message.answer);
-			await peerConnection.setRemoteDescription(remoteDesc);
+			await peerConnection.setRemoteDescription(remoteDesc).catch(e => console.error("Failed to set remote description: ", e));
 		}
 		if (message.iceCandidate) {
-			console.log("message_iceCandidate", message);
 			try {
 				await peerConnection.addIceCandidate(message.iceCandidate);
 			} catch (e) {
@@ -105,10 +101,8 @@ async function makeCall() {
 		'offerToReceiveAudio': true,
 		'offerToReceiveVideo': false
 	});
-	console.log("offer", offer);
 	await peerConnection.setLocalDescription(offer);
 	peerConnection.addEventListener('icecandidate', event => {
-		console.log("icecandidate", event);
 		if (event.candidate) {
 			if (event.candidate.candidate.indexOf("relay") < 0) {
 				return;
@@ -117,14 +111,9 @@ async function makeCall() {
 		}
 	});
 	peerConnection.addEventListener('connectionstatechange', event => {
-		console.log("connectionstatechange", event);
-		console.log("state", peerConnection.connectionState);
-		if (peerConnection.connectionState === 'connected') {
-			console.log("connected ?????? gg");
-			if (interval) {
-				clearInterval(interval);
-				interval = undefined;
-			}
+		if (peerConnection.connectionState === 'connected' && interval) {
+			clearInterval(interval);
+			interval = undefined;
 		} else if (peerConnection.connectionState === 'failed') {
 			peerConnection.createOffer({ iceRestart: true }).then((offer) => {
 				peerConnection.setLocalDescription(offer).then(() => {
@@ -135,12 +124,11 @@ async function makeCall() {
 	});
 	peerConnection.addEventListener('track', async (event) => {
 		const [remoteStream] = event.streams;
-		console.log("track", event);
 		document.getElementById("peer_stream").srcObject = remoteStream;
 	});
 	interval = setInterval(() => {
 		pongSocket.send(JSON.stringify({ 'offer': offer }));
-	}, 5000);
+	}, 2000);
 }
 
 async function answerCall() {
@@ -152,22 +140,18 @@ async function answerCall() {
 		}], iceTransportPolicy: 'relay', 'sdpSemantics': 'unified-plan',
 	};
 	const peerConnection = new RTCPeerConnection(configuration);
-	console.log("peerConnection", peerConnection);
 	localStream.getTracks().forEach(track => {
-		console.log("track", track);
 		peerConnection.addTrack(track, localStream);
 	});
 	pongSocket.addEventListener('message', async event => {
 		const message = JSON.parse(event.data);
 		if (message.offer) {
-			console.log("message_offer", message);
-			peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
+			peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer)).catch(e => console.error("Failed to set remote description: ", e));
 			const answer = await peerConnection.createAnswer();
 			await peerConnection.setLocalDescription(answer);
 			pongSocket.send(JSON.stringify({ 'answer': answer }));
 		}
 		if (message.iceCandidate) {
-			console.log("message_iceCandidate", message);
 			try {
 				await peerConnection.addIceCandidate(message.iceCandidate);
 			} catch (e) {
@@ -176,7 +160,6 @@ async function answerCall() {
 		}
 	});
 	peerConnection.addEventListener('icecandidate', event => {
-		console.log("icecandidate", event);
 		if (event.candidate) {
 			if (event.candidate.candidate.indexOf("relay") < 0) {
 				return;
@@ -184,16 +167,8 @@ async function answerCall() {
 			pongSocket.send(JSON.stringify({ 'iceCandidate': event.candidate }));
 		}
 	});
-	peerConnection.addEventListener('connectionstatechange', event => {
-		console.log("connectionstatechange", event);
-		console.log("state", peerConnection.connectionState);
-		if (peerConnection.connectionState === 'connected') {
-			console.log("connected ?????? gg");
-		}
-	});
 	peerConnection.addEventListener('track', async (event) => {
 		const [remoteStream] = event.streams;
-		console.log("track", event);
 		document.getElementById("peer_stream").srcObject = remoteStream;
 	});
 }
