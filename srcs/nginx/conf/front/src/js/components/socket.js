@@ -68,7 +68,7 @@ export var pongSocket = undefined;
 
 export var localStream = undefined;
 
-export var localPeerConnection = undefined;
+export var peerConnection = undefined;
 
 async function makeCall() {
 	let interval = undefined;
@@ -79,7 +79,7 @@ async function makeCall() {
 			credential: 'anon-pass'
 		}], iceTransportPolicy: 'relay', 'sdpSemantics': 'unified-plan',
 	};
-	const peerConnection = new RTCPeerConnection(configuration);
+	peerConnection = new RTCPeerConnection(configuration);
 	if (localStream) {
 		localStream.getTracks().forEach(track => {
 			peerConnection.addTrack(track, localStream);
@@ -148,7 +148,7 @@ async function answerCall() {
 			credential: 'anon-pass'
 		}], iceTransportPolicy: 'relay', 'sdpSemantics': 'unified-plan',
 	};
-	const peerConnection = new RTCPeerConnection(configuration);
+	peerConnection = new RTCPeerConnection(configuration);
 	if (localStream) {
 		localStream.getTracks().forEach(track => {
 			peerConnection.addTrack(track, localStream);
