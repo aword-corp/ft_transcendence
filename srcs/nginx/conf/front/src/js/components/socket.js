@@ -145,12 +145,14 @@ async function answerCall() {
 		}], iceTransportPolicy: 'relay', 'sdpSemantics': 'unified-plan',
 	};
 	const peerConnection = new RTCPeerConnection(configuration);
+	console.log("peerConnection", peerConnection);
 	localStream.getTracks().forEach(track => {
 		console.log("track", track);
 		peerConnection.addTrack(track, localStream);
 	});
 	pongSocket.addEventListener('message', async event => {
 		const message = JSON.parse(event.data);
+		console.log("message", message);
 		if (message.offer) {
 			console.log("message_offer", message);
 			peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
