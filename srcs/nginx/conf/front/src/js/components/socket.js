@@ -90,6 +90,10 @@ async function makeCall() {
 		if (message.answer) {
 			const remoteDesc = new RTCSessionDescription(message.answer);
 			await peerConnection.setRemoteDescription(remoteDesc).catch(e => console.error("Failed to set remote description: ", e));
+			if (interval) {
+				clearInterval(interval);
+				interval = undefined;
+			}
 		}
 		if (message.iceCandidate) {
 			try {
