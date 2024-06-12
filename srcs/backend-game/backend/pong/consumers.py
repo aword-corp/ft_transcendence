@@ -139,6 +139,7 @@ class PongConsumer(AsyncWebsocketConsumer):
                 ),
                 "started": False,
                 "users": [],
+                "player_id": 1,
             }
 
         try:
@@ -157,8 +158,21 @@ class PongConsumer(AsyncWebsocketConsumer):
                     0,
                     self.user,
                     self.channel_name,
+                    self.games[self.game_id]["player_id"],
                 )
                 self.games[self.game_id]["users"].append(self.user)
+                self.games[self.game_id]["player_id"] += 1
+
+            if self.user.id in self.games[self.game_id]:
+                self.send(
+                    json.dumps(
+                        {
+                            "type": "broadcast.player.id",
+                            "player_id": len(self.games[self.game_id]["users"]),
+                            "user_id": self.games[self.game_id][self.user.id].player_id,
+                        }
+                    )
+                )
 
             if (
                 len(self.games[self.game_id]["users"]) == 2
@@ -256,23 +270,7 @@ class PongConsumer(AsyncWebsocketConsumer):
 
     async def game_loop(self, game_id):
         player1: Paddle = self.games[game_id][self.games[game_id]["users"][0].id]
-        await self.channel_layer.send(
-            player1.channel_name,
-            {
-                "type": "broadcast.player.id",
-                "player_id": 1,
-                "user_id": self.user.id,
-            },
-        )
         player2: Paddle = self.games[game_id][self.games[game_id]["users"][1].id]
-        await self.channel_layer.send(
-            player2.channel_name,
-            {
-                "type": "broadcast.player.id",
-                "player_id": 2,
-                "user_id": self.user.id,
-            },
-        )
         ball = self.games[game_id]["ball"]
         await asyncio.sleep(3)
         self.game.state = Game.State.PLAYING
@@ -580,6 +578,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 0,
                 self.user,
                 None,
+                None,
             )
 
             self.games[self.user.id]["bot"] = Paddle(
@@ -592,6 +591,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 0.083,
                 0.0125,
                 0,
+                None,
                 None,
                 None,
             )

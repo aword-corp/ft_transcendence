@@ -22,6 +22,7 @@ class Paddle:
         score,
         user: Optional[User],
         channel_name: Optional[str],
+        player_id: Optional[int],
     ):
         self.x = x
         self.y = y
@@ -34,6 +35,7 @@ class Paddle:
         self.score = score
         self.user: Optional[User] = user
         self.channel_name: Optional[str] = channel_name
+        self.player_id: Optional[int] = player_id
 
 
 class Ball:

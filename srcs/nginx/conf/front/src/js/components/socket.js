@@ -71,6 +71,7 @@ export var localStream = undefined;
 export var localPeerConnection = undefined;
 
 async function makeCall() {
+	let interval = undefined;
 	const configuration = {
 		'iceServers': [{
 			'urls': 'turn:dev.acorp.games:3478',
@@ -120,6 +121,10 @@ async function makeCall() {
 		console.log("state", peerConnection.connectionState);
 		if (peerConnection.connectionState === 'connected') {
 			console.log("connected ?????? gg");
+			if (interval) {
+				clearInterval(interval);
+				interval = undefined;
+			}
 		} else if (peerConnection.connectionState === 'failed') {
 			peerConnection.createOffer({ iceRestart: true }).then((offer) => {
 				peerConnection.setLocalDescription(offer).then(() => {
@@ -133,7 +138,9 @@ async function makeCall() {
 		console.log("track", event);
 		document.getElementById("peer_stream").srcObject = remoteStream;
 	});
-	pongSocket.send(JSON.stringify({ 'offer': offer }));
+	interval = setInterval(() => {
+		pongSocket.send(JSON.stringify({ 'offer': offer }));
+	}, 5000);
 }
 
 async function answerCall() {
@@ -152,7 +159,6 @@ async function answerCall() {
 	});
 	pongSocket.addEventListener('message', async event => {
 		const message = JSON.parse(event.data);
-		console.log("message", message);
 		if (message.offer) {
 			console.log("message_offer", message);
 			peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
@@ -192,8 +198,6 @@ async function answerCall() {
 	});
 }
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
 export function initPongSocket(params) {
 	if (pongSocket)
 		return;
@@ -201,7 +205,6 @@ export function initPongSocket(params) {
 	pongSocket.addEventListener("message", async event => {
 		const message = JSON.parse(event.data);
 		if (message.player_id && message.player_id === 1) {
-			await sleep(5000);
 			console.log("Trying to get user media")
 			navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 				.then(function (stream) {
@@ -214,7 +217,6 @@ export function initPongSocket(params) {
 					console.error('getUserMedia error:', err);
 				});
 		} else if (message.player_id && message.player_id === 2) {
-			await sleep(5000);
 			console.log("Trying to get user media")
 			navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 				.then(function (stream) {
@@ -227,7 +229,7 @@ export function initPongSocket(params) {
 					console.error('getUserMedia error:', err);
 				});
 		}
-	});
+	}, { once: true });
 	pongSocket.onclose = function (event) {
 		pongSocket = undefined;
 		history.pushState("", "", "/");
