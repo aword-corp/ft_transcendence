@@ -1,4 +1,4 @@
-from .serializers import UserSerializer, MyTokenObtainPairSerializer
+from .serializers import EditUserSerializer, UserSerializer, MyTokenObtainPairSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import (
     api_view,
@@ -23,6 +23,7 @@ from django.conf import settings
 from django.core.cache import cache
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from rest_framework.generics import UpdateAPIView
 
 
 class time_cache:
@@ -111,16 +112,53 @@ def error_500_view(request):
 @throttle_classes([FivePerMinuteUserThrottle])
 def RegisterView(request):
     serializer = UserSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    try:
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    except KeyError:
+        return Response(
+            {"error": "Missing required field."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([FivePerMinuteUserThrottle])
+def EditProfileView(request):
+    serializer = EditUserSerializer(
+        data=request.data, instance=request.user, partial=True
+    )
+    try:
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except KeyError:
+        return Response(
+            {"error": "Missing required field."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 @api_view(["POST"])
 @permission_classes([IsNotAuthenticated])
 def LoginView(request):
     username = request.data.get("username")
+
+    if not username:
+        return Response(
+            {"detail": "No email or username provided."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     password = request.data.get("password")
+
+    if not password:
+        return Response(
+            {"detail": "No password provided."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     user = authenticate(request, username=username, password=password)
 
