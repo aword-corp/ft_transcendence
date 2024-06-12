@@ -80,9 +80,11 @@ async function makeCall() {
 		}], iceTransportPolicy: 'relay', 'sdpSemantics': 'unified-plan',
 	};
 	const peerConnection = new RTCPeerConnection(configuration);
-	localStream.getTracks().forEach(track => {
-		peerConnection.addTrack(track, localStream);
-	});
+	if (localStream) {
+		localStream.getTracks().forEach(track => {
+			peerConnection.addTrack(track, localStream);
+		});
+	}
 	pongSocket.addEventListener('message', async event => {
 		const message = JSON.parse(event.data);
 		if (message.answer) {
@@ -140,9 +142,11 @@ async function answerCall() {
 		}], iceTransportPolicy: 'relay', 'sdpSemantics': 'unified-plan',
 	};
 	const peerConnection = new RTCPeerConnection(configuration);
-	localStream.getTracks().forEach(track => {
-		peerConnection.addTrack(track, localStream);
-	});
+	if (localStream) {
+		localStream.getTracks().forEach(track => {
+			peerConnection.addTrack(track, localStream);
+		});
+	}
 	pongSocket.addEventListener('message', async event => {
 		const message = JSON.parse(event.data);
 		if (message.offer) {
@@ -180,28 +184,24 @@ export function initPongSocket(params) {
 	pongSocket.addEventListener("message", async event => {
 		const message = JSON.parse(event.data);
 		if (message.player_id && message.player_id === 1) {
-			console.log("Trying to get user media")
 			navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 				.then(function (stream) {
 					localStream = stream;
-					console.log("localStream", localStream);
-					// document.getElementById("local_stream").srcObject = localStream;
 					makeCall();
 				})
 				.catch(function (err) {
 					console.error('getUserMedia error:', err);
+					makeCall();
 				});
 		} else if (message.player_id && message.player_id === 2) {
-			console.log("Trying to get user media")
 			navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 				.then(function (stream) {
 					localStream = stream;
-					console.log("localStream", localStream);
-					// document.getElementById("local_stream").srcObject = localStream;
 					answerCall();
 				})
 				.catch(function (err) {
 					console.error('getUserMedia error:', err);
+					answerCall();
 				});
 		}
 	}, { once: true });
@@ -216,6 +216,16 @@ export function closePongSocket() {
 	if (pongSocket && pongSocket.readyState === WebSocket.OPEN) {
 		pongSocket.onclose = null;
 		pongSocket.close();
+	}
+	if (peerConnection) {
+		peerConnection.close();
+		peerConnection = undefined;
+	}
+	if (localStream) {
+		localStream.getTracks().forEach(track => {
+			track.stop();
+		});
+		localStream = undefined;
 	}
 	pongSocket = undefined;
 }
