@@ -3,6 +3,7 @@ from typing import List, Optional, Callable
 import random
 import math
 import json
+from copy import deepcopy
 
 
 ACCELERATION = 1.05
@@ -102,16 +103,10 @@ def ReLU(activation):
 
 
 class Network:
-    def __init__(
-        self,
-        n_inputs: int,
-        n_hidden: int,
-        n_outputs: int,
-        neuron_per_hidden: List[int],
-        activation: Callable,
-    ) -> None:
-        self.layers = []
-        self.activation = activation
+	def __init__(self, n_inputs: int, n_hidden: int, n_outputs: int, neuron_per_hidden: List[int], activation: Callable) -> None:
+		self.layers = []
+		self.activation = activation
+		assert n_hidden == len(neuron_per_hidden)
 
         for layer in range(n_hidden):
             hidden_layer = []
@@ -205,156 +200,162 @@ class Network:
                     )
                 neuron["weights"][-1] += -l_rate * neuron["delta"]  # BIAS weight
 
-    # Train the network for a fixed number of epochs
-    def train(self, l_rate, n_epoch) -> None:
-        print("Training start")
-        player1: Paddle = Paddle(
-            0.03,
-            0.5,
-            False,
-            False,
-            0.016,
-            0.166,
-            0.083,
-            0.0125,
-            0,
-            None,
-        )
-        bot: Paddle = Paddle(
-            1 - 0.03,
-            0.5,
-            False,
-            False,
-            0.016,
-            0.166,
-            0.083,
-            0.0125,
-            0,
-            None,
-        )
-        ball: Ball = Ball(
-            0.5,
-            0.5,
-            0.004,
-            0.004,
-            0.004,
-            0.0128,
-        )
+	# Train the network for a fixed number of epochs
+	def train(self, l_rate, n_epoch) -> None:
+		best_score = -1
+		best_layers = None
+		print("Training start")
+		epoch = 0
+		while epoch < n_epoch:
+			print("New training game")
+			player1: Paddle = Paddle(
+				0.03,
+				0.5,
+				False,
+				False,
+				0.016,
+				0.166,
+				0.083,
+				0.0125,
+				0,
+				None,
+			)
+			bot: Paddle = Paddle(
+				1 - 0.03,
+				0.5,
+				False,
+				False,
+				0.016,
+				0.166,
+				0.083,
+				0.0125,
+				0,
+				None,
+			)
+			ball: Ball = Ball(
+				0.5,
+				0.5,
+				0.004,
+				0.004,
+				0.004,
+				0.0128,
+			)
 
-        epoch = 0
-        while epoch < n_epoch:
-            print(f"{ball.x = :.3f} {ball.y = :.3f}")
-            # Update AI
-            _input = [ball.x, ball.y, ball.dx, ball.dy, bot.y]
-            up, down = self.predict(_input)
-            print(f"AI {up = :.3f} {down = :.3f}")
-            bot.up = up > 0.5 and up > down
-            bot.down = down > 0.5 and down > up
-            hit_y: int = get_hit(ball, player1)
-            above: bool = hit_y < bot.y
-            on: bool = bot.y < hit_y < bot.y + bot.height
-            under: bool = hit_y > bot.y + bot.height
+			while bot.score < 5 and (best_score == -1 or player1.score < best_score):
+				# Update AI if it can be updated
+				_input = [ball.x, ball.y, ball.dx, ball.dy, bot.y]
+				# AI Move
+				move, = brain.predict(_input)
+				# print(f"AI {move = :.5f}")
+				bot.up = move > 2/3
+				bot.down = move < 1/3
 
-            excpected = [
-                0.0 if on or under else 1.0,
-                0.0 if on or above else 1.0,
-            ]
-            print(f"{excpected} {hit_y = :.3f} {bot.y = :.3f}")
-            self.backward_propagate(excpected)
-            self.update_weights(l_rate, _input)
+				# "Best" move
+				hit_y: int = get_hit(ball, player1) if ball.dx > 0 else ball.y
+				above: bool = hit_y < bot.y
+				on: bool = bot.y < hit_y < bot.y + bot.height
+				under: bool = hit_y > bot.y + bot.height
 
-            # update paddle position
-            if player1.up and not player1.down:
-                player1.y -= player1.speed
-            if player1.down and not player1.up:
-                player1.y += player1.speed
-            if player1.y < 0:
-                player1.y = 0
-            if player1.y + player1.height > 1:
-                player1.y = 1 - player1.height
-            if bot.up and not bot.down:
-                bot.y -= bot.speed
-            if bot.down and not bot.up:
-                bot.y += bot.speed
-            if bot.y < 0:
-                bot.y = 0
-            if bot.y + bot.height > 1:
-                bot.y = 1 - bot.height
-            # update ball position
-            old_x = ball.x
-            ball.x += ball.dx
-            ball.y += ball.dy
-            if ball.y - ball.radius < 0:
-                ball.y = ball.radius
-                ball.dy *= -1
-            elif ball.y + ball.radius > 1:
-                ball.y = 1 - ball.radius
-                ball.dy *= -1
+				best = [0.5 if on else 1.0 if above else 0.0]
+				# print(best, hit_y, bot.y)
+				# Learning while playing
+				self.backward_propagate(best)
+				self.update_weights(l_rate, _input)
 
-            # Reset
-            if ball.x - ball.radius < 0:
-                ball.x = 0.5
-                ball.y = 0.5
-                ball.dx = ball.speed
-                ball.dy = ball.speed
-                player1.y = 0.5
-                bot.y = 0.5
-                bot.score += 1
-                print("RESET")
-            elif ball.x + ball.radius > 1:
-                ball.x = 0.5
-                ball.y = 0.5
-                ball.dx = -ball.speed
-                ball.dy = ball.speed
-                player1.y = 0.5
-                bot.y = 0.5
-                player1.score += 1
-                print("RESET")
+				# update paddle position
+				if player1.up and not player1.down:
+					player1.y -= player1.speed
+				if player1.down and not player1.up:
+					player1.y += player1.speed
+				if player1.y < 0:
+					player1.y = 0
+				if player1.y + player1.height > 1:
+					player1.y = 1 - player1.height
+				if bot.up and not bot.down:
+					bot.y -= bot.speed
+				if bot.down and not bot.up:
+					bot.y += bot.speed
+				if bot.y < 0:
+					bot.y = 0
+				if bot.y + bot.height > 1:
+					bot.y = 1 - bot.height
 
-            player1.y = ball.y
+				# update ball position
+				old_x = ball.x
+				ball.x += ball.dx
+				ball.y += ball.dy
+				if ball.y - ball.radius < 0:
+					ball.y = ball.radius
+					ball.dy *= -1
+				elif ball.y + ball.radius > 1:
+					ball.y = 1 - ball.radius
+					ball.dy *= -1
 
-            # check ball collision with paddles
-            maxAngle = math.pi / 4
+				if ball.x - ball.radius < 0:
+					ball.x = 0.5
+					ball.y = 0.5
+					ball.dx = ball.speed
+					ball.dy = ball.speed
+					player1.y = 0.5
+					bot.y = 0.5
+					bot.score += 1
 
-            wentThrough1 = (
-                old_x - ball.radius > player1.width + player1.x
-                and ball.x - ball.radius <= player1.width + player1.x
-            )
-            if (
-                wentThrough1
-                and player1.y <= ball.y + ball.radius
-                and ball.y - ball.radius <= player1.y + player1.height
-            ):
-                ballPosPaddle = (player1.y + player1.half_height) - ball.y
-                relPos = ballPosPaddle / (player1.half_height)
-                bounceAngle = relPos * maxAngle
+				elif ball.x + ball.radius > 1:
+					ball.x = 0.5
+					ball.y = 0.5
+					ball.dx = -ball.speed
+					ball.dy = ball.speed
+					player1.y = 0.5
+					bot.y = 0.5
+					player1.score += 1
 
-                speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
-                ball.dx = speed * math.cos(bounceAngle)
-                ball.dy = speed * -math.sin(bounceAngle)
+				player1.y = ball.y - player1.half_height
+				# check ball collision with paddles
+				maxAngle = math.pi / 4
 
-            wentThrough2 = old_x + ball.radius < bot.x and ball.x + ball.radius >= bot.x
-            if (
-                wentThrough2
-                and bot.y <= ball.y + ball.radius
-                and ball.y - ball.radius <= bot.y + bot.height
-            ):
-                ballPosPaddle = (bot.y + bot.half_height) - ball.y
-                relPos = ballPosPaddle / (bot.half_height)
-                bounceAngle = relPos * maxAngle
+				wentThrough1 = (
+					old_x - ball.radius > player1.width + player1.x
+					and ball.x - ball.radius <= player1.width + player1.x
+				)
+				if (
+					wentThrough1
+					and player1.y <= ball.y + ball.radius
+					and ball.y - ball.radius <= player1.y + player1.height
+				):
+					ballPosPaddle = (player1.y + player1.half_height) - ball.y
+					relPos = ballPosPaddle / (player1.half_height)
+					bounceAngle = relPos * maxAngle
 
-                speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
-                ball.dx = speed * -math.cos(bounceAngle)
-                ball.dy = speed * -math.sin(bounceAngle)
-            # time.sleep(1)
-            epoch += 1
-        print("AI Training finished")
-        print(f"{player1.score = } {bot.score = }")
+					speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
+					ball.dx = speed * math.cos(bounceAngle)
+					ball.dy = speed * -math.sin(bounceAngle)
+
+				wentThrough2 = (
+					old_x + ball.radius < bot.x and ball.x + ball.radius >= bot.x
+				)
+				if (
+					wentThrough2
+					and bot.y <= ball.y + ball.radius
+					and ball.y - ball.radius <= bot.y + bot.height
+				):
+					ballPosPaddle = (bot.y + bot.half_height) - ball.y
+					relPos = ballPosPaddle / (bot.half_height)
+					bounceAngle = relPos * maxAngle
+
+					speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
+					ball.dx = speed * -math.cos(bounceAngle)
+					ball.dy = speed * -math.sin(bounceAngle)
+			epoch += 1
+			print(f"End of training game {epoch} {player1.score = } {bot.score = }")
+			if best_score == -1 or player1.score < best_score:
+				best_score = player1.score
+				best_layers = deepcopy(self.layers)
+		self.layers = best_layers
+		print("AI Training finished")
 
     def predict(self, data) -> List[float]:
         outputs = self.forward_propagate(data)
         return outputs
 
-
-brain = Network(5, 0, 2, [], sigmoid)
-# brain.train(0.5, 1000)
+brain = Network(5, 0, 1, [], sigmoid)
+brain.train(0.5, 100)

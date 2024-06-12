@@ -640,32 +640,30 @@ class PongAIConsumer(AsyncWebsocketConsumer):
 
         await asyncio.sleep(3)
         while player1.score < 5 and player2.score < 5:
+
             # Update AI if it can be updated
             now = time.time_ns()
-            if (
-                ball.dx or ball.dy
-            ) and now - ai_last_fetch >= ONE_SECOND_NS / 100:  # TODO Remove division
+            if now - ai_last_fetch >= ONE_SECOND_NS / 50: # TODO Remove division
                 _input = [ball.x, ball.y, ball.dx, ball.dy, player2.y]
                 # AI Move
-                up, down = brain.predict(_input)
-                print(f"AI {up = :.3f} {down = :.3f}")
-                player2.up = up > 0.5  # and up > down
-                player2.down = down > 0.5  # and down > up
+
+                # Test
+                move, = brain.predict(_input)
+                print(f"AI {move = :.5f}")
+                player2.up = move > 2/3
+                player2.down = move < 1/3
 
                 # "Best" move
-                hit_y: int = get_hit(ball, player1)
+                hit_y: int = get_hit(ball, player1) if ball.dx > 0 else ball.y
                 above: bool = hit_y < player2.y
                 on: bool = player2.y < hit_y < player2.y + player2.height
                 under: bool = hit_y > player2.y + player2.height
 
-                excpected = [
-                    0.0 if on or under else 1.0,
-                    0.0 if on or above else 1.0,
-                ]
-                print(excpected, hit_y, player2.y)
+                best = [0.5 if on else 1.0 if above else 0.0]
+                print(best, hit_y, player2.y)
                 # Learning while playing
-                brain.backward_propagate(excpected)
-                brain.update_weights(0.5, _input)
+                # brain.backward_propagate(best)
+                # brain.update_weights(0.5, _input)
 
                 ai_last_fetch = now
 
@@ -805,7 +803,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 )
             )
             await asyncio.sleep(3 if wait else 0.016)
-
+        print(brain.layers)
         self.games[self.user.id]["state"] = 2
         await self.send(
             json.dumps(
