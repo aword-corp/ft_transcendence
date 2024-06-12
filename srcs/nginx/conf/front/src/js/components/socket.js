@@ -100,7 +100,7 @@ async function makeCall() {
 	});
 	const offer = await peerConnection.createOffer({
 		'offerToReceiveAudio': true,
-		'offerToReceiveVideo': true
+		'offerToReceiveVideo': false
 	});
 	await peerConnection.setLocalDescription(offer);
 	peerConnection.addEventListener('icecandidate', event => {
@@ -187,7 +187,7 @@ export function initPongSocket(params) {
 	pongSocket.addEventListener("message", async event => {
 		const message = JSON.parse(event.data);
 		if (message.player_id && message.player_id === 1) {
-			navigator.mediaDevices.getUserMedia({ audio: true, video: true }, (stream) => {
+			navigator.mediaDevices.getUserMedia({ audio: true, video: false }, (stream) => {
 				localStream = stream;
 				document.getElementById("local_stream").srcObject = localStream;
 				makeCall();
@@ -195,7 +195,7 @@ export function initPongSocket(params) {
 				console.error('getUserMedia error:', error);
 			});
 		} else if (message.player_id && message.player_id === 2) {
-			navigator.mediaDevices.getUserMedia({ audio: true, video: true }, (stream) => {
+			navigator.mediaDevices.getUserMedia({ audio: true, video: false }, (stream) => {
 				localStream = stream;
 				document.getElementById("local_stream").srcObject = localStream;
 				answerCall();
