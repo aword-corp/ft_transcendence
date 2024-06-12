@@ -79,7 +79,9 @@ async function makeCall() {
 		}], iceTransportPolicy: 'relay', 'sdpSemantics': 'unified-plan',
 	};
 	const peerConnection = new RTCPeerConnection(configuration);
+	console.log("peerConnection", peerConnection);
 	localStream.getTracks().forEach(track => {
+		console.log("track", track);
 		peerConnection.addTrack(track, localStream);
 	});
 	pongSocket.addEventListener('message', async event => {
@@ -102,6 +104,7 @@ async function makeCall() {
 		'offerToReceiveAudio': true,
 		'offerToReceiveVideo': false
 	});
+	console.log("offer", offer);
 	await peerConnection.setLocalDescription(offer);
 	peerConnection.addEventListener('icecandidate', event => {
 		console.log("icecandidate", event);
@@ -143,6 +146,7 @@ async function answerCall() {
 	};
 	const peerConnection = new RTCPeerConnection(configuration);
 	localStream.getTracks().forEach(track => {
+		console.log("track", track);
 		peerConnection.addTrack(track, localStream);
 	});
 	pongSocket.addEventListener('message', async event => {
@@ -196,9 +200,11 @@ export function initPongSocket(params) {
 		const message = JSON.parse(event.data);
 		if (message.player_id && message.player_id === 1) {
 			await sleep(5000);
+			console.log("Trying to get user media")
 			navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 				.then(function (stream) {
 					localStream = stream;
+					console.log("localStream", localStream);
 					// document.getElementById("local_stream").srcObject = localStream;
 					makeCall();
 				})
@@ -207,9 +213,11 @@ export function initPongSocket(params) {
 				});
 		} else if (message.player_id && message.player_id === 2) {
 			await sleep(5000);
+			console.log("Trying to get user media")
 			navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 				.then(function (stream) {
 					localStream = stream;
+					console.log("localStream", localStream);
 					// document.getElementById("local_stream").srcObject = localStream;
 					answerCall();
 				})
