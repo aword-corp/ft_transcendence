@@ -164,12 +164,14 @@ class PongConsumer(AsyncWebsocketConsumer):
                 self.games[self.game_id]["player_id"] += 1
 
             if self.user.id in self.games[self.game_id]:
-                self.send(
+                await self.send(
                     json.dumps(
                         {
                             "type": "broadcast.player.id",
-                            "player_id": len(self.games[self.game_id]["users"]),
-                            "user_id": self.games[self.game_id][self.user.id].player_id,
+                            "player_id": self.games[self.game_id][
+                                self.user.id
+                            ].player_id,
+                            "user_id": self.user.id,
                         }
                     )
                 )
