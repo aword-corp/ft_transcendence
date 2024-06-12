@@ -186,6 +186,8 @@ async function answerCall() {
 	});
 }
 
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 export function initPongSocket(params) {
 	if (pongSocket)
 		return;
@@ -193,6 +195,7 @@ export function initPongSocket(params) {
 	pongSocket.addEventListener("message", async event => {
 		const message = JSON.parse(event.data);
 		if (message.player_id && message.player_id === 1) {
+			await sleep(5000);
 			navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 				.then(function (stream) {
 					localStream = stream;
@@ -203,6 +206,7 @@ export function initPongSocket(params) {
 					console.error('getUserMedia error:', err);
 				});
 		} else if (message.player_id && message.player_id === 2) {
+			await sleep(5000);
 			navigator.mediaDevices.getUserMedia({ audio: true, video: false })
 				.then(function (stream) {
 					localStream = stream;
