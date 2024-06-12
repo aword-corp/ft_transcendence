@@ -122,6 +122,9 @@ async function makeCall() {
 					pongSocket.send(JSON.stringify({ 'offer': offer }));
 				});
 			});
+		} else if (peerConnection.connectionState === 'closed' && interval) {
+			clearInterval(interval);
+			interval = undefined;
 		}
 	});
 	peerConnection.addEventListener('track', async (event) => {
