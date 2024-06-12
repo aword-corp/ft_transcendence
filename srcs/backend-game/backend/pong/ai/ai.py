@@ -7,329 +7,352 @@ import json
 
 ACCELERATION = 1.05
 
+
 class Paddle:
-	def __init__(
-		self, x, y, up: bool, down: bool, speed, height, half_height, width, score, user: Optional[User]
-	):
-		self.x = x
-		self.y = y
-		self.up = up
-		self.down = down
-		self.speed = speed
-		self.height = height
-		self.half_height = half_height
-		self.width = width
-		self.score = score
-		self.user = user
+    def __init__(
+        self,
+        x,
+        y,
+        up: bool,
+        down: bool,
+        speed,
+        height,
+        half_height,
+        width,
+        score,
+        user: Optional[User],
+        channel_name: Optional[str],
+    ):
+        self.x = x
+        self.y = y
+        self.up = up
+        self.down = down
+        self.speed = speed
+        self.height = height
+        self.half_height = half_height
+        self.width = width
+        self.score = score
+        self.user: Optional[User] = user
+        self.channel_name: Optional[str] = channel_name
 
 
 class Ball:
-	def __init__(self, x, y, dx, dy, speed, radius, temperature=0):
-		self.x = x
-		self.y = y
-		self.dx = dx
-		self.dy = dy
-		self.speed = speed
-		self.radius = radius
+    def __init__(self, x, y, dx, dy, speed, radius, temperature=0):
+        self.x = x
+        self.y = y
+        self.dx = dx
+        self.dy = dy
+        self.speed = speed
+        self.radius = radius
+
 
 # Predict y of ball when it reaches player2
 def get_hit(ball, opp):
-	x = ball.x
-	y = ball.y
-	dx = ball.dx
-	dy = ball.dy
-	radius = ball.radius
-	speed = ball.speed
-	
-	while True:
-		old_x = x
-		x += dx
-		y += dy
-		if y - radius < 0:
-			y = radius
-			dy *= -1
-		elif y + radius > 1:
-			y = 1 - radius
-			dy *= -1
+    x = ball.x
+    y = ball.y
+    dx = ball.dx
+    dy = ball.dy
+    radius = ball.radius
+    speed = ball.speed
 
-		if x - radius < 0:
-			break
-		elif x + radius > 1:
-			break
-		# check ball collision with paddles
-		maxAngle = math.pi / 4
-		opp_y = y
-		wentThrough1 = (
-			old_x - radius > opp.width + opp.x
-			and x - radius <= opp.width + opp.x
-		)
-		if (
-			wentThrough1
-			and opp_y <= y + radius
-			and y - radius <= opp_y + opp.height
-		):
-			ballPosPaddle = (opp_y + opp.half_height) - y
-			relPos = ballPosPaddle / (opp.half_height)
-			bounceAngle = relPos * maxAngle
+    while True:
+        old_x = x
+        x += dx
+        y += dy
+        if y - radius < 0:
+            y = radius
+            dy *= -1
+        elif y + radius > 1:
+            y = 1 - radius
+            dy *= -1
 
-			speed = (dx**2 + dy**2) ** 0.5 * ACCELERATION
-			dx = speed * math.cos(bounceAngle)
-			dy = speed * -math.sin(bounceAngle)
+        if x - radius < 0:
+            break
+        elif x + radius > 1:
+            break
+        # check ball collision with paddles
+        maxAngle = math.pi / 4
+        opp_y = y
+        wentThrough1 = (
+            old_x - radius > opp.width + opp.x and x - radius <= opp.width + opp.x
+        )
+        if wentThrough1 and opp_y <= y + radius and y - radius <= opp_y + opp.height:
+            ballPosPaddle = (opp_y + opp.half_height) - y
+            relPos = ballPosPaddle / (opp.half_height)
+            bounceAngle = relPos * maxAngle
 
-	return y
+            speed = (dx**2 + dy**2) ** 0.5 * ACCELERATION
+            dx = speed * math.cos(bounceAngle)
+            dy = speed * -math.sin(bounceAngle)
+
+    return y
+
 
 BIAS = 1
 
+
 def sigmoid(activation):
-	return 1.0 / (1.0 + math.exp(-activation))
+    return 1.0 / (1.0 + math.exp(-activation))
+
 
 def ReLU(activation):
-	return max(0, activation)
+    return max(0, activation)
+
 
 class Network:
-	def __init__(self, n_inputs: int, n_hidden: int, n_outputs: int, neuron_per_hidden: List[int], activation: Callable) -> None:
-		self.layers = []
-		self.activation = activation
+    def __init__(
+        self,
+        n_inputs: int,
+        n_hidden: int,
+        n_outputs: int,
+        neuron_per_hidden: List[int],
+        activation: Callable,
+    ) -> None:
+        self.layers = []
+        self.activation = activation
 
-		for layer in range(n_hidden):
-			hidden_layer = []
-			n = n_inputs
-			if layer:
-				n = neuron_per_hidden[layer - 1]
-			for _ in range(neuron_per_hidden[layer]):
-				weights = []
-				for _ in range(n + 1):
-					weights.append(random.random())
-				hidden_layer.append({"weights": weights})
-			self.layers.append(hidden_layer)
+        for layer in range(n_hidden):
+            hidden_layer = []
+            n = n_inputs
+            if layer:
+                n = neuron_per_hidden[layer - 1]
+            for _ in range(neuron_per_hidden[layer]):
+                weights = []
+                for _ in range(n + 1):
+                    weights.append(random.random())
+                hidden_layer.append({"weights": weights})
+            self.layers.append(hidden_layer)
 
-		output_layer = []
-		n = n_inputs
-		if n_hidden:
-			n = neuron_per_hidden[n_hidden - 1]
-		for _ in range(n_outputs):
-			weights = []
-			for _ in range(n + 1):
-				weights.append(random.random())
-			output_layer.append({"weights": weights})
-		self.layers.append(output_layer)
+        output_layer = []
+        n = n_inputs
+        if n_hidden:
+            n = neuron_per_hidden[n_hidden - 1]
+        for _ in range(n_outputs):
+            weights = []
+            for _ in range(n + 1):
+                weights.append(random.random())
+            output_layer.append({"weights": weights})
+        self.layers.append(output_layer)
 
-	def serialize(self, path = ".", filename = "network.json") -> None:
-		if not path.endswith('/'):
-			path += '/'
+    def serialize(self, path=".", filename="network.json") -> None:
+        if not path.endswith("/"):
+            path += "/"
 
-		data = {
-			"layers": self.layers
-		}
-		with open(path + filename, "w") as out_file:
-			json.dump(data, out_file, indent=4)
-	
-	@staticmethod
-	def deserialize(path) -> 'Network':
-		with open(path, "r") as in_file:
-			data = json.load(in_file)
-			layers = data["layers"]
-			activation = sigmoid
-			network = Network(0, 0, 0, [], activation)
-			network.layers = layers
-			return network
-	
-	# Compute neuron activation for an input
-	def compute(self, weights, _input) -> int:
-		activation = 0
-		for i, weight in zip(_input + [BIAS], weights):
-			activation += i * weight
-		return activation
+        data = {"layers": self.layers}
+        with open(path + filename, "w") as out_file:
+            json.dump(data, out_file, indent=4)
 
-	# Forward propagate input to the network output
-	def forward_propagate(self, inputs) -> List[float]:
-		for layer in self.layers:
-			new_inputs = []
-			for neuron in layer:
-				activation = self.compute(neuron['weights'], inputs)
-				neuron['output'] = self.activation(activation)
-				new_inputs.append(neuron['output'])
-			inputs = new_inputs
-		return inputs
+    @staticmethod
+    def deserialize(path) -> "Network":
+        with open(path, "r") as in_file:
+            data = json.load(in_file)
+            layers = data["layers"]
+            activation = sigmoid
+            network = Network(0, 0, 0, [], activation)
+            network.layers = layers
+            return network
 
-	# Backpropagate error and store in neurons
-	def backward_propagate(self, expected) -> None:
-		# Output layer
-		for k, neuron in enumerate(self.layers[-1]):
-			output = neuron['output']
-			neuron['delta'] = output * (1.0 - output) * (output - expected[k])
+    # Compute neuron activation for an input
+    def compute(self, weights, _input) -> int:
+        activation = 0
+        for i, weight in zip(_input + [BIAS], weights):
+            activation += i * weight
+        return activation
 
-		# Hidden layers
-		for i in reversed(range(len(self.layers) - 1)):
-			for j, neuron in enumerate(self.layers[i]):
-				output = neuron['output']
-				neuron['delta'] = output * (1.0 - output) * sum(n['delta'] * n['weights'][j] for n in self.layers[i + 1])
+    # Forward propagate input to the network output
+    def forward_propagate(self, inputs) -> List[float]:
+        for layer in self.layers:
+            new_inputs = []
+            for neuron in layer:
+                activation = self.compute(neuron["weights"], inputs)
+                neuron["output"] = self.activation(activation)
+                new_inputs.append(neuron["output"])
+            inputs = new_inputs
+        return inputs
 
-	# Update the network's weights
-	def update_weights(self, l_rate, _input) -> None:
-		# First layer must use input
-		for neuron in self.layers[0]:
-			for j in range(len(neuron['weights']) - 1):
-				neuron['weights'][j] += -l_rate * neuron['delta'] * _input[j]
-			neuron['weights'][-1] += -l_rate * neuron['delta'] # BIAS weight
-		
-		for layer in range(1, len(self.layers)):
-			for neuron in self.layers[layer]:
-				for j in range(len(neuron['weights']) - 1):
-					neuron['weights'][j] += -l_rate * neuron['delta'] * self.layers[layer - 1][j]['output']
-				neuron['weights'][-1] += -l_rate * neuron['delta'] # BIAS weight
+    # Backpropagate error and store in neurons
+    def backward_propagate(self, expected) -> None:
+        # Output layer
+        for k, neuron in enumerate(self.layers[-1]):
+            output = neuron["output"]
+            neuron["delta"] = output * (1.0 - output) * (output - expected[k])
 
-	# Train the network for a fixed number of epochs
-	def train(self, l_rate, n_epoch) -> None:
-		print("Training start")
-		player1: Paddle = Paddle(
-			0.03,
-			0.5,
-			False,
-			False,
-			0.016,
-			0.166,
-			0.083,
-			0.0125,
-			0,
-			None,
-		)
-		bot: Paddle = Paddle(
-			1 - 0.03,
-			0.5,
-			False,
-			False,
-			0.016,
-			0.166,
-			0.083,
-			0.0125,
-			0,
-			None,
-		)
-		ball: Ball = Ball(
-			0.5,
-			0.5,
-			0.004,
-			0.004,
-			0.004,
-			0.0128,
-		)
+        # Hidden layers
+        for i in reversed(range(len(self.layers) - 1)):
+            for j, neuron in enumerate(self.layers[i]):
+                output = neuron["output"]
+                neuron["delta"] = (
+                    output
+                    * (1.0 - output)
+                    * sum(n["delta"] * n["weights"][j] for n in self.layers[i + 1])
+                )
 
-		epoch = 0
-		while epoch < n_epoch:
-			print(f"{ball.x = :.3f} {ball.y = :.3f}")
-			# Update AI
-			_input = [ball.x, ball.y, ball.dx, ball.dy, bot.y]
-			up, down = self.predict(_input)
-			print(f"AI {up = :.3f} {down = :.3f}")
-			bot.up = up > 0.5 and up > down
-			bot.down = down > 0.5 and down > up
-			hit_y: int = get_hit(ball, player1)
-			above: bool = hit_y < bot.y
-			on: bool = bot.y < hit_y < bot.y + bot.height
-			under: bool = hit_y > bot.y + bot.height
+    # Update the network's weights
+    def update_weights(self, l_rate, _input) -> None:
+        # First layer must use input
+        for neuron in self.layers[0]:
+            for j in range(len(neuron["weights"]) - 1):
+                neuron["weights"][j] += -l_rate * neuron["delta"] * _input[j]
+            neuron["weights"][-1] += -l_rate * neuron["delta"]  # BIAS weight
 
-			excpected = [
-				0.0 if on or under else 1.0,
-				0.0 if on or above else 1.0,
-			]
-			print(f"{excpected} {hit_y = :.3f} {bot.y = :.3f}")
-			self.backward_propagate(excpected)
-			self.update_weights(l_rate, _input)
+        for layer in range(1, len(self.layers)):
+            for neuron in self.layers[layer]:
+                for j in range(len(neuron["weights"]) - 1):
+                    neuron["weights"][j] += (
+                        -l_rate * neuron["delta"] * self.layers[layer - 1][j]["output"]
+                    )
+                neuron["weights"][-1] += -l_rate * neuron["delta"]  # BIAS weight
 
-			# update paddle position
-			if player1.up and not player1.down:
-				player1.y -= player1.speed
-			if player1.down and not player1.up:
-				player1.y += player1.speed
-			if player1.y < 0:
-				player1.y = 0
-			if player1.y + player1.height > 1:
-				player1.y = 1 - player1.height
-			if bot.up and not bot.down:
-				bot.y -= bot.speed
-			if bot.down and not bot.up:
-				bot.y += bot.speed
-			if bot.y < 0:
-				bot.y = 0
-			if bot.y + bot.height > 1:
-				bot.y = 1 - bot.height
-			# update ball position
-			old_x = ball.x
-			ball.x += ball.dx
-			ball.y += ball.dy
-			if ball.y - ball.radius < 0:
-				ball.y = ball.radius
-				ball.dy *= -1
-			elif ball.y + ball.radius > 1:
-				ball.y = 1 - ball.radius
-				ball.dy *= -1
+    # Train the network for a fixed number of epochs
+    def train(self, l_rate, n_epoch) -> None:
+        print("Training start")
+        player1: Paddle = Paddle(
+            0.03,
+            0.5,
+            False,
+            False,
+            0.016,
+            0.166,
+            0.083,
+            0.0125,
+            0,
+            None,
+        )
+        bot: Paddle = Paddle(
+            1 - 0.03,
+            0.5,
+            False,
+            False,
+            0.016,
+            0.166,
+            0.083,
+            0.0125,
+            0,
+            None,
+        )
+        ball: Ball = Ball(
+            0.5,
+            0.5,
+            0.004,
+            0.004,
+            0.004,
+            0.0128,
+        )
 
-			# Reset
-			if ball.x - ball.radius < 0:
-				ball.x = 0.5
-				ball.y = 0.5
-				ball.dx = ball.speed
-				ball.dy = ball.speed
-				player1.y = 0.5
-				bot.y = 0.5
-				bot.score += 1
-				print("RESET")
-			elif ball.x + ball.radius > 1:
-				ball.x = 0.5
-				ball.y = 0.5
-				ball.dx = -ball.speed
-				ball.dy = ball.speed
-				player1.y = 0.5
-				bot.y = 0.5
-				player1.score += 1
-				print("RESET")
+        epoch = 0
+        while epoch < n_epoch:
+            print(f"{ball.x = :.3f} {ball.y = :.3f}")
+            # Update AI
+            _input = [ball.x, ball.y, ball.dx, ball.dy, bot.y]
+            up, down = self.predict(_input)
+            print(f"AI {up = :.3f} {down = :.3f}")
+            bot.up = up > 0.5 and up > down
+            bot.down = down > 0.5 and down > up
+            hit_y: int = get_hit(ball, player1)
+            above: bool = hit_y < bot.y
+            on: bool = bot.y < hit_y < bot.y + bot.height
+            under: bool = hit_y > bot.y + bot.height
 
-			player1.y = ball.y
+            excpected = [
+                0.0 if on or under else 1.0,
+                0.0 if on or above else 1.0,
+            ]
+            print(f"{excpected} {hit_y = :.3f} {bot.y = :.3f}")
+            self.backward_propagate(excpected)
+            self.update_weights(l_rate, _input)
 
-			# check ball collision with paddles
-			maxAngle = math.pi / 4
+            # update paddle position
+            if player1.up and not player1.down:
+                player1.y -= player1.speed
+            if player1.down and not player1.up:
+                player1.y += player1.speed
+            if player1.y < 0:
+                player1.y = 0
+            if player1.y + player1.height > 1:
+                player1.y = 1 - player1.height
+            if bot.up and not bot.down:
+                bot.y -= bot.speed
+            if bot.down and not bot.up:
+                bot.y += bot.speed
+            if bot.y < 0:
+                bot.y = 0
+            if bot.y + bot.height > 1:
+                bot.y = 1 - bot.height
+            # update ball position
+            old_x = ball.x
+            ball.x += ball.dx
+            ball.y += ball.dy
+            if ball.y - ball.radius < 0:
+                ball.y = ball.radius
+                ball.dy *= -1
+            elif ball.y + ball.radius > 1:
+                ball.y = 1 - ball.radius
+                ball.dy *= -1
 
-			wentThrough1 = (
-				old_x - ball.radius > player1.width + player1.x
-				and ball.x - ball.radius <= player1.width + player1.x
-			)
-			if (
-				wentThrough1
-				and player1.y <= ball.y + ball.radius
-				and ball.y - ball.radius <= player1.y + player1.height
-			):
-				ballPosPaddle = (player1.y + player1.half_height) - ball.y
-				relPos = ballPosPaddle / (player1.half_height)
-				bounceAngle = relPos * maxAngle
+            # Reset
+            if ball.x - ball.radius < 0:
+                ball.x = 0.5
+                ball.y = 0.5
+                ball.dx = ball.speed
+                ball.dy = ball.speed
+                player1.y = 0.5
+                bot.y = 0.5
+                bot.score += 1
+                print("RESET")
+            elif ball.x + ball.radius > 1:
+                ball.x = 0.5
+                ball.y = 0.5
+                ball.dx = -ball.speed
+                ball.dy = ball.speed
+                player1.y = 0.5
+                bot.y = 0.5
+                player1.score += 1
+                print("RESET")
 
-				speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
-				ball.dx = speed * math.cos(bounceAngle)
-				ball.dy = speed * -math.sin(bounceAngle)
+            player1.y = ball.y
 
-			wentThrough2 = (
-				old_x + ball.radius < bot.x and ball.x + ball.radius >= bot.x
-			)
-			if (
-				wentThrough2
-				and bot.y <= ball.y + ball.radius
-				and ball.y - ball.radius <= bot.y + bot.height
-			):
-				ballPosPaddle = (bot.y + bot.half_height) - ball.y
-				relPos = ballPosPaddle / (bot.half_height)
-				bounceAngle = relPos * maxAngle
+            # check ball collision with paddles
+            maxAngle = math.pi / 4
 
-				speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
-				ball.dx = speed * -math.cos(bounceAngle)
-				ball.dy = speed * -math.sin(bounceAngle)
-			# time.sleep(1)
-			epoch += 1
-		print("AI Training finished")
-		print(f"{player1.score = } {bot.score = }")
+            wentThrough1 = (
+                old_x - ball.radius > player1.width + player1.x
+                and ball.x - ball.radius <= player1.width + player1.x
+            )
+            if (
+                wentThrough1
+                and player1.y <= ball.y + ball.radius
+                and ball.y - ball.radius <= player1.y + player1.height
+            ):
+                ballPosPaddle = (player1.y + player1.half_height) - ball.y
+                relPos = ballPosPaddle / (player1.half_height)
+                bounceAngle = relPos * maxAngle
 
-	def predict(self, data) -> List[float]:
-		outputs = self.forward_propagate(data)
-		return outputs
+                speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
+                ball.dx = speed * math.cos(bounceAngle)
+                ball.dy = speed * -math.sin(bounceAngle)
+
+            wentThrough2 = old_x + ball.radius < bot.x and ball.x + ball.radius >= bot.x
+            if (
+                wentThrough2
+                and bot.y <= ball.y + ball.radius
+                and ball.y - ball.radius <= bot.y + bot.height
+            ):
+                ballPosPaddle = (bot.y + bot.half_height) - ball.y
+                relPos = ballPosPaddle / (bot.half_height)
+                bounceAngle = relPos * maxAngle
+
+                speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
+                ball.dx = speed * -math.cos(bounceAngle)
+                ball.dy = speed * -math.sin(bounceAngle)
+            # time.sleep(1)
+            epoch += 1
+        print("AI Training finished")
+        print(f"{player1.score = } {bot.score = }")
+
+    def predict(self, data) -> List[float]:
+        outputs = self.forward_propagate(data)
+        return outputs
+
 
 brain = Network(5, 0, 2, [], sigmoid)
 # brain.train(0.5, 1000)

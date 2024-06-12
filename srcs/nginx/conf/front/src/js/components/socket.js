@@ -1,3 +1,5 @@
+import { router } from '../main.js';
+
 export var countSocket = undefined;
 
 export function initSocketClick() {
@@ -64,14 +66,153 @@ export function closeTMSocket() {
 
 export var pongSocket = undefined;
 
+export var localStream = undefined;
+
+export var localPeerConnection = undefined;
+
+async function makeCall() {
+	const configuration = {
+		'iceServers': [{
+			'urls': 'turn:dev.acorp.games:3478',
+			username: 'anon',
+			credential: 'anon-pass'
+		}], iceTransportPolicy: 'relay'
+	};
+	const peerConnection = new RTCPeerConnection(configuration);
+	localStream.getTracks().forEach(track => {
+		peerConnection.addTrack(track, localStream);
+	});
+	pongSocket.addEventListener('message', async event => {
+		const message = JSON.parse(event.data);
+		if (message.answer) {
+			console.log("message_answer", message);
+			const remoteDesc = new RTCSessionDescription(message.answer);
+			await peerConnection.setRemoteDescription(remoteDesc);
+		}
+		if (message.iceCandidate) {
+			console.log("message_iceCandidate", message);
+			try {
+				await peerConnection.addIceCandidate(message.iceCandidate);
+			} catch (e) {
+				console.error('Error adding received ice candidate', e);
+			}
+		}
+	});
+	const offer = await peerConnection.createOffer({
+		'offerToReceiveAudio': true,
+		'offerToReceiveVideo': false
+	});
+	await peerConnection.setLocalDescription(offer);
+	peerConnection.addEventListener('icecandidate', event => {
+		console.log("icecandidate", event);
+		if (event.candidate) {
+			pongSocket.send(JSON.stringify({ 'iceCandidate': event.candidate }));
+		}
+	});
+	peerConnection.addEventListener('connectionstatechange', event => {
+		console.log("connectionstatechange", event);
+		console.log("state", peerConnection.connectionState);
+		if (peerConnection.connectionState === 'connected') {
+			console.log("connected ?????? gg");
+		} else if (peerConnection.connectionState === 'failed') {
+			peerConnection.createOffer({ iceRestart: true }).then((offer) => {
+				peerConnection.setLocalDescription(offer).then(() => {
+					pongSocket.send(JSON.stringify({ 'offer': offer }));
+				});
+			});
+		}
+	});
+	peerConnection.addEventListener('track', async (event) => {
+		const [remoteStream] = event.streams;
+		console.log("track", event);
+		document.getElementById("peer_stream").srcObject = remoteStream;
+	});
+	pongSocket.send(JSON.stringify({ 'offer': offer }));
+}
+
+async function answerCall() {
+	const configuration = {
+		'iceServers': [{
+			'urls': 'turn:dev.acorp.games:3478',
+			username: 'anon',
+			credential: 'anon-pass'
+		}], iceTransportPolicy: 'relay'
+	};
+	const peerConnection = new RTCPeerConnection(configuration);
+	localStream.getTracks().forEach(track => {
+		peerConnection.addTrack(track, localStream);
+	});
+	pongSocket.addEventListener('message', async event => {
+		const message = JSON.parse(event.data);
+		if (message.offer) {
+			console.log("message_offer", message);
+			peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
+			const answer = await peerConnection.createAnswer();
+			await peerConnection.setLocalDescription(answer);
+			pongSocket.send(JSON.stringify({ 'answer': answer }));
+		}
+		if (message.iceCandidate) {
+			console.log("message_iceCandidate", message);
+			try {
+				await peerConnection.addIceCandidate(message.iceCandidate);
+			} catch (e) {
+				console.error('Error adding received ice candidate', e);
+			}
+		}
+	});
+	peerConnection.addEventListener('icecandidate', event => {
+		console.log("icecandidate", event);
+		if (event.candidate) {
+			pongSocket.send(JSON.stringify({ 'iceCandidate': event.candidate }));
+		}
+	});
+	peerConnection.addEventListener('connectionstatechange', event => {
+		console.log("connectionstatechange", event);
+		console.log("state", peerConnection.connectionState);
+		if (peerConnection.connectionState === 'connected') {
+			console.log("connected ?????? gg");
+		}
+	});
+	peerConnection.addEventListener('track', async (event) => {
+		const [remoteStream] = event.streams;
+		console.log("track", event);
+		document.getElementById("peer_stream").srcObject = remoteStream;
+	});
+}
+
 export function initPongSocket(params) {
 	if (pongSocket)
 		return;
 	pongSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/pong/game/' + params.uuid);
+	pongSocket.addEventListener("message", async event => {
+		const message = JSON.parse(event.data);
+		if (message.player_id && message.player_id === 1) {
+			navigator.getUserMedia({ audio: true, video: false }, (stream) => {
+				localStream = stream;
+				makeCall();
+			}, (error) => {
+				console.error('getUserMedia error:', error);
+			});
+		} else if (message.player_id && message.player_id === 2) {
+			navigator.getUserMedia({ audio: true, video: false }, (stream) => {
+				localStream = stream;
+				answerCall();
+			}, (error) => {
+				console.error('getUserMedia error:', error);
+			});
+		}
+	});
+	pongSocket.onclose = function (event) {
+		pongSocket = undefined;
+		history.pushState("", "", "/");
+		router();
+	};
 }
 
 export function closePongSocket() {
-	if (pongSocket && pongSocket.readyState === WebSocket.OPEN)
+	if (pongSocket && pongSocket.readyState === WebSocket.OPEN) {
+		pongSocket.onclose = null;
 		pongSocket.close();
+	}
 	pongSocket = undefined;
 }

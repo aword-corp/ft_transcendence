@@ -156,6 +156,7 @@ class PongConsumer(AsyncWebsocketConsumer):
                     0.0125 * self.game.paddle_size,
                     0,
                     self.user,
+                    self.channel_name,
                 )
                 self.games[self.game_id]["users"].append(self.user)
 
@@ -172,11 +173,13 @@ class PongConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.game_channel, self.channel_name)
 
     async def disconnect(self, close_code):
-        if self.user.is_spectating:
-            self.user.is_spectating = False
-            await self.user.asave()
-
-        await self.channel_layer.group_discard(self.game_channel, self.channel_name)
+        try:
+            if self.user.is_spectating:
+                self.user.is_spectating = False
+                await self.user.asave()
+            await self.channel_layer.group_discard(self.game_channel, self.channel_name)
+        except AttributeError:
+            pass
 
     async def receive(self, text_data):
         data = json.loads(text_data)
@@ -218,9 +221,58 @@ class PongConsumer(AsyncWebsocketConsumer):
                     },
                 )
 
+        if "offer" in data and self.user.id in self.games[self.game_id]:
+            offer = data["offer"]
+            await self.channel_layer.group_send(
+                self.game_channel,
+                {
+                    "type": "broadcast.offer",
+                    "offer": offer,
+                    "user_id": self.user.id,
+                },
+            )
+
+        if "answer" in data and self.user.id in self.games[self.game_id]:
+            answer = data["answer"]
+            await self.channel_layer.group_send(
+                self.game_channel,
+                {
+                    "type": "broadcast.answer",
+                    "answer": answer,
+                    "user_id": self.user.id,
+                },
+            )
+
+        if "iceCandidate" in data and self.user.id in self.games[self.game_id]:
+            iceCandidate = data["iceCandidate"]
+            await self.channel_layer.group_send(
+                self.game_channel,
+                {
+                    "type": "broadcast.iceCandidate",
+                    "iceCandidate": iceCandidate,
+                    "user_id": self.user.id,
+                },
+            )
+
     async def game_loop(self, game_id):
         player1: Paddle = self.games[game_id][self.games[game_id]["users"][0].id]
+        await self.channel_layer.send(
+            player1.channel_name,
+            {
+                "type": "broadcast.player.id",
+                "player_id": 1,
+                "user_id": self.user.id,
+            },
+        )
         player2: Paddle = self.games[game_id][self.games[game_id]["users"][1].id]
+        await self.channel_layer.send(
+            player2.channel_name,
+            {
+                "type": "broadcast.player.id",
+                "player_id": 2,
+                "user_id": self.user.id,
+            },
+        )
         ball = self.games[game_id]["ball"]
         await asyncio.sleep(3)
         self.game.state = Game.State.PLAYING
@@ -434,6 +486,51 @@ class PongConsumer(AsyncWebsocketConsumer):
             text_data=json.dumps({"type": "broadcast.message", "message": message})
         )
 
+    async def broadcast_offer(self, event):
+        if await User.is_blocked(self.user.id, event["user_id"]):
+            return
+
+        if await User.is_blocked(event["user_id"], self.user.id):
+            return
+
+        if event["user_id"] == self.user.id:
+            return
+
+        await self.send(text_data=json.dumps(event))
+
+    async def broadcast_answer(self, event):
+        if await User.is_blocked(self.user.id, event["user_id"]):
+            return
+
+        if await User.is_blocked(event["user_id"], self.user.id):
+            return
+
+        if event["user_id"] == self.user.id:
+            return
+
+        await self.send(text_data=json.dumps(event))
+
+    async def broadcast_iceCandidate(self, event):
+        if await User.is_blocked(self.user.id, event["user_id"]):
+            return
+
+        if await User.is_blocked(event["user_id"], self.user.id):
+            return
+
+        if event["user_id"] == self.user.id:
+            return
+
+        await self.send(text_data=json.dumps(event))
+
+    async def broadcast_player_id(self, event):
+        player_id = event["player_id"]
+
+        await self.send(
+            text_data=json.dumps(
+                {"type": "broadcast.player_id", "player_id": player_id}
+            )
+        )
+
     async def discard_everyone(self, event):
         await self.send(text_data=json.dumps({"details": "Connection closed."}))
 
@@ -476,6 +573,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 0.0125,
                 0,
                 self.user,
+                None,
             )
 
             self.games[self.user.id]["bot"] = Paddle(
@@ -488,6 +586,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 0.083,
                 0.0125,
                 0,
+                None,
                 None,
             )
 
