@@ -187,21 +187,25 @@ export function initPongSocket(params) {
 	pongSocket.addEventListener("message", async event => {
 		const message = JSON.parse(event.data);
 		if (message.player_id && message.player_id === 1) {
-			navigator.mediaDevices.getUserMedia({ audio: true, video: false }, (stream) => {
-				localStream = stream;
-				document.getElementById("local_stream").srcObject = localStream;
-				makeCall();
-			}, (error) => {
-				console.error('getUserMedia error:', error);
-			});
+			navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+				.then(function (stream) {
+					localStream = stream;
+					document.getElementById("local_stream").srcObject = localStream;
+					makeCall();
+				})
+				.catch(function (err) {
+					console.error('getUserMedia error:', err);
+				});
 		} else if (message.player_id && message.player_id === 2) {
-			navigator.mediaDevices.getUserMedia({ audio: true, video: false }, (stream) => {
-				localStream = stream;
-				document.getElementById("local_stream").srcObject = localStream;
-				answerCall();
-			}, (error) => {
-				console.error('getUserMedia error:', error);
-			});
+			navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+				.then(function (stream) {
+					localStream = stream;
+					document.getElementById("local_stream").srcObject = localStream;
+					answerCall();
+				})
+				.catch(function (err) {
+					console.error('getUserMedia error:', err);
+				});
 		}
 	});
 	pongSocket.onclose = function (event) {
