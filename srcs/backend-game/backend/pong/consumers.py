@@ -496,6 +496,8 @@ class PongConsumer(AsyncWebsocketConsumer):
         if event["user_id"] == self.user.id:
             return
 
+        print(event)
+
         await self.send(text_data=json.dumps(event))
 
     async def broadcast_answer(self, event):
@@ -508,6 +510,8 @@ class PongConsumer(AsyncWebsocketConsumer):
         if event["user_id"] == self.user.id:
             return
 
+        print(event)
+
         await self.send(text_data=json.dumps(event))
 
     async def broadcast_iceCandidate(self, event):
@@ -519,6 +523,8 @@ class PongConsumer(AsyncWebsocketConsumer):
 
         if event["user_id"] == self.user.id:
             return
+
+        print(event)
 
         await self.send(text_data=json.dumps(event))
 
@@ -624,13 +630,15 @@ class PongAIConsumer(AsyncWebsocketConsumer):
         while player1.score < 5 and player2.score < 5:
             # Update AI if it can be updated
             now = time.time_ns()
-            if (ball.dx or ball.dy) and now - ai_last_fetch >= ONE_SECOND_NS / 100: # TODO Remove division
+            if (
+                ball.dx or ball.dy
+            ) and now - ai_last_fetch >= ONE_SECOND_NS / 100:  # TODO Remove division
                 _input = [ball.x, ball.y, ball.dx, ball.dy, player2.y]
                 # AI Move
                 up, down = brain.predict(_input)
                 print(f"AI {up = :.3f} {down = :.3f}")
-                player2.up = up > 0.5 #and up > down
-                player2.down = down > 0.5 #and down > up
+                player2.up = up > 0.5  # and up > down
+                player2.down = down > 0.5  # and down > up
 
                 # "Best" move
                 hit_y: int = get_hit(ball, player1)
@@ -648,7 +656,6 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 brain.update_weights(0.5, _input)
 
                 ai_last_fetch = now
-
 
             wait = False
             # update paddle position
