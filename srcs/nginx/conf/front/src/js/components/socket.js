@@ -106,6 +106,9 @@ async function makeCall() {
 	peerConnection.addEventListener('icecandidate', event => {
 		console.log("icecandidate", event);
 		if (event.candidate) {
+			if (event.candidate.candidate.indexOf("relay") < 0) {
+				return;
+			}
 			pongSocket.send(JSON.stringify({ 'iceCandidate': event.candidate }));
 		}
 	});
@@ -163,6 +166,9 @@ async function answerCall() {
 	peerConnection.addEventListener('icecandidate', event => {
 		console.log("icecandidate", event);
 		if (event.candidate) {
+			if (event.candidate.candidate.indexOf("relay") < 0) {
+				return;
+			}
 			pongSocket.send(JSON.stringify({ 'iceCandidate': event.candidate }));
 		}
 	});
