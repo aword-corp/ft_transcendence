@@ -136,7 +136,7 @@ async function answerCall() {
 			'urls': 'turn:dev.acorp.games:3478',
 			username: 'anon',
 			credential: 'anon-pass'
-		}], iceTransportPolicy: 'relay'
+		}], iceTransportPolicy: 'relay', 'sdpSemantics': 'unified-plan',
 	};
 	const peerConnection = new RTCPeerConnection(configuration);
 	localStream.getTracks().forEach(track => {
