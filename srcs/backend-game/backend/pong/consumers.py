@@ -61,12 +61,19 @@ class CountConsumer(AsyncWebsocketConsumer):
 class PongConsumer(AsyncWebsocketConsumer):
     games = {}
 
+    users = {}
+
     async def connect(self):
         await self.accept()
         if self.scope["user"].is_authenticated:
             self.user: User = self.scope["user"]
         else:
             await self.send(json.dumps({"error": "You need to be logged in."}))
+            await self.close()
+            return
+
+        if self.user.id in self.users:
+            await self.send(json.dumps({"error": "You are already in a game."}))
             await self.close()
             return
 
@@ -162,6 +169,7 @@ class PongConsumer(AsyncWebsocketConsumer):
                 )
                 self.games[self.game_id]["users"].append(self.user)
                 self.games[self.game_id]["player_id"] += 1
+                self.users[self.user.id] = self.user.id
 
             if self.user.id in self.games[self.game_id]:
                 await self.send(
@@ -190,6 +198,8 @@ class PongConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         try:
+            if self.user.id in self.users:
+                del self.users[self.user.id]
             if self.user.is_spectating:
                 self.user.is_spectating = False
                 await self.user.asave()
