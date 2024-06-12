@@ -90,10 +90,6 @@ async function makeCall() {
 		if (message.answer) {
 			const remoteDesc = new RTCSessionDescription(message.answer);
 			await peerConnection.setRemoteDescription(remoteDesc).catch(e => console.error("Failed to set remote description: ", e));
-			if (interval) {
-				clearInterval(interval);
-				interval = undefined;
-			}
 		}
 		if (message.iceCandidate) {
 			try {
@@ -132,7 +128,7 @@ async function makeCall() {
 		} else if (peerConnection.connectionState === 'disconnected' && !interval) {
 			interval = setInterval(() => {
 				pongSocket.send(JSON.stringify({ 'offer': offer }));
-			}, 2000);
+			}, 4000);
 		}
 	});
 	peerConnection.addEventListener('track', async (event) => {
@@ -141,7 +137,7 @@ async function makeCall() {
 	});
 	interval = setInterval(() => {
 		pongSocket.send(JSON.stringify({ 'offer': offer }));
-	}, 2000);
+	}, 4000);
 }
 
 async function answerCall() {
