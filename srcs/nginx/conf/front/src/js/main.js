@@ -3,6 +3,8 @@ import { clicks_view, clicks_title } from "./views/clicks.js";
 import { chat_view, chat_title } from "./views/chat.js";
 import { play_view, play_title } from "./views/play.js";
 import { pong_view, pong_title } from "./views/pong.js";
+import { pong_local_view, pong_local_title } from "./views/pong_local.js";
+import { pong_local_tournament_view, pong_local_tournament_title } from "./views/pong_local_tournament.js";
 import { login_view, login_title } from "./views/login.js";
 import { register_view, register_title } from "./views/register.js";
 import { profile_view, profile_title } from "./views/profile.js";
@@ -49,7 +51,9 @@ const routes = {
 	"/channels/:id": { title: channels_id_title, render: channels_id_view, auth: "yes" },
 	"/channels": { title: channels_title, render: channels_view, auth: "yes" },
 	"/pong/:uuid": { title: pong_title, render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket }, // AI will go here with game id "ai"
-	"/pong/:uuid/iframe": { title: pong_title, render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket, iframe: true }, // AI will go here with game id "ai"
+	"/pong/:uuid/iframe": { title: pong_title, render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket, iframe: true },
+	"/pong_local" : {title: pong_local_title, render : pong_local_view, auth: "yes"},
+	"/pong_local_tournament" : {title: pong_local_tournament_title, render : pong_local_tournament_view, auth: "yes"},
 	"/auth/login": { title: login_title, render: login_view, auth: "no_only" },
 	"/auth/ft/callback": { title: ft_callback_title, render: ft_callback_view, auth: "no_only" },
 	"/auth/register": { title: register_title, render: register_view, auth: "no_only" },
