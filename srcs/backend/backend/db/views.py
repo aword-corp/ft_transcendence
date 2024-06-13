@@ -502,42 +502,35 @@ def UserProfileView(request, name: str):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def SelfUserFriendsList(request):
-    return Response(
-        {
-            "friends": [
-                {
-                    "name": user.username,
-                    "avatar_url": user.avatar_url.url if user.avatar_url else None,
-                    "display_name": user.display_name,
-                    "grade": user.grade,
-                    "verified": user.verified,
-                }
-                for user in request.user.friends.all()
-            ]
-        },
-        status=status.HTTP_200_OK,
-    )
+    try:
+        user = User.objects.get(id=request.user.id)
+        return Response(
+            {
+                "friends": [
+                    {
+                        "name": friend.username,
+                        "avatar_url": friend.avatar_url.url
+                        if friend.avatar_url
+                        else None,
+                        "display_name": friend.display_name,
+                        "grade": friend.grade,
+                        "verified": friend.verified,
+                    }
+                    for friend in user.friends.all()
+                ]
+            },
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def UserFriendsList(request, name: str):
-    if name == request.user.username:
-        return Response(
-            {
-                "friends": [
-                    {
-                        "name": user.username,
-                        "avatar_url": user.avatar_url.url if user.avatar_url else None,
-                        "display_name": user.display_name,
-                        "grade": user.grade,
-                        "verified": user.verified,
-                    }
-                    for user in request.user.friends.all()
-                ]
-            },
-            status=status.HTTP_200_OK,
-        )
     try:
         user = User.objects.get(username=name)
         if user.blocked.filter(id=request.user.id).exists():
@@ -545,13 +538,17 @@ def UserFriendsList(request, name: str):
                 {"error": "You are blocked."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-        if user.display_friends == user.Friend_Display.PRIVATE:
+        if (
+            request.user.id != user.id
+            and user.display_friends == user.Friend_Display.PRIVATE
+        ):
             return Response(
                 {"error": "You cannot see this user friends list."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         if (
-            user.display_friends == user.Friend_Display.FRIENDS
+            request.user.id != user.id
+            and user.display_friends == user.Friend_Display.FRIENDS
             and not user.friends.filter(id=request.user.id).exists()
         ):
             return Response(
@@ -562,13 +559,15 @@ def UserFriendsList(request, name: str):
             {
                 "friends": [
                     {
-                        "name": user.username,
-                        "avatar_url": user.avatar_url.url if user.avatar_url else None,
-                        "display_name": user.display_name,
-                        "grade": user.grade,
-                        "verified": user.verified,
+                        "name": friend.username,
+                        "avatar_url": friend.avatar_url.url
+                        if friend.avatar_url
+                        else None,
+                        "display_name": friend.display_name,
+                        "grade": friend.grade,
+                        "verified": friend.verified,
                     }
-                    for user in user.friends.all()
+                    for friend in user.friends.all()
                 ]
             },
             status=status.HTTP_200_OK,
@@ -583,13 +582,13 @@ def UserFriendsList(request, name: str):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def UserFriendsAdd(request, name: str):
-    if name == request.user.username:
-        return Response(
-            {"error": "You cannot add yourself."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
     try:
         user = User.objects.get(username=name)
+        if user.id == request.user.id:
+            return Response(
+                {"error": "You cannot add yourself."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if user.blocked.filter(id=request.user.id).exists():
             return Response(
                 {"error": "You are blocked."},
