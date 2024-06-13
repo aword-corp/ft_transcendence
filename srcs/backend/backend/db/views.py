@@ -127,17 +127,22 @@ def RegisterView(request):
 @permission_classes([IsAuthenticated])
 @throttle_classes([FivePerMinuteUserThrottle])
 def EditProfileView(request):
-    serializer = EditUserSerializer(
-        data=request.data, instance=request.user, partial=True
-    )
     try:
+        user = User.objects.get(id=request.user.id)
+        serializer = EditUserSerializer(data=request.data, instance=user, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        user.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
     except KeyError:
         return Response(
             {"error": "Missing required field."},
             status=status.HTTP_400_BAD_REQUEST,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
         )
 
 
