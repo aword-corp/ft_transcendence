@@ -324,8 +324,8 @@ class User(AbstractBaseUser):
         return user.friends.filter(id=self.id).exists()
 
     @database_sync_to_async
-    def get_friends(self):
-        return self.friends.all()
+    def get_friends(self) -> List["User"]:
+        return list(self.friends.all())
 
     @staticmethod
     @database_sync_to_async
