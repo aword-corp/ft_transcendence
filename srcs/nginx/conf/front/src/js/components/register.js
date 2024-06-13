@@ -284,6 +284,7 @@ class Register extends HTMLElement {
 			<p>
 				<label for="id_region">Region:</label>
 				<select name="region" id="id_region">
+					<option value selected>---------</option>
 					<option value="eu-we">Europe West</option>
 					<option value="eu-ea">Europe East</option>
 					<option value="eu-no">Europe North</option>

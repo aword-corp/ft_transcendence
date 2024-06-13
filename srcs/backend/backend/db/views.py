@@ -400,6 +400,102 @@ def get_clicks(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def UserSelfProfileView(request):
+    try:
+        user = User.objects.get(id=request.user.id)
+        player_games = Game.objects.filter(
+            users=user, game_type=Game.Type.MM, state=Game.State.ENDED
+        ).all()
+        return Response(
+            {
+                "user": {
+                    "display_name": user.display_name,
+                    "username": user.username,
+                    "bio": user.bio,
+                    "region": user.get_region_display(),
+                    "country_code": user.country_code,
+                    "language": user.get_language_display(),
+                    "avatar_url": user.avatar_url.url if user.avatar_url else None,
+                    "banner_url": user.banner_url.url if user.banner_url else None,
+                    "grade": user.get_grade_display(),
+                    "created_at": user.created_at,
+                    "xp": int(user.xp),
+                    "elo": int(user.elo),
+                    "elo_history": [
+                        {"elo": int(elo.elo), "date": elo.date}
+                        for elo in user.elo_history.all()
+                    ],
+                    "is_online": user.is_online and not user.is_invisible,
+                    "is_focused": user.is_focused and not user.is_invisible,
+                    "is_spectating": user.is_spectating and not user.is_invisible,
+                    "is_playing": user.is_playing and not user.is_invisible,
+                    "is_friend": user.friends.filter(id=request.user.id).exists(),
+                    "has_friend_request": request.user.id != user.id
+                    and request.user.friendrequests.filter(id=user.id).exists(),
+                    "sent_friend_request": request.user.id != user.id
+                    and user.friendrequests.filter(id=request.user.id).exists(),
+                    "has_dms": request.user.id != user.id
+                    and GroupChannel.objects.filter(channel_type=GroupChannel.Type.DM)
+                    .filter(users=request.user)
+                    .filter(users=user)
+                    .distinct()
+                    .exists(),
+                    "can_dm": request.user.id != user.id
+                    and (
+                        user.msg_default_response != User.Message_Request.BLOCK
+                        or user.friends.filter(id=request.user.id).exists()
+                        or GroupChannel.objects.filter(
+                            channel_type=GroupChannel.Type.DM
+                        )
+                        .filter(users=request.user)
+                        .filter(users=user)
+                        .distinct()
+                        .exists()
+                    )
+                    and not request.user.blocked.filter(id=user.id).exists(),
+                    "is_blocked": request.user.id != user.id
+                    and request.user.blocked.filter(id=user.id).exists(),
+                    "wins": player_games.filter(winner=user).count(),
+                    "losses": player_games.filter(loser=user).count(),
+                    "game_count": player_games.count(),
+                    "games": [
+                        {
+                            "uuid": game.uuid,
+                            "date": game.date,
+                            "winner": {
+                                "username": game.winner.username,
+                                "display_name": game.winner.display_name,
+                                "elo": game.elo_winner,
+                                "avatar_url": game.winner.avatar_url.url
+                                if game.winner.avatar_url
+                                else None,
+                            },
+                            "loser": {
+                                "username": game.loser.username,
+                                "display_name": game.loser.display_name,
+                                "elo": game.elo_loser,
+                                "avatar_url": game.loser.avatar_url.url
+                                if game.loser.avatar_url
+                                else None,
+                            },
+                            "score_winner": game.score_winner,
+                            "score_loser": game.score_loser,
+                        }
+                        for game in player_games
+                    ],
+                }
+            },
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def UserProfileView(request, name: str):
     try:
         user = User.objects.get(username=name)

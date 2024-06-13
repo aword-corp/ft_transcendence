@@ -11,6 +11,7 @@ class EditUserSerializer(serializers.ModelSerializer):
             "email",
             "username",
             "display_name",
+            "password",
             "bio",
             "region",
             "country_code",
@@ -25,6 +26,22 @@ class EditUserSerializer(serializers.ModelSerializer):
 
     def validate_birth_date(self, value):
         return verify_date(value)
+
+    def validate_password(self, value):
+        password = value
+        password_confirmation = self.initial_data["password_confirmation"]
+        if password and password_confirmation and password != password_confirmation:
+            raise serializers.ValidationError("Passwords don't match")
+        return verify_password(password, self.initial_data["username"])
+
+    def update(self, instance, validated_data):
+        user = super().update(instance, validated_data)
+        try:
+            user.set_password(validated_data["password"])
+            user.save()
+        except KeyError:
+            pass
+        return user
 
 
 class UserSerializer(serializers.ModelSerializer):

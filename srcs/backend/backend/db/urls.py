@@ -28,6 +28,7 @@ from .views import (
     EditProfileView,
     UserDuelRequestAdd,
     UserDuelRequestAccept,
+    UserSelfProfileView,
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -48,6 +49,7 @@ urlpatterns = [
     path("clicks", get_clicks, name="get_clicks"),
     path("leaderboard", get_leaderboard, name="get_leaderboard"),
     path("user/settings/edit", EditProfileView, name="edit_profile"),
+    path("user/profile", UserSelfProfileView, name="user_self_profile"),
     path("user/profile/<str:name>", UserProfileView, name="user_profile"),
     path("user/profile/<str:name>/dm", channel_username, name="channel_username"),
     path("user/duel/<str:name>/add", UserDuelRequestAdd, name="user_duel_add"),

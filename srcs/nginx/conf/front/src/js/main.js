@@ -18,6 +18,7 @@ import { tournament_queue_title, tournament_queue_view } from "./views/tournamen
 import { user_profile_title, user_profile_view } from "./views/user_profile.js";
 import { channels_title, channels_view } from "./views/channels.js";
 import { channels_id_title, channels_id_view } from "./views/channels_id.js";
+import { edit_profile_title, edit_profile_view } from "./views/edit_profile.js";
 
 function logout() {
 	localStorage.removeItem("access-token");
@@ -52,13 +53,14 @@ const routes = {
 	"/channels": { title: channels_title, render: channels_view, auth: "yes" },
 	"/pong/:uuid": { title: pong_title, render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket }, // AI will go here with game id "ai"
 	"/pong/:uuid/iframe": { title: pong_title, render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket, iframe: true },
-	"/pong_local" : {title: pong_local_title, render : pong_local_view, auth: "yes"},
-	"/pong_local_tournament" : {title: pong_local_tournament_title, render : pong_local_tournament_view, auth: "yes"},
+	"/pong_local": { title: pong_local_title, render: pong_local_view, auth: "yes" },
+	"/pong_local_tournament": { title: pong_local_tournament_title, render: pong_local_tournament_view, auth: "yes" },
 	"/auth/login": { title: login_title, render: login_view, auth: "no_only" },
 	"/auth/ft/callback": { title: ft_callback_title, render: ft_callback_view, auth: "no_only" },
 	"/auth/register": { title: register_title, render: register_view, auth: "no_only" },
 	"/profile/:user": { title: user_profile_title, render: user_profile_view, auth: "yes" },
 	"/profile": { title: profile_title, render: profile_view, auth: "yes" },
+	"/profile/settings": { title: edit_profile_title, render: edit_profile_view, auth: "yes" },
 	"/profile/settings/setup_2fa": { title: setup_2fa_title, render: setup_2fa_view, auth: "yes" },
 	"/leaderboard": { title: leaderboard_title, render: leaderboard_view, auth: "no" },
 };
