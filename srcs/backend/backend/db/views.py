@@ -1130,7 +1130,11 @@ def channel(request):
                         "topic": channel.topic,
                         "users": [user.username for user in channel.users.all()],
                     }
-                    for channel in GroupChannel.objects.filter(users=request.user.id)
+                    for channel in GroupChannel.objects.order_by("-updated_at").filter(
+                        users=request.user.id
+                    )
+                    if channel.channel_type != GroupChannel.Type.DM
+                    or channel.messages.exists()
                 ]
             },
             status=status.HTTP_200_OK,
@@ -1383,7 +1387,7 @@ def channel_messages(request, id: int):
                             "edited": message.edited,
                             "is_pin": message.is_pin,
                         }
-                        for message in channel.messages.all()
+                        for message in channel.messages.all().order_by('-id')[:100:-1]
                     ],
                 },
                 status=status.HTTP_200_OK,
