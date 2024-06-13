@@ -72,6 +72,72 @@ export var peerConnection = undefined;
 
 export var interval = undefined;
 
+async function onAnswer(event) {
+	const message = JSON.parse(event.data);
+	if (message.answer) {
+		const remoteDesc = new RTCSessionDescription(message.answer);
+		await peerConnection.setRemoteDescription(remoteDesc).catch(e => console.error("Failed to set remote description: ", e));
+	}
+	if (message.iceCandidate) {
+		try {
+			await peerConnection.addIceCandidate(message.iceCandidate);
+		} catch (e) {
+			console.error('Error adding received ice candidate', e);
+		}
+	}
+	if (message.error) {
+		if (peerConnection) {
+			peerConnection.close();
+			peerConnection = undefined;
+		}
+		if (localStream) {
+			localStream.getTracks().forEach(track => {
+				track.stop();
+			});
+			localStream = undefined;
+		}
+		if (interval) {
+			clearInterval(interval);
+			interval = undefined;
+		}
+		pongSocket.removeEventListener('message', onAnswer);
+	}
+}
+
+async function onIceCandidate(event) {
+	if (event.candidate) {
+		if (event.candidate.candidate.indexOf("relay") < 0) {
+			return;
+		}
+		pongSocket.send(JSON.stringify({ 'iceCandidate': event.candidate }));
+	}
+}
+
+async function onConnectionStateChange(event) {
+	if (peerConnection.connectionState === 'connected' && interval) {
+		clearInterval(interval);
+		interval = undefined;
+	} else if (peerConnection.connectionState === 'failed') {
+		peerConnection.createOffer({ iceRestart: true }).then((offer) => {
+			peerConnection.setLocalDescription(offer).then(() => {
+				pongSocket.send(JSON.stringify({ 'offer': offer }));
+			});
+		});
+	} else if (peerConnection.connectionState === 'closed' && interval) {
+		clearInterval(interval);
+		interval = undefined;
+	} else if (peerConnection.connectionState === 'disconnected' && !interval) {
+		interval = setInterval(() => {
+			pongSocket.send(JSON.stringify({ 'offer': offer }));
+		}, 4000);
+	}
+}
+
+async function onTrack(event) {
+	const [remoteStream] = event.streams;
+	document.getElementById("peer_stream").srcObject = remoteStream;
+}
+
 async function makeCall() {
 	const configuration = {
 		'iceServers': [{
@@ -86,59 +152,52 @@ async function makeCall() {
 			peerConnection.addTrack(track, localStream);
 		});
 	}
-	pongSocket.addEventListener('message', async event => {
-		const message = JSON.parse(event.data);
-		if (message.answer) {
-			const remoteDesc = new RTCSessionDescription(message.answer);
-			await peerConnection.setRemoteDescription(remoteDesc).catch(e => console.error("Failed to set remote description: ", e));
-		}
-		if (message.iceCandidate) {
-			try {
-				await peerConnection.addIceCandidate(message.iceCandidate);
-			} catch (e) {
-				console.error('Error adding received ice candidate', e);
-			}
-		}
-	});
+	pongSocket.addEventListener('message', onAnswer);
 	const offer = await peerConnection.createOffer({
 		'offerToReceiveAudio': true,
 		'offerToReceiveVideo': false
 	});
 	await peerConnection.setLocalDescription(offer);
-	peerConnection.addEventListener('icecandidate', event => {
-		if (event.candidate) {
-			if (event.candidate.candidate.indexOf("relay") < 0) {
-				return;
-			}
-			pongSocket.send(JSON.stringify({ 'iceCandidate': event.candidate }));
-		}
-	});
-	peerConnection.addEventListener('connectionstatechange', event => {
-		if (peerConnection.connectionState === 'connected' && interval) {
-			clearInterval(interval);
-			interval = undefined;
-		} else if (peerConnection.connectionState === 'failed') {
-			peerConnection.createOffer({ iceRestart: true }).then((offer) => {
-				peerConnection.setLocalDescription(offer).then(() => {
-					pongSocket.send(JSON.stringify({ 'offer': offer }));
-				});
-			});
-		} else if (peerConnection.connectionState === 'closed' && interval) {
-			clearInterval(interval);
-			interval = undefined;
-		} else if (peerConnection.connectionState === 'disconnected' && !interval) {
-			interval = setInterval(() => {
-				pongSocket.send(JSON.stringify({ 'offer': offer }));
-			}, 4000);
-		}
-	});
-	peerConnection.addEventListener('track', async (event) => {
-		const [remoteStream] = event.streams;
-		document.getElementById("peer_stream").srcObject = remoteStream;
-	});
+	peerConnection.addEventListener('icecandidate', onIceCandidate);
+	peerConnection.addEventListener('connectionstatechange', onConnectionStateChange);
+	peerConnection.addEventListener('track', onTrack);
 	interval = setInterval(() => {
 		pongSocket.send(JSON.stringify({ 'offer': offer }));
 	}, 4000);
+}
+
+async function onCall(event) {
+	const message = JSON.parse(event.data);
+	if (message.offer) {
+		peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer)).catch(e => console.error("Failed to set remote description: ", e));
+		const answer = await peerConnection.createAnswer();
+		await peerConnection.setLocalDescription(answer);
+		pongSocket.send(JSON.stringify({ 'answer': answer }));
+	}
+	if (message.iceCandidate) {
+		try {
+			await peerConnection.addIceCandidate(message.iceCandidate);
+		} catch (e) {
+			console.error('Error adding received ice candidate', e);
+		}
+	}
+	if (message.error) {
+		if (peerConnection) {
+			peerConnection.close();
+			peerConnection = undefined;
+		}
+		if (localStream) {
+			localStream.getTracks().forEach(track => {
+				track.stop();
+			});
+			localStream = undefined;
+		}
+		if (interval) {
+			clearInterval(interval);
+			interval = undefined;
+		}
+		pongSocket.removeEventListener('message', onCall);
+	}
 }
 
 async function answerCall() {
@@ -155,34 +214,9 @@ async function answerCall() {
 			peerConnection.addTrack(track, localStream);
 		});
 	}
-	pongSocket.addEventListener('message', async event => {
-		const message = JSON.parse(event.data);
-		if (message.offer) {
-			peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer)).catch(e => console.error("Failed to set remote description: ", e));
-			const answer = await peerConnection.createAnswer();
-			await peerConnection.setLocalDescription(answer);
-			pongSocket.send(JSON.stringify({ 'answer': answer }));
-		}
-		if (message.iceCandidate) {
-			try {
-				await peerConnection.addIceCandidate(message.iceCandidate);
-			} catch (e) {
-				console.error('Error adding received ice candidate', e);
-			}
-		}
-	});
-	peerConnection.addEventListener('icecandidate', event => {
-		if (event.candidate) {
-			if (event.candidate.candidate.indexOf("relay") < 0) {
-				return;
-			}
-			pongSocket.send(JSON.stringify({ 'iceCandidate': event.candidate }));
-		}
-	});
-	peerConnection.addEventListener('track', async (event) => {
-		const [remoteStream] = event.streams;
-		document.getElementById("peer_stream").srcObject = remoteStream;
-	});
+	pongSocket.addEventListener('message', onCall);
+	peerConnection.addEventListener('icecandidate', onIceCandidate);
+	peerConnection.addEventListener('track', onTrack);
 }
 
 export function initPongSocket(params) {

@@ -504,43 +504,37 @@ class PongConsumer(AsyncWebsocketConsumer):
 
     async def broadcast_offer(self, event):
         if await User.is_blocked(self.user.id, event["user_id"]):
-            return
+            await self.send(text_data=json.dumps({"error": "You are blocked."}))
 
         if await User.is_blocked(event["user_id"], self.user.id):
-            return
+            await self.send(text_data=json.dumps({"error": "You are blocked."}))
 
         if event["user_id"] == self.user.id:
             return
-
-        print(event)
 
         await self.send(text_data=json.dumps(event))
 
     async def broadcast_answer(self, event):
         if await User.is_blocked(self.user.id, event["user_id"]):
-            return
+            await self.send(text_data=json.dumps({"error": "You are blocked."}))
 
         if await User.is_blocked(event["user_id"], self.user.id):
-            return
+            await self.send(text_data=json.dumps({"error": "You are blocked."}))
 
         if event["user_id"] == self.user.id:
             return
-
-        print(event)
 
         await self.send(text_data=json.dumps(event))
 
     async def broadcast_iceCandidate(self, event):
         if await User.is_blocked(self.user.id, event["user_id"]):
-            return
+            await self.send(text_data=json.dumps({"error": "You are blocked."}))
 
         if await User.is_blocked(event["user_id"], self.user.id):
-            return
+            await self.send(text_data=json.dumps({"error": "You are blocked."}))
 
         if event["user_id"] == self.user.id:
             return
-
-        print(event)
 
         await self.send(text_data=json.dumps(event))
 
