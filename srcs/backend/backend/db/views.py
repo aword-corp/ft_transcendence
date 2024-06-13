@@ -1223,6 +1223,12 @@ def UserBlock(request, name: str):
             user.friendrequests.remove(request.user)
         if request.user.friendrequests.filter(id=user.id).exists():
             request.user.friendrequests.remove(user)
+        if user.duels.filter(id=request.user.id).exists():
+            user.duels.remove(request.user)
+        if user.duelrequests.filter(id=request.user.id).exists():
+            user.duelrequests.remove(request.user)
+        if request.user.duelrequests.filter(id=user.id).exists():
+            request.user.duelrequests.remove(user)
         for channel in (
             GroupChannel.objects.filter(channel_type=GroupChannel.Type.GROUP)
             .filter(users=request.user)

@@ -26,6 +26,8 @@ from .views import (
     channel_messages_id,
     channel_username,
     EditProfileView,
+    UserDuelRequestAdd,
+    UserDuelRequestAccept,
 )
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -48,6 +50,8 @@ urlpatterns = [
     path("user/settings/edit", EditProfileView, name="edit_profile"),
     path("user/profile/<str:name>", UserProfileView, name="user_profile"),
     path("user/profile/<str:name>/dm", channel_username, name="channel_username"),
+    path("user/duel/<str:name>/add", UserDuelRequestAdd, name="user_duel_add"),
+    path("user/duel/<str:name>/accept", UserDuelRequestAccept, name="user_duel_accept"),
     path("user/friends/list", SelfUserFriendsList, name="self_user_friends_list"),
     path("user/friends/list/<str:name>", UserFriendsList, name="user_friends_list"),
     path("user/friends/add/<str:name>", UserFriendsAdd, name="user_friends_add"),
