@@ -1,4 +1,4 @@
-import "../components/home.js"
+// import "../components/home.js"
 
 export function home_title() {
 	return ("Home");
