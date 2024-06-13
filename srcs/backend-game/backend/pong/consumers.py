@@ -430,7 +430,7 @@ class PongConsumer(AsyncWebsocketConsumer):
         await player1.user.arefresh_from_db()
         await player2.user.arefresh_from_db()
         await self.game.arefresh_from_db()
-        if player1.score > player2.score:
+        if player1.score > player2.score and self.game.game_type == Game.Type.MM:
             diff = player2.user.elo - player1.user.elo
 
             diff_divided = diff / 400
@@ -454,7 +454,7 @@ class PongConsumer(AsyncWebsocketConsumer):
             self.game.elo_loser = player2.user.elo
 
             player2.user.elo += 20 * (0 - expected)
-        else:
+        elif player1.score < player2.score and self.game.game_type == Game.Type.MM:
             diff = player2.user.elo - player1.user.elo
 
             diff_divided = diff / 400
@@ -479,8 +479,7 @@ class PongConsumer(AsyncWebsocketConsumer):
 
             player2.user.elo += 20 * (1 - expected)
         if self.game.game_type == Game.Type.DUEL:
-            player1.user.duels.aremove(player2.user)
-            player2.user.duels.aremove(player1.user)
+            await player1.user.duels.aremove(player2.user)
         player1.user.is_playing = False
         player2.user.is_playing = False
         await player1.user.asave()
