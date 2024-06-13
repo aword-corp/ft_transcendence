@@ -3,11 +3,21 @@ export function play_title() {
 }
 
 export function play_view() {
-	return (`<div>
-				<a href="/play/regular" data-link id="Regular_Queue">Regular queue</a>
-				<a href="/play/tournament" data-link id="Tournament_Queue">Tournament queue</a>
-				<a href="/pong_local" data-link id="Local_Pong_Game">Local Pong Game</a>
-				<a href="/pong_local_tournament" data-link id="Local_Pong_Tournament">Local Pong Tournament</a>
-				<a href="/pong/ai" data-link id="Ai_Match">AI match</a>
-			</div>`);
+	return (`
+		<div class="play-container">
+			<div class="top-buttons">
+				<div class="left-play-buttons">
+					<button class="play-button btn" id="Regular_Queue" onclick="location.href='/play/regular'">Regular queue</button>
+					<button class="play-button btn" id="Tournament_Queue" onclick="location.href='/play/tournament'">Tournament queue</button>
+				</div>
+				<div class="right-play-buttons">
+					<button class="play-button btn" id="Local_Pong_Game" onclick="location.href='/pong_local'">Local Pong Game</button>
+					<button class="play-button btn" id="Local_Pong_Tournament" onclick="location.href='/pong_local_tournament'">Local Pong Tournament</button>
+				</div>
+			</div>
+			<div class="center-play-button">
+				<button class="play-button btn" id="Ai_Match" onclick="location.href='/pong/ai'">AI match</button>
+			</div>
+		</div>
+	`);
 }

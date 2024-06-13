@@ -46,7 +46,7 @@ const routes = {
 	"/": { title: home_title, render: home_view, auth: "no" },
 	"/clicks": { title: clicks_title, render: clicks_view, auth: "no", constructor: initSocketClick, destructor: closeSocketClick },
 	"/chat": { title: chat_title, render: chat_view, auth: "yes" },
-	"/play": { title: play_title, render: play_view, auth: "yes" },
+	"/play": { title: play_title, render: play_view, auth: "no" },
 	"/play/regular": { title: regular_queue_title, render: regular_queue_view, auth: "yes", constructor: initMMSocket, destructor: closeMMSocket },
 	"/play/tournament": { title: tournament_queue_title, render: tournament_queue_view, auth: "yes", constructor: initTMSocket, destructor: closeTMSocket },
 	"/channels/:id": { title: channels_id_title, render: channels_id_view, auth: "yes" },
