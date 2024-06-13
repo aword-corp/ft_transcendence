@@ -401,79 +401,6 @@ def get_clicks(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def UserProfileView(request, name: str):
-    if request.user.username == name:
-        player_games = Game.objects.filter(
-            users=request.user, game_type=Game.Type.MM, state=Game.State.ENDED
-        ).all()
-        return Response(
-            {
-                "user": {
-                    "display_name": request.user.display_name,
-                    "username": request.user.username,
-                    "bio": request.user.bio,
-                    "region": request.user.get_region_display(),
-                    "country_code": request.user.country_code,
-                    "language": request.user.get_language_display(),
-                    "avatar_url": request.user.avatar_url.url
-                    if request.user.avatar_url
-                    else None,
-                    "banner_url": request.user.banner_url.url
-                    if request.user.banner_url
-                    else None,
-                    "grade": request.user.get_grade_display(),
-                    "created_at": request.user.created_at,
-                    "xp": int(request.user.xp),
-                    "elo": int(request.user.elo),
-                    "elo_history": [
-                        {"elo": int(elo.elo), "date": elo.date}
-                        for elo in request.user.elo_history.all()
-                    ],
-                    "is_online": request.user.is_online
-                    and not request.user.is_invisible,
-                    "is_focused": request.user.is_focused
-                    and not request.user.is_invisible,
-                    "is_spectating": request.user.is_spectating
-                    and not request.user.is_invisible,
-                    "is_playing": request.user.is_playing
-                    and not request.user.is_invisible,
-                    "is_friend": False,
-                    "has_friend_request": False,
-                    "sent_friend_request": False,
-                    "has_dms": False,
-                    "can_dm": False,
-                    "is_blocked": False,
-                    "wins": player_games.filter(winner=request.user).count(),
-                    "losses": player_games.filter(loser=request.user).count(),
-                    "game_count": player_games.count(),
-                    "games": [
-                        {
-                            "uuid": game.uuid,
-                            "date": game.date,
-                            "winner": {
-                                "username": game.winner.username,
-                                "display_name": game.winner.display_name,
-                                "elo": game.elo_winner,
-                                "avatar_url": game.winner.avatar_url.url
-                                if game.winner.avatar_url
-                                else None,
-                            },
-                            "loser": {
-                                "username": game.loser.username,
-                                "display_name": game.loser.display_name,
-                                "elo": game.elo_loser,
-                                "avatar_url": game.loser.avatar_url.url
-                                if game.loser.avatar_url
-                                else None,
-                            },
-                            "score_winner": game.score_winner,
-                            "score_loser": game.score_loser,
-                        }
-                        for game in player_games
-                    ],
-                }
-            },
-            status=status.HTTP_200_OK,
-        )
     try:
         user = User.objects.get(username=name)
         if user.blocked.filter(id=request.user.id).exists():
@@ -508,20 +435,18 @@ def UserProfileView(request, name: str):
                     "is_spectating": user.is_spectating and not user.is_invisible,
                     "is_playing": user.is_playing and not user.is_invisible,
                     "is_friend": user.friends.filter(id=request.user.id).exists(),
-                    "has_friend_request": request.user.friendrequests.filter(
-                        id=user.id
-                    ).exists(),
-                    "sent_friend_request": user.friendrequests.filter(
-                        id=request.user.id
-                    ).exists(),
-                    "has_dms": GroupChannel.objects.filter(
-                        channel_type=GroupChannel.Type.DM
-                    )
+                    "has_friend_request": request.user.id != user.id
+                    and request.user.friendrequests.filter(id=user.id).exists(),
+                    "sent_friend_request": request.user.id != user.id
+                    and user.friendrequests.filter(id=request.user.id).exists(),
+                    "has_dms": request.user.id != user.id
+                    and GroupChannel.objects.filter(channel_type=GroupChannel.Type.DM)
                     .filter(users=request.user)
                     .filter(users=user)
                     .distinct()
                     .exists(),
-                    "can_dm": (
+                    "can_dm": request.user.id != user.id
+                    and (
                         user.msg_default_response != User.Message_Request.BLOCK
                         or user.friends.filter(id=request.user.id).exists()
                         or GroupChannel.objects.filter(
@@ -533,7 +458,8 @@ def UserProfileView(request, name: str):
                         .exists()
                     )
                     and not request.user.blocked.filter(id=user.id).exists(),
-                    "is_blocked": request.user.blocked.filter(id=user.id).exists(),
+                    "is_blocked": request.user.id != user.id
+                    and request.user.blocked.filter(id=user.id).exists(),
                     "wins": player_games.filter(winner=user).count(),
                     "losses": player_games.filter(loser=user).count(),
                     "game_count": player_games.count(),
