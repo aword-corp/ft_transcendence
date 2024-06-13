@@ -113,6 +113,7 @@ class Network:
     ) -> None:
         self.layers = []
         self.activation = activation
+        self.fitness = float("-inf")
         assert n_hidden == len(neuron_per_hidden)
 
         for layer in range(n_hidden):
@@ -256,7 +257,7 @@ class Network:
                 # Update AI if it can be updated
                 _input = [ball.x, ball.y, ball.dx, ball.dy, bot.y]
                 # AI Move
-                (move,) = brain.predict(_input)
+                move, = brain.predict(_input)
                 # print(f"AI {move = :.5f}")
                 bot.up = move > 2 / 3
                 bot.down = move < 1 / 3
@@ -363,18 +364,189 @@ class Network:
                 best_layers = deepcopy(self.layers)
         self.layers = best_layers
         print("AI Training finished")
+    
+    def evaluate(self):
+        self.fitness = 0
+        player1: Paddle = Paddle(
+            0.03,
+            0.5,
+            False,
+            False,
+            0.016,
+            0.166,
+            0.083,
+            0.0125,
+            0,
+            None,
+            None,
+            None,
+        )
+        bot: Paddle = Paddle(
+            1 - 0.03,
+            0.5,
+            False,
+            False,
+            0.016,
+            0.166,
+            0.083,
+            0.0125,
+            0,
+            None,
+            None,
+            None,
+        )
+        ball: Ball = Ball(
+            0.5,
+            0.5,
+            random.uniform(-0.006, 0.006),
+            random.uniform(-0.006, 0.006),
+            0.004,
+            0.0128,
+        )
+
+        while player1.score < 5 and bot.score < 5:
+            # Update AI if it can be updated
+            _input = [ball.x, ball.y, ball.dx, ball.dy, bot.y]
+            # AI Move
+            move, = self.predict(_input)
+            # print(f"AI {move = :.5f}")
+            bot.up = move > 2 / 3
+            bot.down = move < 1 / 3
+
+            # update paddle position
+            if player1.up and not player1.down:
+                player1.y -= player1.speed
+            if player1.down and not player1.up:
+                player1.y += player1.speed
+            if player1.y < 0:
+                player1.y = 0
+            if player1.y + player1.height > 1:
+                player1.y = 1 - player1.height
+            if bot.up and not bot.down:
+                # self.fitness += 0.001
+                bot.y -= bot.speed
+            if bot.down and not bot.up:
+                # self.fitness += 0.001
+                bot.y += bot.speed
+            if bot.y < 0:
+                bot.y = 0
+            if bot.y + bot.height > 1:
+                bot.y = 1 - bot.height
+
+            # update ball position
+            old_x = ball.x
+            ball.x += ball.dx
+            ball.y += ball.dy
+            if ball.y - ball.radius < 0:
+                ball.y = ball.radius
+                ball.dy *= -1
+            elif ball.y + ball.radius > 1:
+                ball.y = 1 - ball.radius
+                ball.dy *= -1
+
+            if ball.x - ball.radius < 0:
+                ball.x = 0.5
+                ball.y = 0.5
+                ball.dx = ball.speed
+                ball.dy = ball.speed
+                player1.y = 0.5
+                bot.y = 0.5
+                bot.score += 1
+
+            elif ball.x + ball.radius > 1:
+                ball.x = 0.5
+                ball.y = 0.5
+                ball.dx = -ball.speed
+                ball.dy = ball.speed
+                player1.y = 0.5
+                bot.y = 0.5
+                player1.score += 1
+            jsp = player1.half_height / 4
+            player1.y = ball.y - player1.half_height + random.uniform(-jsp, jsp)
+            # check ball collision with paddles
+            maxAngle = math.pi / 4
+
+            wentThrough1 = (
+                old_x - ball.radius > player1.width + player1.x
+                and ball.x - ball.radius <= player1.width + player1.x
+            )
+            if (
+                wentThrough1
+                and player1.y <= ball.y + ball.radius
+                and ball.y - ball.radius <= player1.y + player1.height
+            ):
+                ballPosPaddle = (player1.y + player1.half_height) - ball.y
+                relPos = ballPosPaddle / (player1.half_height)
+                bounceAngle = relPos * maxAngle
+
+                speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
+                ball.dx = speed * math.cos(bounceAngle)
+                ball.dy = speed * -math.sin(bounceAngle)
+
+            wentThrough2 = (
+                old_x + ball.radius < bot.x and ball.x + ball.radius >= bot.x
+            )
+            if (
+                wentThrough2
+                and bot.y <= ball.y + ball.radius
+                and ball.y - ball.radius <= bot.y + bot.height
+            ):
+                self.fitness += 1.0
+                ballPosPaddle = (bot.y + bot.half_height) - ball.y
+                relPos = ballPosPaddle / (bot.half_height)
+                bounceAngle = relPos * maxAngle
+
+                speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
+                ball.dx = speed * -math.cos(bounceAngle)
+                ball.dy = speed * -math.sin(bounceAngle)
+        
+        self.fitness += bot.score - player1.score
 
     def predict(self, data) -> List[float]:
         outputs = self.forward_propagate(data)
         return outputs
 
+def child(parents, old_fit):
+    a, b = random.sample(parents, 2)
+    c = Network(5, 0, 1, [], sigmoid)
+    c.layers = []
+    for la, lb in zip(a.layers, b.layers):
+        clayers = []
+        for na, nb in zip(la, lb):
+            nc = {"weights": [(wa + wb) / 2 for wa, wb in zip(na["weights"], nb["weights"])]}
+            clayers.append(nc)
+        c.layers.append(clayers)
+    mutate(c, 0.8)
+    return c
 
-brain: Optional[Network] = None
+def mutate(individual: Network, mutation_rate = 0.3):
+    for layer in individual.layers:
+        for neuron in layer:
+            for i, w in enumerate(neuron["weights"]):
+                if random.random() < mutation_rate:
+                    neuron["weights"][i] += random.uniform(-mutation_rate, mutation_rate)
 
+def natural_selection(n_individuals, generations):
+    old_pop = []
+    population = [Network(5, 0, 1, [], sigmoid) for _ in range(n_individuals)]
+    for generation in range(generations):
+        for individual in population:
+            individual.evaluate()
+        population.sort(key = lambda x: x.fitness)
+        best_score = population[-1].fitness
+        print(' '.join(f"{x.fitness:.3f}" for x in population))
+        print(f"Generation {generation + 1 : 3d} {best_score = :.3f}")
+        # if best_score == -5.0:
+        #     old_pop = population
+        #     population = [Network(5, 0, 1, [], sigmoid) for _ in range(n_individuals)]
+        # else:
+        bests = 10
+        parents = population[-bests:]
+        old_pop = population
+        population = [child(parents, best_score) for _ in range(n_individuals - bests)] + parents
 
-async def start_training():
-    brain = Network(5, 0, 1, [], sigmoid)
-    brain.train(0.5, 100)
+    assert old_pop
+    print("Training successfully ended")
+    return old_pop[-1]
 
-
-start_training()
+brain = natural_selection(120, 100)

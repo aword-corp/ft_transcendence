@@ -682,12 +682,12 @@ class PongAIConsumer(AsyncWebsocketConsumer):
         while player1.score < 3 and player2.score < 3:
             # Update AI if it can be updated
             now = time.time_ns()
-            if now - ai_last_fetch >= ONE_SECOND_NS / 50:  # TODO Remove division
+            if now - ai_last_fetch >= ONE_SECOND_NS:  # TODO Remove division
                 _input = [ball.x, ball.y, ball.dx, ball.dy, player2.y]
                 # AI Move
 
                 # Test
-                (move,) = brain.predict(_input)
+                move, = brain.predict(_input)
                 print(f"AI {move = :.5f}")
                 player2.up = move > 2 / 3
                 player2.down = move < 1 / 3
