@@ -1,3 +1,5 @@
+import "../components/home.js"
+
 export function home_title() {
 	return ("Home");
 }

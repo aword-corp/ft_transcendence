@@ -1,0 +1,11 @@
+Model Information:
+* title:	Nintendo 64 Logo
+* source:	https://sketchfab.com/3d-models/nintendo-64-logo-c45a05628f1e4d0287ce3ddcc1becd7f
+* author:	Sir2Yas (https://sketchfab.com/yas2yas)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Nintendo 64 Logo" (https://sketchfab.com/3d-models/nintendo-64-logo-c45a05628f1e4d0287ce3ddcc1becd7f) by Sir2Yas (https://sketchfab.com/yas2yas) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
