@@ -323,6 +323,10 @@ class User(AbstractBaseUser):
     def is_friend(self, user: "User") -> bool:
         return user.friends.filter(id=self.id).exists()
 
+    @database_sync_to_async
+    def get_friends(self):
+        return self.friends.all()
+
     @staticmethod
     @database_sync_to_async
     def is_blocked(from_id: int, to_id: int) -> bool:

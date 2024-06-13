@@ -38,7 +38,8 @@ class UpdateConsumer(AsyncWebsocketConsumer):
             await self.user.asave()
             channel = []
             if not self.user.is_invisible:
-                for user in self.user.friends.all():
+                friends = await self.user.get_friends()
+                for user in friends:
                     chnls = cache.get(f"user_{user.id}_channel")
 
                     if chnls:
@@ -67,7 +68,8 @@ class UpdateConsumer(AsyncWebsocketConsumer):
                 self.user.is_online = False
                 await self.user.asave()
                 if not self.user.is_invisible:
-                    for user in self.user.friends.all():
+                    friends = await self.user.get_friends()
+                    for user in friends:
                         chnls = cache.get(f"user_{user.id}_channel")
 
                         if chnls:
