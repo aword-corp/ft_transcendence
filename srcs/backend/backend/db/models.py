@@ -202,7 +202,11 @@ class User(AbstractBaseUser):
     friendrequests = models.ManyToManyField(
         "self", symmetrical=False, related_name="user_friend_requests"
     )
+    duelrequests = models.ManyToManyField(
+        "self", symmetrical=False, related_name="user_duel_requests"
+    )
     friends = models.ManyToManyField("self", symmetrical=True)
+    duels = models.ManyToManyField("self", symmetrical=True)
     blocked = models.ManyToManyField(
         "self", symmetrical=False, related_name="user_blocked_users"
     )
@@ -354,16 +358,41 @@ class GlobalChat(models.Model):
         GlobalChat.objects.create(content=message[:512], user=user)
 
 
+class Attachment(models.Model):
+    url = models.FileField(max_length=256, upload_to="medias/attachments/")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Type(models.IntegerChoices):
+        IMAGE = 1, _("Image")
+        VIDEO = 2, _("Video")
+        AUDIO = 3, _("Audio")
+        FILE = 4, _("File")
+
+    attachment_type = models.SmallIntegerField(choices=Type.choices)
+
+
 class Messages(models.Model):
     content = models.CharField(max_length=2048)
     author = models.ForeignKey(
-        User, related_name="message_authors", on_delete=models.CASCADE
+        User, related_name="message_authors", on_delete=models.CASCADE, null=True
     )
     created_at = models.DateTimeField(auto_now_add=True)
     seen_by = models.ManyToManyField(User, related_name="message_seen_by")
     edited = models.BooleanField(default=False)
     original_content = models.CharField(max_length=2048)
     is_pin = models.BooleanField(default=False)
+    attachements = models.ManyToManyField(
+        Attachment, related_name="message_attachments"
+    )
+
+    class Type(models.IntegerChoices):
+        MESSAGE = 1, _("Message")
+        INFO = 2, _("Info")
+        REQUEST = 3, _("Request")
+        ALERT = 4, _("Alert")
+        DUEL = 5, _("Duel")
+
+    message_type = models.SmallIntegerField(choices=Type.choices, default=Type.MESSAGE)
 
 
 class GroupChannel(models.Model):
@@ -437,6 +466,14 @@ class Game(models.Model):
         ENDED = 4, _("Ended")
 
     state = models.SmallIntegerField(choices=State.choices, default=State.STARTING)
+
+    class Type(models.IntegerChoices):
+        DUEL = 1, _("Duel")
+        MM = 2, _("Matchmaking")
+        AI = 3, _("AI")
+        TOURNAMENT = 4, _("Tournament")
+
+    game_type = models.SmallIntegerField(choices=Type.choices, default=Type.MM)
 
     @staticmethod
     @database_sync_to_async

@@ -3,7 +3,7 @@ from typing import List
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from db.models import Count, Game, User, Tournament
+from db.models import Count, Elo, Game, User, Tournament
 from math import pi, cos, sin
 import asyncio
 import uuid
@@ -172,6 +172,8 @@ class PongConsumer(AsyncWebsocketConsumer):
                 self.users[self.user.id] = self.user.id
 
             if self.user.id in self.games[self.game_id]:
+                self.user.is_playing = True
+                await self.user.asave()
                 await self.send(
                     json.dumps(
                         {
@@ -202,6 +204,9 @@ class PongConsumer(AsyncWebsocketConsumer):
                 del self.users[self.user.id]
             if self.user.is_spectating:
                 self.user.is_spectating = False
+                await self.user.asave()
+            if self.user.is_playing:
+                self.user.is_playing = False
                 await self.user.asave()
             await self.channel_layer.group_discard(self.game_channel, self.channel_name)
         except AttributeError:
@@ -428,10 +433,14 @@ class PongConsumer(AsyncWebsocketConsumer):
             expectedA = 1 / (10 ** ((player2.user.elo - player1.user.elo) / 400) + 1)
             changeA = 32 * (1 - expectedA)
             new_elo_A = player1.user.elo + changeA
+            elo = await Elo.objects.acreate(elo=player1.user.elo)
+            await player1.user.elo_history.aadd(elo)
             player1.user.elo = new_elo_A
             expectedB = 1 / (10 ** ((player1.user.elo - player2.user.elo) / 400) + 1)
             changeB = 32 * (0 - expectedB)
             new_elo_B = player2.user.elo + changeB
+            elo = await Elo.objects.acreate(elo=player2.user.elo)
+            await player2.user.elo_history.aadd(elo)
             player2.user.elo = new_elo_B
         else:
             self.game.winner = player2.user
@@ -446,11 +455,13 @@ class PongConsumer(AsyncWebsocketConsumer):
             changeB = 32 * (1 - expectedB)
             new_elo_B = player2.user.elo + changeB
             player2.user.elo = new_elo_B
-        player1.user.is_playing = False
+        if self.game.game_type == Game.Type.DUEL:
+            player1.user.duels.aremove(player2.user)
+            player2.user.duels.aremove(player1.user)
         await player1.user.asave()
-        player2.user.is_playing = False
         await player2.user.asave()
         self.game.state = self.game.State.ENDED
+
         await self.game.asave()
 
         await self.channel_layer.group_send(
@@ -953,7 +964,10 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             return
 
         game = await Game.objects.acreate(
-            uuid=uuid.uuid4(), region=self.region, state=Game.State.WAITING
+            uuid=uuid.uuid4(),
+            region=self.region,
+            state=Game.State.WAITING,
+            game_type=Game.Type.MM,
         )
 
         for _ in range(2):
@@ -1129,7 +1143,10 @@ class TournamentConsumer(AsyncWebsocketConsumer):
     async def start_game(self, player1, player2):
         await asyncio.sleep(2)
         game = await Game.objects.acreate(
-            uuid=uuid.uuid4(), region=player1.region, state=Game.State.WAITING
+            uuid=uuid.uuid4(),
+            region=player1.region,
+            state=Game.State.WAITING,
+            game_type=Game.Type.TOURNAMENT,
         )
         await game.users.aadd(player1)
         await game.users.aadd(player2)

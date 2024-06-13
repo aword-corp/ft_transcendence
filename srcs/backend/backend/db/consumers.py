@@ -182,3 +182,15 @@ class UpdateConsumer(AsyncWebsocketConsumer):
 
     async def user_disconnected_sent(self, event):
         await self.send(json.dumps(event))
+
+    async def duel_start_sent(self, event):
+        await self.send(json.dumps(event))
+
+    async def duel_start_received(self, event):
+        await self.send(json.dumps(event))
+
+    async def duel_request_sent(self, event):
+        await self.send(json.dumps(event))
+
+    async def duel_request_received(self, event):
+        await self.send(json.dumps(event))

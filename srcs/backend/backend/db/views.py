@@ -1,3 +1,4 @@
+import uuid
 from .serializers import EditUserSerializer, UserSerializer, MyTokenObtainPairSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import (
@@ -10,7 +11,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework import status
 from rest_framework.throttling import UserRateThrottle
 from django.contrib.auth import authenticate, login as django_login
-from .models import User, UserTwoFactorAuthData, Count, GroupChannel, Messages
+from .models import Game, User, UserTwoFactorAuthData, Count, GroupChannel, Messages
 from django.core.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 import pyotp
@@ -608,17 +609,17 @@ def UserFriendsAdd(request, name: str):
                 {"error": "You are already friend with this user."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if user.friendrequests.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You already sent a friend request to this user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if user.friend_default_response == user.Friend_Request.ACCEPT:
             user.friends.add(request.user)
             user.save()
             return Response(
                 {"details": "ok."},
                 status=status.HTTP_200_OK,
-            )
-        if user.friendrequests.filter(id=request.user.id).exists():
-            return Response(
-                {"error": "You already sent a friend request to this user."},
-                status=status.HTTP_400_BAD_REQUEST,
             )
         if request.user.friendrequests.filter(id=user.id).exists():
             user.friends.add(request.user)
@@ -659,6 +660,307 @@ def UserFriendsAdd(request, name: str):
             {"details": "ok."},
             status=status.HTTP_200_OK,
         )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def UserDuelRequestAdd(request, name: str):
+    if name == request.user.username:
+        return Response(
+            {"error": "You cannot duel yourself."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        user = User.objects.get(username=name)
+        if user.blocked.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are blocked."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if (
+            user.msg_default_response == User.Message_Request.BLOCK
+            and not user.friends.filter(id=request.user.id).exists()
+        ):
+            return Response(
+                {"error": "You cannot start a duel with this user."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if user.duelrequests.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You already sent a duel request to this user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if user.duels.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are already dueling this user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        channel_layer = get_channel_layer()
+
+        channel = (
+            GroupChannel.objects.filter(channel_type=GroupChannel.Type.DM)
+            .filter(users=request.user)
+            .filter(users=user)
+            .distinct()
+            .first()
+        )
+        if not channel:
+            channel = GroupChannel.objects.create(channel_type=GroupChannel.Type.DM)
+            channel.users.add(user)
+            channel.users.add(request.user)
+
+            channel.save()
+
+            layer_channels = cache.get(f"user_{request.user.id}_channel")
+
+            if layer_channels:
+                for layer_channel in layer_channels:
+                    async_to_sync(channel_layer.send)(
+                        layer_channel,
+                        {
+                            "type": "dm.creation.sent",
+                            "from": request.user.username,
+                            "to": user.username,
+                            "channel_id": channel.id,
+                        },
+                    )
+
+            layer_channels = cache.get(f"user_{user.id}_channel")
+
+            if layer_channels:
+                for layer_channel in layer_channels:
+                    async_to_sync(channel_layer.send)(
+                        layer_channel,
+                        {
+                            "type": "dm.creation.received",
+                            "from": request.user.username,
+                            "to": user.username,
+                            "channel_id": channel.id,
+                        },
+                    )
+
+        if request.user.duelrequests.filter(id=user.id).exists():
+            game = Game.objects.create(
+                uuid=uuid.uuid4(),
+                region=request.user.region,
+                state=Game.State.WAITING,
+                game_type=Game.Type.DUEL,
+            )
+            game.users.add(request.user)
+            game.users.add(user)
+            game.save()
+            request.user.duels.add(user)
+            request.user.duelrequests.remove(user)
+            request.user.save()
+            user.duels.add(request.user)
+            user.save()
+
+            message = channel.messages.create(
+                content="",
+                original_content="",
+                author=user,
+                message_type=Messages.Type.DUEL,
+            )
+            message.save()
+
+            for user in channel.users.all():
+                layer_channels = cache.get(f"user_{user.id}_channel")
+
+                if layer_channels:
+                    for layer_channel in layer_channels:
+                        async_to_sync(channel_layer.send)(
+                            layer_channel,
+                            {
+                                "type": "channel.message.sent",
+                                "from": request.user.username,
+                                "channel_id": channel.id,
+                                "message_id": message.id,
+                            },
+                        )
+
+            channel.save()
+
+            layer_channels = cache.get(f"user_{request.user.id}_channel")
+
+            if layer_channels:
+                for chnl in layer_channels:
+                    async_to_sync(channel_layer.send)(
+                        chnl,
+                        {
+                            "type": "duel.start.sent",
+                            "from": request.user.username,
+                            "to": user.username,
+                            "game_id": str(game.uuid),
+                        },
+                    )
+
+            layer_channels = cache.get(f"user_{user.id}_channel")
+
+            if layer_channels:
+                for chnl in layer_channels:
+                    async_to_sync(channel_layer.send)(
+                        chnl,
+                        {
+                            "type": "duel.start.received",
+                            "from": request.user.username,
+                            "to": user.username,
+                            "game_id": str(game.uuid),
+                        },
+                    )
+
+            return Response(
+                {"details": "ok."},
+                status=status.HTTP_200_OK,
+            )
+
+        else:
+            user.duelrequests.add(request.user)
+        user.save()
+
+        message = channel.messages.create(
+            content="",
+            original_content="",
+            author=request.user,
+            message_type=Messages.Type.REQUEST,
+        )
+        message.save()
+
+        for user in channel.users.all():
+            layer_channels = cache.get(f"user_{user.id}_channel")
+
+            if layer_channels:
+                for layer_channel in layer_channels:
+                    async_to_sync(channel_layer.send)(
+                        layer_channel,
+                        {
+                            "type": "channel.message.sent",
+                            "from": request.user.username,
+                            "channel_id": channel.id,
+                            "message_id": message.id,
+                        },
+                    )
+
+        channel.save()
+
+        channels = cache.get(f"user_{request.user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "duel.request.sent",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
+        channels = cache.get(f"user_{user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "duel.request.received",
+                        "from": request.user.username,
+                        "to": user.username,
+                    },
+                )
+
+        return Response(
+            {"details": "ok."},
+            status=status.HTTP_200_OK,
+        )
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def UserDuelRequestAccept(request, name: str):
+    if name == request.user.username:
+        return Response(
+            {"error": "You cannot duel yourself."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    try:
+        user = User.objects.get(username=name)
+        if user.blocked.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are blocked."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        if user.duels.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You are already dueling this user."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not request.user.duelrequests.filter(id=user.id).exists():
+            return Response(
+                {"error": "You have no duel request from this user."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        channel_layer = get_channel_layer()
+
+        game = Game.objects.create(
+            uuid=uuid.uuid4(),
+            region=request.user.region,
+            state=Game.State.WAITING,
+            game_type=Game.Type.DUEL,
+        )
+        game.users.add(request.user)
+        game.users.add(user)
+        game.save()
+        request.user.duels.add(user)
+        request.user.duelrequests.remove(user)
+        request.user.save()
+        user.duels.add(request.user)
+        user.save()
+        channels = cache.get(f"user_{request.user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "duel.start.sent",
+                        "from": request.user.username,
+                        "to": user.username,
+                        "game_id": str(game.uuid),
+                    },
+                )
+
+        channels = cache.get(f"user_{user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "duel.start.received",
+                        "from": request.user.username,
+                        "to": user.username,
+                        "game_id": str(game.uuid),
+                    },
+                )
+
+        return Response(
+            {"details": "ok."},
+            status=status.HTTP_200_OK,
+        )
+
     except User.DoesNotExist:
         return Response(
             {"error": "User not found."},
@@ -1387,7 +1689,7 @@ def channel_messages(request, id: int):
                             "edited": message.edited,
                             "is_pin": message.is_pin,
                         }
-                        for message in channel.messages.all().order_by('-id')[:100:-1]
+                        for message in channel.messages.all().order_by("-id")[:100:-1]
                     ],
                 },
                 status=status.HTTP_200_OK,
