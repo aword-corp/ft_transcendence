@@ -448,9 +448,11 @@ class Game(models.Model):
     winner = models.ForeignKey(
         User, related_name="game_winners", on_delete=models.SET_NULL, null=True
     )
+    elo_winner = models.FloatField(default=0.0)
     loser = models.ForeignKey(
         User, related_name="game_losers", on_delete=models.SET_NULL, null=True
     )
+    elo_loser = models.FloatField(default=0.0)
     ball_speed = models.FloatField(default=1.0)
     ball_size = models.FloatField(default=1.0)
     paddle_speed = models.FloatField(default=1.0)

@@ -402,6 +402,9 @@ def get_clicks(request):
 @permission_classes([IsAuthenticated])
 def UserProfileView(request, name: str):
     if request.user.username == name:
+        player_games = Game.objects.filter(
+            users=request.user, game_type=Game.Type.MM, state=Game.State.ENDED
+        ).all()
         return Response(
             {
                 "user": {
@@ -421,6 +424,10 @@ def UserProfileView(request, name: str):
                     "created_at": request.user.created_at,
                     "xp": int(request.user.xp),
                     "elo": int(request.user.elo),
+                    "elo_history": [
+                        {"elo": int(elo.elo), "date": elo.date}
+                        for elo in request.user.elo_history.all()
+                    ],
                     "is_online": request.user.is_online
                     and not request.user.is_invisible,
                     "is_focused": request.user.is_focused
@@ -435,6 +442,34 @@ def UserProfileView(request, name: str):
                     "has_dms": False,
                     "can_dm": False,
                     "is_blocked": False,
+                    "wins": player_games.filter(winner=request.user).count(),
+                    "losses": player_games.filter(loser=request.user).count(),
+                    "game_count": player_games.count(),
+                    "games": [
+                        {
+                            "uuid": game.uuid,
+                            "date": game.date,
+                            "winner": {
+                                "username": game.winner.username,
+                                "display_name": game.winner.display_name,
+                                "elo": game.elo_winner,
+                                "avatar_url": game.winner.avatar_url.url
+                                if game.winner.avatar_url
+                                else None,
+                            },
+                            "loser": {
+                                "username": game.loser.username,
+                                "display_name": game.loser.display_name,
+                                "elo": game.elo_loser,
+                                "avatar_url": game.loser.avatar_url.url
+                                if game.loser.avatar_url
+                                else None,
+                            },
+                            "score_winner": game.score_winner,
+                            "score_loser": game.score_loser,
+                        }
+                        for game in player_games
+                    ],
                 }
             },
             status=status.HTTP_200_OK,
@@ -446,6 +481,9 @@ def UserProfileView(request, name: str):
                 {"error": "You are blocked."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+        player_games = Game.objects.filter(
+            users=user, game_type=Game.Type.MM, state=Game.State.ENDED
+        ).all()
         return Response(
             {
                 "user": {
@@ -461,6 +499,10 @@ def UserProfileView(request, name: str):
                     "created_at": user.created_at,
                     "xp": int(user.xp),
                     "elo": int(user.elo),
+                    "elo_history": [
+                        {"elo": int(elo.elo), "date": elo.date}
+                        for elo in user.elo_history.all()
+                    ],
                     "is_online": user.is_online and not user.is_invisible,
                     "is_focused": user.is_focused and not user.is_invisible,
                     "is_spectating": user.is_spectating and not user.is_invisible,
@@ -492,6 +534,34 @@ def UserProfileView(request, name: str):
                     )
                     and not request.user.blocked.filter(id=user.id).exists(),
                     "is_blocked": request.user.blocked.filter(id=user.id).exists(),
+                    "wins": player_games.filter(winner=user).count(),
+                    "losses": player_games.filter(loser=user).count(),
+                    "game_count": player_games.count(),
+                    "games": [
+                        {
+                            "uuid": game.uuid,
+                            "date": game.date,
+                            "winner": {
+                                "username": game.winner.username,
+                                "display_name": game.winner.display_name,
+                                "elo": game.elo_winner,
+                                "avatar_url": game.winner.avatar_url.url
+                                if game.winner.avatar_url
+                                else None,
+                            },
+                            "loser": {
+                                "username": game.loser.username,
+                                "display_name": game.loser.display_name,
+                                "elo": game.elo_loser,
+                                "avatar_url": game.loser.avatar_url.url
+                                if game.loser.avatar_url
+                                else None,
+                            },
+                            "score_winner": game.score_winner,
+                            "score_loser": game.score_loser,
+                        }
+                        for game in player_games
+                    ],
                 }
             },
             status=status.HTTP_200_OK,
@@ -1217,14 +1287,17 @@ def UserBlock(request, name: str):
                 {"error": "You have already blocked this user."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if user.duels.filter(id=request.user.id).exists():
+            return Response(
+                {"error": "You cannot block an user in a duel."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if user.friends.filter(id=request.user.id).exists():
             user.friends.remove(request.user)
         if user.friendrequests.filter(id=request.user.id).exists():
             user.friendrequests.remove(request.user)
         if request.user.friendrequests.filter(id=user.id).exists():
             request.user.friendrequests.remove(user)
-        if user.duels.filter(id=request.user.id).exists():
-            user.duels.remove(request.user)
         if user.duelrequests.filter(id=request.user.id).exists():
             user.duelrequests.remove(request.user)
         if request.user.duelrequests.filter(id=user.id).exists():

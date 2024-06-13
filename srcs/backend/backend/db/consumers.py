@@ -65,6 +65,7 @@ class UpdateConsumer(AsyncWebsocketConsumer):
 
             if not len(channel):
                 await cache.adelete(f"user_{self.user.id}_channel")
+                await self.user.arefresh_from_db()
                 self.user.is_online = False
                 await self.user.asave()
                 if not self.user.is_invisible:

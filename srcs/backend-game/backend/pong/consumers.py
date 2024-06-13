@@ -200,6 +200,7 @@ class PongConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         try:
+            await self.user.arefresh_from_db()
             if self.user.id in self.users:
                 del self.users[self.user.id]
             if self.user.is_spectating:
@@ -290,9 +291,10 @@ class PongConsumer(AsyncWebsocketConsumer):
         player2: Paddle = self.games[game_id][self.games[game_id]["users"][1].id]
         ball = self.games[game_id]["ball"]
         await asyncio.sleep(3)
+        await self.game.arefresh_from_db()
         self.game.state = Game.State.PLAYING
         await self.game.asave()
-        while player1.score < 5 and player2.score < 5:
+        while player1.score < 3 and player2.score < 3:
             wait = False
             # update paddle position
             if player1.up and not player1.down:
@@ -330,7 +332,7 @@ class PongConsumer(AsyncWebsocketConsumer):
                 player1.y = 0.5
                 player2.y = 0.5
                 player2.score += 1
-                wait = True if player2.score < 5 else False
+                wait = True if player2.score < 3 else False
                 await self.channel_layer.group_send(
                     self.game_channel,
                     {
@@ -346,7 +348,7 @@ class PongConsumer(AsyncWebsocketConsumer):
                 player1.y = 0.5
                 player2.y = 0.5
                 player1.score += 1
-                wait = True if player1.score < 5 else False
+                wait = True if player1.score < 3 else False
                 await self.channel_layer.group_send(
                     self.game_channel,
                     {
@@ -425,39 +427,62 @@ class PongConsumer(AsyncWebsocketConsumer):
                 },
             )
             await asyncio.sleep(3 if wait else 0.016)
+        await player1.user.arefresh_from_db()
+        await player2.user.arefresh_from_db()
+        await self.game.arefresh_from_db()
         if player1.score > player2.score:
+            diff = player2.user.elo - player1.user.elo
+
+            diff_divided = diff / 400
+
+            expected = 1 / (1 + 10**diff_divided)
+
             self.game.winner = player1.user
-            self.game.loser = player2.user
             self.game.score_winner = player1.score
+
+            await player1.user.elo_history.acreate(elo=player1.user.elo)
+
+            self.game.elo_winner = player1.user.elo
+
+            player1.user.elo += 20 * (1 - expected)
+
+            self.game.loser = player2.user
             self.game.score_loser = player2.score
-            expectedA = 1 / (10 ** ((player2.user.elo - player1.user.elo) / 400) + 1)
-            changeA = 32 * (1 - expectedA)
-            new_elo_A = player1.user.elo + changeA
-            elo = await Elo.objects.acreate(elo=player1.user.elo)
-            await player1.user.elo_history.aadd(elo)
-            player1.user.elo = new_elo_A
-            expectedB = 1 / (10 ** ((player1.user.elo - player2.user.elo) / 400) + 1)
-            changeB = 32 * (0 - expectedB)
-            new_elo_B = player2.user.elo + changeB
-            elo = await Elo.objects.acreate(elo=player2.user.elo)
-            await player2.user.elo_history.aadd(elo)
-            player2.user.elo = new_elo_B
+
+            await player2.user.elo_history.acreate(elo=player2.user.elo)
+
+            self.game.elo_loser = player2.user.elo
+
+            player2.user.elo += 20 * (0 - expected)
         else:
-            self.game.winner = player2.user
+            diff = player2.user.elo - player1.user.elo
+
+            diff_divided = diff / 400
+
+            expected = 1 / (1 + 10**diff_divided)
+
             self.game.loser = player1.user
-            self.game.score_winner = player2.score
             self.game.score_loser = player1.score
-            expectedA = 1 / (10 ** ((player2.user.elo - player1.user.elo) / 400) + 1)
-            changeA = 32 * (0 - expectedA)
-            new_elo_A = player1.user.elo + changeA
-            player1.user.elo = new_elo_A
-            expectedB = 1 / (10 ** ((player1.user.elo - player2.user.elo) / 400) + 1)
-            changeB = 32 * (1 - expectedB)
-            new_elo_B = player2.user.elo + changeB
-            player2.user.elo = new_elo_B
+
+            await player1.user.elo_history.acreate(elo=player1.user.elo)
+
+            self.game.elo_loser = player1.user.elo
+
+            player1.user.elo += 20 * (0 - expected)
+
+            self.game.winner = player2.user
+            self.game.score_winner = player2.score
+
+            await player2.user.elo_history.acreate(elo=player2.user.elo)
+
+            self.game.elo_winner = player2.user.elo
+
+            player2.user.elo += 20 * (1 - expected)
         if self.game.game_type == Game.Type.DUEL:
             player1.user.duels.aremove(player2.user)
             player2.user.duels.aremove(player1.user)
+        player1.user.is_playing = False
+        player2.user.is_playing = False
         await player1.user.asave()
         await player2.user.asave()
         self.game.state = self.game.State.ENDED
@@ -655,7 +680,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
         ONE_SECOND_NS = 1_000_000_000
 
         await asyncio.sleep(3)
-        while player1.score < 5 and player2.score < 5:
+        while player1.score < 3 and player2.score < 3:
             # Update AI if it can be updated
             now = time.time_ns()
             if now - ai_last_fetch >= ONE_SECOND_NS / 50:  # TODO Remove division
@@ -719,7 +744,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 player1.y = 0.5
                 player2.y = 0.5
                 player2.score += 1
-                wait = True if player2.score < 5 else False
+                wait = True if player2.score < 3 else False
                 await self.send(
                     json.dumps(
                         {
@@ -739,7 +764,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 player1.y = 0.5
                 player2.y = 0.5
                 player1.score += 1
-                wait = True if player1.score < 5 else False
+                wait = True if player1.score < 3 else False
                 await self.send(
                     json.dumps(
                         {
@@ -949,6 +974,7 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
         can_start = True
 
         for user in users:
+            await user.arefresh_from_db()
             if not bool(self.user.mm_channel_name):
                 can_start = False
 
@@ -990,6 +1016,8 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             self.queue.remove(self.user)
         except (ValueError, AttributeError):
             return
+
+        await self.user.arefresh_from_db()
 
         await self.user.set_mm_channel_name(None)
 
@@ -1164,8 +1192,10 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             {"type": "game.start", "game_id": str(game.uuid)},
         )
 
+        await player1.arefresh_from_db()
         player1.is_playing = True
         await player1.asave()
+        await player2.arefresh_from_db()
         player2.is_playing = True
         await player2.asave()
 
@@ -1204,6 +1234,8 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             self.queue.remove(self.user)
         except (ValueError, AttributeError):
             return
+
+        await self.user.arefresh_from_db()
 
         await self.user.set_tournament_channel_name(None)
 
