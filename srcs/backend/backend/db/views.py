@@ -132,7 +132,33 @@ def EditProfileView(request):
         serializer = EditUserSerializer(data=request.data, instance=user, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        user.save()
+        channel_layer = get_channel_layer()
+
+        channels = cache.get(f"user_{request.user.id}_channel")
+
+        if channels:
+            for channel in channels:
+                async_to_sync(channel_layer.send)(
+                    channel,
+                    {
+                        "type": "profile.update.sent",
+                        "from": request.user.username,
+                    },
+                )
+
+        for user in user.friends.all():
+            channels = cache.get(f"user_{user.id}_channel")
+
+            if channels:
+                for channel in channels:
+                    async_to_sync(channel_layer.send)(
+                        channel,
+                        {
+                            "type": "profile.update.received",
+                            "from": request.user.username,
+                        },
+                    )
+
         return Response(serializer.data, status=status.HTTP_200_OK)
     except KeyError:
         return Response(

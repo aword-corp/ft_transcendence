@@ -37,6 +37,19 @@ class UpdateConsumer(AsyncWebsocketConsumer):
             self.user.is_online = True
             await self.user.asave()
             channel = []
+            if not self.user.is_invisible:
+                for user in self.user.friends.all():
+                    chnls = cache.get(f"user_{user.id}_channel")
+
+                    if chnls:
+                        for chnl in chnls:
+                            await self.channel_layer.send(
+                                chnl,
+                                {
+                                    "type": "user.connected.sent",
+                                    "from": self.user.username,
+                                },
+                            )
 
         channel.append(self.channel_name)
 
@@ -53,6 +66,19 @@ class UpdateConsumer(AsyncWebsocketConsumer):
                 await cache.adelete(f"user_{self.user.id}_channel")
                 self.user.is_online = False
                 await self.user.asave()
+                if not self.user.is_invisible:
+                    for user in self.user.friends.all():
+                        chnls = cache.get(f"user_{user.id}_channel")
+
+                        if chnls:
+                            for chnl in chnls:
+                                await self.channel_layer.send(
+                                    chnl,
+                                    {
+                                        "type": "user.disconnected.sent",
+                                        "from": self.user.username,
+                                    },
+                                )
                 return
 
             await cache.aset(f"user_{self.user.id}_channel", channel)
@@ -141,4 +167,16 @@ class UpdateConsumer(AsyncWebsocketConsumer):
         await self.send(json.dumps(event))
 
     async def channel_view_sent(self, event):
+        await self.send(json.dumps(event))
+
+    async def profile_update_sent(self, event):
+        await self.send(json.dumps(event))
+
+    async def profile_update_received(self, event):
+        await self.send(json.dumps(event))
+
+    async def user_connected_sent(self, event):
+        await self.send(json.dumps(event))
+
+    async def user_disconnected_sent(self, event):
         await self.send(json.dumps(event))
