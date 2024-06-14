@@ -12,6 +12,7 @@ from .ai.ai import Paddle, Ball, brain, ACCELERATION
 import math
 import time
 import random
+from django.core.cache import cache
 
 # from colorama import Fore, Back, Style
 
