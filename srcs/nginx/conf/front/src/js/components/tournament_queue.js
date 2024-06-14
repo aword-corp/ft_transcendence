@@ -26,7 +26,10 @@ class TournamentQueue extends HTMLElement {
 					<iframe src="${src}" width="900" height="700">
 					</iframe>
 				`;
-			} else if (data.type == "update.message") {
+			} else if (data.type == "game.waiting") {
+				document.getElementById("status").innerText = `Currently waiting`;
+			}
+			else if (data.type == "update.message") {
 				console.log(data.users);
 			} else {
 				history.pushState("", "", "/");

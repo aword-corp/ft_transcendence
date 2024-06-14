@@ -1072,16 +1072,6 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             region=user.region,
         )
 
-    # @database_sync_to_async
-    # def add_user(self, tournament, user):
-    #     tournament.users.add(user)
-    #     tournament.save()
-
-    # @database_sync_to_async
-    # def change_state(self, tournament, state):
-    #     tournament.state = state
-    #     tournament.save()
-
     async def connect(self):
         await self.accept()
         if self.scope["user"].is_authenticated:
@@ -1247,6 +1237,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
                 winners.append(winner)
             else:
                 winners.append(game)
+                await self.send(text_data=json.dumps({"type": "game_waiting"}))
         return winners
 
     async def wait_game_winner(self, game: Game):
