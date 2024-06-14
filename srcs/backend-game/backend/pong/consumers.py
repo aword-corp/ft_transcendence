@@ -8,10 +8,11 @@ from math import pi, cos, sin
 import asyncio
 import uuid
 from datetime import datetime, timedelta
-from .ai.ai import Paddle, Ball, brain, get_hit, ACCELERATION
+from .ai.ai import Paddle, Ball, brain, ACCELERATION
 import math
 import time
-from django.core.cache import cache
+import random
+
 # from colorama import Fore, Back, Style
 
 
@@ -583,12 +584,18 @@ class PongConsumer(AsyncWebsocketConsumer):
 
         await self.close()
 
+def rand_moment(speed):
+	angle = random.uniform(0.5, 1.5 * math.pi)
+	dx = speed * math.cos(angle)
+	dy = speed * math.sin(angle)
+	return dx, dy
 
 class PongAIConsumer(AsyncWebsocketConsumer):
     games = {}
 
     async def connect(self):
         await self.accept()
+        self.task = None
         if self.scope["user"].is_authenticated:
             self.user: User = await User.objects.aget(id=self.scope["user"].id)
         else:
@@ -600,54 +607,54 @@ class PongAIConsumer(AsyncWebsocketConsumer):
             await self.send(json.dumps({"error": "AI is not ready."}))
             await self.close()
             return
-
-        if self.user.id not in self.games or self.games[self.user.id]["state"] == 2:
-            self.games[self.user.id] = {
-                "ball": Ball(
-                    0.5,
-                    0.5,
-                    0.004,
-                    0.004,
-                    0.004,
-                    0.0128,
-                ),
-                "state": 0,
-            }
-
-            self.games[self.user.id][self.user.id] = Paddle(
-                0.03,
+    
+        # if self.user.id not in self.games or self.games[self.user.id]["state"] == 2:
+        self.games[self.user.id] = {
+            "ball": Ball(
                 0.5,
-                False,
-                False,
-                0.016,
-                0.166,
-                0.083,
-                0.0125,
-                0,
-                self.user,
-                None,
-                None,
-            )
-
-            self.games[self.user.id]["bot"] = Paddle(
-                1 - 0.03,
                 0.5,
-                False,
-                False,
-                0.016,
-                0.166,
-                0.083,
-                0.0125,
-                0,
-                None,
-                None,
-                None,
-            )
+                *rand_moment(0.008),
+                0.008,
+                0.0128,
+            ),
+            "state": 0,
+        }
 
-            asyncio.create_task(self.game_loop())
+        self.games[self.user.id][self.user.id] = Paddle(
+            0.03,
+            0.5,
+            False,
+            False,
+            0.016,
+            0.166,
+            0.083,
+            0.0125,
+            0,
+            self.user,
+            None,
+            None,
+        )
+
+        self.games[self.user.id]["bot"] = Paddle(
+            1 - 0.03,
+            0.5,
+            False,
+            False,
+            0.016,
+            0.166,
+            0.083,
+            0.0125,
+            0,
+            None,
+            None,
+            None,
+        )
+
+        self.task = asyncio.create_task(self.game_loop())
 
     async def disconnect(self, close_code):
-        pass
+        if self.task:
+            self.task.cancel()
 
     async def receive(self, text_data):
         data = json.loads(text_data)
@@ -672,33 +679,20 @@ class PongAIConsumer(AsyncWebsocketConsumer):
         self.games[self.user.id]["state"] = 1
 
         ai_last_fetch = 0
+        MAX_SPEED = 0.3
         ONE_SECOND_NS = 1_000_000_000
 
         await asyncio.sleep(3)
         while player1.score < 3 and player2.score < 3:
             # Update AI if it can be updated
             now = time.time_ns()
-            if now - ai_last_fetch >= ONE_SECOND_NS:  # TODO Remove division
-                _input = [ball.x, ball.y, ball.dx, ball.dy, player2.y]
+            if now - ai_last_fetch >= ONE_SECOND_NS / 100:
                 # AI Move
-
-                # Test
-                (move,) = brain.predict(_input)
-                print(f"AI {move = :.5f}")
-                player2.up = move > 2 / 3
-                player2.down = move < 1 / 3
-
-                # "Best" move
-                hit_y: int = get_hit(ball, player1) if ball.dx > 0 else ball.y
-                above: bool = hit_y < player2.y
-                on: bool = player2.y < hit_y < player2.y + player2.height
-                under: bool = hit_y > player2.y + player2.height
-
-                best = [0.5 if on else 1.0 if above else 0.0]
-                print(best, hit_y, player2.y)
-                # Learning while playing
-                # brain.backward_propagate(best)
-                # brain.update_weights(0.5, _input)
+                output = brain.activate((player2.y, ball.x, ball.y, ball.dx, ball.dy))
+                decision = max(range(len(output)), key = output.__getitem__)
+                # decision = random.randint(0, 2) # Random move for tests
+                player2.up = decision == 2
+                player2.down = decision == 1
 
                 ai_last_fetch = now
 
@@ -734,8 +728,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
             if ball.x - ball.radius < 0:
                 ball.x = 0.5
                 ball.y = 0.5
-                ball.dx = ball.speed
-                ball.dy = ball.speed
+                ball.dx, ball.dy = rand_moment(ball.speed)
                 player1.y = 0.5
                 player2.y = 0.5
                 player2.score += 1
@@ -754,8 +747,8 @@ class PongAIConsumer(AsyncWebsocketConsumer):
             elif ball.x + ball.radius > 1:
                 ball.x = 0.5
                 ball.y = 0.5
-                ball.dx = -ball.speed
-                ball.dy = ball.speed
+                ball.dx, ball.dy = rand_moment(ball.speed)
+                ball.dx = -ball.dx
                 player1.y = 0.5
                 player2.y = 0.5
                 player1.score += 1
@@ -789,7 +782,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 relPos = ballPosPaddle / (player1.half_height)
                 bounceAngle = relPos * maxAngle
 
-                speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
+                speed = min(MAX_SPEED, (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION)
                 ball.dx = speed * cos(bounceAngle)
                 ball.dy = speed * -sin(bounceAngle)
 
@@ -806,7 +799,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 relPos = ballPosPaddle / (player2.half_height)
                 bounceAngle = relPos * maxAngle
 
-                speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
+                speed = min(MAX_SPEED, (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION)
                 ball.dx = speed * -cos(bounceAngle)
                 ball.dy = speed * -sin(bounceAngle)
 
@@ -838,7 +831,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 )
             )
             await asyncio.sleep(3 if wait else 0.016)
-        print(brain.layers)
+
         self.games[self.user.id]["state"] = 2
         await self.send(
             json.dumps(

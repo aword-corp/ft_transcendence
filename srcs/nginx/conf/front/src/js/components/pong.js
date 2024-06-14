@@ -135,7 +135,7 @@ class PongGame extends HTMLElement {
 		const ratio_y = this.canvas.height;
 		const scale = Math.min(ratio_x, ratio_y);
 
-		this.ctx.fillStyle = 'black';
+		this.ctx.fillStyle = 'white';
 		this.ctx.beginPath();
 		this.ctx.arc(ball.x * ratio_x, ball.y * ratio_y, ball.radius * scale, 0, Math.PI * 2);
 		this.ctx.fill();
@@ -152,7 +152,7 @@ class PongGame extends HTMLElement {
 		this.ctx.shadowBlur = 20;
 		this.ctx.shadowOffsetX = 0;
 		this.ctx.shadowOffsetY = 0;
-		this.ctx.fillStyle = 'rgba(22, 219, 101, 1)';
+		this.ctx.fillStyle = 'white';
 
 		this.ctx.fillRect(paddle.x * ratio_x, paddle.y * ratio_y, paddle.width * ratio_x, paddle.height * ratio_y);
 
