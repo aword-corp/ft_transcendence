@@ -24,6 +24,7 @@ function logout() {
 	localStorage.removeItem("access-token");
 	localStorage.removeItem("refresh-token");
 	closeSocketUpdate();
+	router();
 }
 
 function remove_2fa() {
@@ -93,18 +94,18 @@ function isAuth() {
 		).then((response) => {
 			response.json().then((json) => {
 				if (!json.access) {
-					localStorage.removeItem("refresh-token");
+					logout();
 					return (false);
 				}
 				localStorage.setItem("access-token", json.access);
 				return (true);
 			}
 			).catch((e) => {
-				localStorage.removeItem("refresh-token");
+				logout();
 				return (false);
 			})
 		}).catch((e) => {
-			localStorage.removeItem("refresh-token");
+			logout();
 			return (false);
 		});
 	}
@@ -121,13 +122,11 @@ function isAuth() {
 			}
 		).then((response) => {
 			if (response.status !== 200) {
-				localStorage.removeItem("access-token");
-				localStorage.removeItem("refresh-token");
+				logout();
 				return (false);
 			}
 		}).catch((e) => {
-			localStorage.removeItem("access-token");
-			localStorage.removeItem("refresh-token");
+			logout();
 			return (false);
 		});
 	}
@@ -137,6 +136,7 @@ function isAuth() {
 function checkAccess(view) {
 
 	if (isAuth()) {
+		initSocketUpdate();
 		if (view.auth == "no_only")
 			return (false);
 		return (true);
@@ -176,11 +176,6 @@ export function router() {
 
 	// if (view === last_view)
 	// 	return;
-
-	initSocketUpdate();
-
-	if (updateSocket)
-		updateSocket.onmessage = defaultSocketUpdateOnMessage;
 
 	if (last_view && last_view.destructor)
 		last_view.destructor();

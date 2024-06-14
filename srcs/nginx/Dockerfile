@@ -44,9 +44,15 @@ COPY conf/localhost.key /etc/ssl/private/
 
 ADD conf/front /var/www/front
 
-RUN chown -R www-data:www-data /var/www/front
+RUN mkdir -p /var/www/static
 
-RUN chmod -R 755 /var/www/front
+RUN mkdir -p /var/www/static/media
+
+COPY conf/discordyellow.png /var/www/static/media/
+
+RUN chown -R www-data:www-data /var/www
+
+RUN chmod -R 755 /var/www
 
 EXPOSE 443 443/udp
 

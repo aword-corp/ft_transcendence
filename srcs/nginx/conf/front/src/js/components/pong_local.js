@@ -8,6 +8,9 @@ class Local extends HTMLElement {
 
 		this.innerHTML = `
 			<canvas tabindex='1' id="pongCanvas" class="pongCanvas"></canvas>
+			<h1 style="text-align: center">Player 1: W/Z and S</h1>
+			<h1 style="text-align: center">Player 2: 5 and 2</h1>
+			<h1 style="text-align: center" id="winner"></h1>
 		`;
 
 		this.canvas = document.getElementById("pongCanvas");
@@ -21,7 +24,7 @@ class Local extends HTMLElement {
 		this.wall_offset = 25;
 		this.paddleWidth = 10;
 		this.paddleHeight = 100;
-		this.maxScore = 2;
+		this.maxScore = 3;
 		this.acceleration = 1.05;
 		this.rectWidth = 200;
 		this.rectLength = 80;
@@ -125,20 +128,11 @@ class Local extends HTMLElement {
 	}
 
 	drawWinner(can_replay) {
-		this.ctx.fillStyle = 'black';
 		if (this.player_1.score >= this.player_2.score) {
-			this.ctx.fillText("Player 1 has won", this.canvas.width / 3.25, this.canvas.height / 2);
+			document.getElementById("winner").innerText = "Player 1 has won";
 		}
 		else {
-			this.ctx.fillText("Player 2 has won", this.canvas.width / 3.25, this.canvas.height / 2);
-		}
-
-		this.ctx.fillStyle = 'grey';
-		this.drawRoundedRect(this.ctx, (this.canvas.width - this.rectWidth) / 2, this.canvas.height / 2 + 20, this.rectWidth, this.rectLength, 10);
-
-		if (can_replay) {
-			this.ctx.fillStyle = 'black';
-			this.ctx.fillText("REPLAY", (this.canvas.width - this.rectWidth) / 2 + 30, this.canvas.height / 2 + 20 + 55);
+			document.getElementById("winner").innerText = "Player 2 has won";
 		}
 
 		this.gameFinished = true;
@@ -285,6 +279,7 @@ class Local extends HTMLElement {
 	handleKeyDown(event) {
 		switch (event.key) {
 			case 'w':
+			case 'z':
 				this.player_1.up = true;
 				break;
 			case 's':
@@ -302,6 +297,7 @@ class Local extends HTMLElement {
 	handleKeyUp(event) {
 		switch (event.key) {
 			case 'w':
+			case 'z':
 				this.player_1.up = false;
 				break;
 			case 's':

@@ -20,6 +20,9 @@ class EditUserSerializer(serializers.ModelSerializer):
             "banner_url",
             "birth_date",
         ]
+        extra_kwargs = {
+            "password": {"write_only": True},
+        }
 
     def validate_username(self, value):
         return verify_username(value)
@@ -32,15 +35,18 @@ class EditUserSerializer(serializers.ModelSerializer):
         password_confirmation = self.initial_data["password_confirmation"]
         if password and password_confirmation and password != password_confirmation:
             raise serializers.ValidationError("Passwords don't match")
-        return verify_password(password, self.initial_data["username"])
+        return verify_password(password)
 
     def update(self, instance, validated_data):
+        print(validated_data)
+        if instance.has_ft and "email" in validated_data:
+            raise serializers.ValidationError("You can't change your email address")
         user = super().update(instance, validated_data)
         try:
             user.set_password(validated_data["password"])
-            user.save()
         except KeyError:
             pass
+        user.save()
         return user
 
 
@@ -78,7 +84,7 @@ class UserSerializer(serializers.ModelSerializer):
         password_confirmation = self.initial_data["password_confirmation"]
         if password and password_confirmation and password != password_confirmation:
             raise serializers.ValidationError("Passwords don't match")
-        return verify_password(password, self.initial_data["username"])
+        return verify_password(password)
 
     def validate_birth_date(self, value):
         return verify_date(value)

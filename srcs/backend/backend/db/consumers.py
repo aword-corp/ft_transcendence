@@ -47,7 +47,7 @@ class UpdateConsumer(AsyncWebsocketConsumer):
                             await self.channel_layer.send(
                                 chnl,
                                 {
-                                    "type": "user.connected.sent",
+                                    "type": "user.connected.received",
                                     "from": self.user.username,
                                 },
                             )
@@ -78,7 +78,7 @@ class UpdateConsumer(AsyncWebsocketConsumer):
                                 await self.channel_layer.send(
                                     chnl,
                                     {
-                                        "type": "user.disconnected.sent",
+                                        "type": "user.disconnected.received",
                                         "from": self.user.username,
                                     },
                                 )
@@ -178,10 +178,10 @@ class UpdateConsumer(AsyncWebsocketConsumer):
     async def profile_update_received(self, event):
         await self.send(json.dumps(event))
 
-    async def user_connected_sent(self, event):
+    async def user_connected_received(self, event):
         await self.send(json.dumps(event))
 
-    async def user_disconnected_sent(self, event):
+    async def user_disconnected_received(self, event):
         await self.send(json.dumps(event))
 
     async def duel_start_sent(self, event):

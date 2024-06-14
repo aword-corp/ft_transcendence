@@ -126,7 +126,6 @@ def RegisterView(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-@throttle_classes([FivePerMinuteUserThrottle])
 def EditProfileView(request):
     try:
         user = User.objects.get(id=request.user.id)
@@ -161,7 +160,7 @@ def EditProfileView(request):
                     )
 
         return Response(serializer.data, status=status.HTTP_200_OK)
-    except KeyError:
+    except KeyError as e:
         return Response(
             {"error": "Missing required field."},
             status=status.HTTP_400_BAD_REQUEST,
@@ -411,6 +410,9 @@ def UserSelfProfileView(request):
                 "user": {
                     "display_name": user.display_name,
                     "username": user.username,
+                    "email": user.email,
+                    "has_ft": user.has_ft,
+                    "birth_date": user.birth_date,
                     "bio": user.bio,
                     "region": user.get_region_display(),
                     "country_code": user.country_code,
@@ -819,6 +821,7 @@ def UserDuelRequestAdd(request, name: str):
                             "from": request.user.username,
                             "to": user.username,
                             "channel_id": channel.id,
+                            "channel": channel.name,
                         },
                     )
 
@@ -833,6 +836,7 @@ def UserDuelRequestAdd(request, name: str):
                             "from": request.user.username,
                             "to": user.username,
                             "channel_id": channel.id,
+                            "channel": channel.name,
                         },
                     )
 
@@ -871,6 +875,7 @@ def UserDuelRequestAdd(request, name: str):
                                 "type": "channel.message.sent",
                                 "from": request.user.username,
                                 "channel_id": channel.id,
+                                "channel": channel.name,
                                 "message_id": message.id,
                             },
                         )
@@ -933,6 +938,7 @@ def UserDuelRequestAdd(request, name: str):
                             "type": "channel.message.sent",
                             "from": request.user.username,
                             "channel_id": channel.id,
+                            "channel": channel.name,
                             "message_id": message.id,
                         },
                     )
@@ -1482,6 +1488,7 @@ def channel_username(request, name: str):
                             "from": request.user.username,
                             "to": user.username,
                             "channel_id": channel.id,
+                            "channel": channel.name,
                         },
                     )
 
@@ -1496,6 +1503,7 @@ def channel_username(request, name: str):
                             "from": request.user.username,
                             "to": user.username,
                             "channel_id": channel.id,
+                            "channel": channel.name,
                         },
                     )
 
@@ -1571,6 +1579,7 @@ def channel(request):
                         "type": "channel.creation.sent",
                         "from": request.user.username,
                         "channel_id": channel.id,
+                        "channel": channel.name,
                     },
                 )
 
@@ -1679,6 +1688,7 @@ def channel_id(request, id: int):
                                 "type": "channel.edit.sent",
                                 "from": request.user.username,
                                 "channel_id": channel.id,
+                                "channel": channel.name,
                             },
                         )
 
@@ -1726,6 +1736,7 @@ def channel_id(request, id: int):
                                 "type": "channel.delete.sent",
                                 "from": request.user.username,
                                 "channel_id": channel.id,
+                                "channel": channel.name,
                             },
                         )
 
@@ -1772,6 +1783,7 @@ def channel_messages(request, id: int):
                                     "type": "channel.view.sent",
                                     "from": request.user.username,
                                     "channel_id": channel.id,
+                                    "channel": channel.name,
                                 },
                             )
 
@@ -1844,9 +1856,14 @@ def channel_messages(request, id: int):
                         async_to_sync(channel_layer.send)(
                             layer_channel,
                             {
-                                "type": "channel.message.sent",
+                                "type": "channel.message.received"
+                                if user.id != request.user.id
+                                else "channel.message.sent",
                                 "from": request.user.username,
                                 "channel_id": channel.id,
+                                "channel": channel.name
+                                if channel.channel_type == GroupChannel.Type.GROUP
+                                else None,
                                 "message_id": message.id,
                             },
                         )
@@ -1942,6 +1959,7 @@ def channel_messages_id(request, channel_id: int, message_id: int):
                                 "type": "channel.message.edited",
                                 "from": request.user.username,
                                 "channel_id": channel.id,
+                                "channel": channel.name,
                                 "message_id": message.id,
                             },
                         )
@@ -1981,6 +1999,7 @@ def channel_messages_id(request, channel_id: int, message_id: int):
                                 "type": "channel.message.deleted",
                                 "from": request.user.username,
                                 "channel_id": channel.id,
+                                "channel": channel.name,
                                 "message_id": message.id,
                             },
                         )

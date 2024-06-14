@@ -50,7 +50,7 @@ def check_repeating_chars(sequence, max_repeat):
     return False
 
 
-def verify_password(password, username):
+def verify_password(password):
     uppers = lowers = symbols = digits = 0
     for char in password:
         uppers += char.isupper()
@@ -67,8 +67,6 @@ def verify_password(password, username):
         raise ValidationError(
             f"At least {ALNUM_MIN_PASSWORD} upper letter, {ALNUM_MIN_PASSWORD} lower letter, {ALNUM_MIN_PASSWORD} digit, {ALNUM_MIN_PASSWORD} symbol are required"
         )
-    if username in password:
-        raise ValidationError("Username must not be part of the password")
     if check_repeating_chars(password, MAX_REPEAT):
         raise ValidationError(
             f"There must be not more a sequence of {MAX_REPEAT} following or repeating characters"

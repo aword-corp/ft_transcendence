@@ -1,10 +1,10 @@
 import { router } from "../main.js";
 
 class AnonNavbar extends HTMLElement {
-	constructor() {
-		super();
+    constructor() {
+        super();
 
-		this.innerHTML = `
+        this.innerHTML = `
             <div class="left-nav">
                 <a href="/" data-link id="Home">Home</a>
                 <a href="/clicks" data-link id="Clicks">Clicks</a>
@@ -15,16 +15,16 @@ class AnonNavbar extends HTMLElement {
                 <a href="/auth/register" data-link id="Register">Register</a>
             </div>
         `;
-	}
+    }
 }
 
 customElements.define("anon-nav-bar", AnonNavbar);
 
 class Navbar extends HTMLElement {
-	constructor() {
-		super();
+    constructor() {
+        super();
 
-		this.innerHTML = `
+        this.innerHTML = `
             <div class="left-nav">
                 <a href="/" data-link id="Home">Home</a>
                 <a href="/play" data-link id="Play">Play</a>
@@ -34,10 +34,11 @@ class Navbar extends HTMLElement {
                 <a href="/pong" data-link id="Pong">Pong</a>
             </div>
             <div class="right-nav">
+                <a href="/profile" data-link id="Profile">Profile</a>
                 <a href="/auth/logout" data-link id="Logout">Logout</a>
             </div>
         `;
-	}
+    }
 }
 
 customElements.define("nav-bar", Navbar);

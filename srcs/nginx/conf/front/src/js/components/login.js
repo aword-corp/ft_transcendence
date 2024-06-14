@@ -16,6 +16,10 @@ class Login extends HTMLElement {
                     <label class="sub_title" for="id_password">Password</label>
                     <input id="id_password" class="input" type="password" name="password" placeholder="Enter your password" required>
                 </div>
+				<div id="otp-input" class="form_group" style="visibility: hidden;">
+					<label class="sub_title" for="id_otp">2fa code</label>
+					<input id="id_otp" class="input" type="text" name="otp" placeholder="Enter 2fa code from your auth app">
+				</div>
                 
                 <button class="btn" type="submit">SIGN IN</button>
                 <p id="form-status"></p>
@@ -55,7 +59,7 @@ class Login extends HTMLElement {
 			const status = response.status;
 			if (status != 200) {
 				if (json.detail.includes("validation")) {
-					document.getElementById("otp-input").classList.remove("hidden");
+					document.getElementById("otp-input").style.visibility = "visible";
 					document.getElementById("id_otp").required = true;
 					url = "/api/auth/login/verify";
 				}

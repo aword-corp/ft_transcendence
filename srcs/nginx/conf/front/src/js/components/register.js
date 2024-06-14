@@ -287,6 +287,7 @@ class Register extends HTMLElement {
                     <div class="form_group">
                         <label class="sub_title" for="id_region">Region</label>
                         <select name="region" id="id_region" class="input">
+                            <option value selected>---------</option>
                             <option value="eu-we">Europe West</option>
                             <option value="eu-ea">Europe East</option>
                             <option value="eu-no">Europe North</option>
@@ -309,6 +310,7 @@ class Register extends HTMLElement {
                     <div class="form_group">
                         <label class="sub_title" for="id_language">Language</label>
                         <select name="language" id="id_language" class="input">
+                            <option value selected>---------</option>
                             <option value="FR-FR">French</option>
                             <option value="EN-US">English</option>
                             <option value="CH-ZH">Chinese</option>
@@ -317,7 +319,7 @@ class Register extends HTMLElement {
                     <div>
                         <button class="btn" type="submit">SIGN UP</button>
                         <p id="form-status"></p>
-                        <p>Have an Account? <a class="link" href="/auth/login">Login Here!</a></p>
+                        <p>Have an Account? <a class="link" data-link href="/auth/login">Login Here!</a></p>
                     </div>
                 </form>
             </div>

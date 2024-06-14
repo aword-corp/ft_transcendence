@@ -16,7 +16,7 @@ class Channel extends HTMLElement {
 
 		updateSocket.onmessage = (e) => {
 			var data = JSON.parse(e.data);
-			if (data.type.includes("channel") || data.type.includes("dm") || data.type.includes("block")) {
+			if (data.type && data.type.includes("channel") || data.type.includes("dm") || data.type.includes("block")) {
 				this.refreshChannel(this.getAttribute("id"));
 			}
 		};

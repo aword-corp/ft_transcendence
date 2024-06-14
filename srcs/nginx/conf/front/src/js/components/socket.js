@@ -16,22 +16,79 @@ export function closeSocketClick() {
 
 export var updateSocket = undefined;
 
+export var update_interval = undefined;
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 export function initSocketUpdate() {
 	if (updateSocket)
 		return;
 	updateSocket = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/api/ws/update/');
+	updateSocket.addEventListener("message", defaultSocketUpdateOnMessage);
+	update_interval = setInterval(async () => {
+		let notifications = notification_queue.slice();
+		let message = "";
+		for (const notification of notifications) {
+			document.getElementById("notification-system").style.visibility = "visible";
+			switch (notification.type) {
+				case "friend.request.received":
+					message = `You received a friend request from ${notification.from}.`;
+					break;
+				case "friend.accepted.received":
+					message = `${notification.from} is now your friend.`;
+					break;
+				case "channel.message.received":
+					message = notification.channel ? `${notification.from} sent a message in ${notification.channel}.` : `${notification.from} sent you a message.`;
+					break;
+				case "user.connected.received":
+					message = `${notification.from} is now online.`;
+					break;
+				case "user.disconnected.received":
+					message = `${notification.from} is now offline.`;
+					break;
+				case "duel.request.received":
+					message = `${notification.from} sent you a duel request.`;
+					break;
+				case "duel.start.received":
+					message = `A duel agains ${notification.from} started.`;
+					break;
+			}
+			notification_queue.shift();
+			document.getElementById("notification-system").innerHTML = message;
+			await sleep(3000);
+			document.getElementById("notification-system").innerHTML = "";
+			document.getElementById("notification-system").style.visibility = "hidden";
+			await sleep(500);
+		}
+	}, 5000);
 }
 
 export function closeSocketUpdate() {
 	if (updateSocket && updateSocket.readyState === WebSocket.OPEN)
 		updateSocket.close();
+	if (update_interval) {
+		clearInterval(update_interval);
+		update_interval = undefined;
+	}
+	if (updateSocket)
+		updateSocket.removeEventListener("message", defaultSocketUpdateOnMessage);
 	updateSocket = undefined;
 }
 
+export var notification_queue = [];
+
 export function defaultSocketUpdateOnMessage(e) {
 	var data = JSON.parse(e.data);
-	if (data) {
-		console.log(data);
+	if (data && data.type) {
+		if (data.type.includes("received") &&
+			(
+				data.type.includes("friend.request.received")
+				|| data.type.includes("friend.accepted")
+				|| data.type.includes("channel.message")
+				|| data.type.includes("connected")
+				|| data.type.includes("duel")
+			))
+			notification_queue.push(data);
 	}
 }
 

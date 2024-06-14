@@ -176,7 +176,10 @@ class User(AbstractBaseUser):
 
     language = models.CharField(choices=Language.choices, max_length=5)
     avatar_url = models.ImageField(
-        max_length=256, null=True, upload_to="medias/users/avatar/"
+        max_length=256,
+        null=True,
+        upload_to="medias/users/avatar/",
+        default="discordyellow.png",
     )
     banner_url = models.ImageField(
         max_length=256, null=True, upload_to="medias/users/banner/"

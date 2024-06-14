@@ -18,7 +18,7 @@ class Leaderboard extends HTMLElement {
 				if (objIsEmpty(leaderboardData)) {
 					leaderboardElement.innerText = "No data";
 					leaderboardElement.classList.add("leaderboard-align-text");
-					return ;
+					return;
 				}
 
 				leaderboardElement.innerHTML = '';
@@ -44,25 +44,26 @@ class Leaderboard extends HTMLElement {
 				const tbody = table.createTBody();
 				Object.entries(leaderboardData).forEach(([name, score]) => {
 					if (!name || !name.length)
-						return ;
+						return;
 					const row = tbody.insertRow();
 					const nameCell = row.insertCell();
 					const scoreCell = row.insertCell();
-	
+
 					const profile = document.createElement('a');
 					profile.textContent = name;
 					profile.href = `/profile/${name}`;
+					profile.setAttribute('data-link', '');
 					nameCell.appendChild(profile);
 
 					nameCell.style.textAlign = 'center';
 					nameCell.style.border = '1px solid black';
 					nameCell.style.padding = '8px';
-					
+
 					scoreCell.textContent = Math.trunc(score);
 					scoreCell.style.textAlign = 'center';
 					scoreCell.style.border = '1px solid black';
 					scoreCell.style.padding = '8px';
-					
+
 				});
 
 				leaderboardElement.appendChild(table);

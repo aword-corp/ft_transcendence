@@ -257,7 +257,7 @@ class Network:
                 # Update AI if it can be updated
                 _input = [ball.x, ball.y, ball.dx, ball.dy, bot.y]
                 # AI Move
-                move, = brain.predict(_input)
+                (move,) = brain.predict(_input)
                 # print(f"AI {move = :.5f}")
                 bot.up = move > 2 / 3
                 bot.down = move < 1 / 3
@@ -364,7 +364,7 @@ class Network:
                 best_layers = deepcopy(self.layers)
         self.layers = best_layers
         print("AI Training finished")
-    
+
     def evaluate(self):
         self.fitness = 0
         player1: Paddle = Paddle(
@@ -408,7 +408,7 @@ class Network:
             # Update AI if it can be updated
             _input = [ball.x, ball.y, ball.dx, ball.dy, bot.y]
             # AI Move
-            move, = self.predict(_input)
+            (move,) = self.predict(_input)
             # print(f"AI {move = :.5f}")
             bot.up = move > 2 / 3
             bot.down = move < 1 / 3
@@ -483,9 +483,7 @@ class Network:
                 ball.dx = speed * math.cos(bounceAngle)
                 ball.dy = speed * -math.sin(bounceAngle)
 
-            wentThrough2 = (
-                old_x + ball.radius < bot.x and ball.x + ball.radius >= bot.x
-            )
+            wentThrough2 = old_x + ball.radius < bot.x and ball.x + ball.radius >= bot.x
             if (
                 wentThrough2
                 and bot.y <= ball.y + ball.radius
@@ -499,12 +497,13 @@ class Network:
                 speed = (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION
                 ball.dx = speed * -math.cos(bounceAngle)
                 ball.dy = speed * -math.sin(bounceAngle)
-        
+
         self.fitness += bot.score - player1.score
 
     def predict(self, data) -> List[float]:
         outputs = self.forward_propagate(data)
         return outputs
+
 
 def child(parents, old_fit):
     a, b = random.sample(parents, 2)
@@ -513,18 +512,26 @@ def child(parents, old_fit):
     for la, lb in zip(a.layers, b.layers):
         clayers = []
         for na, nb in zip(la, lb):
-            nc = {"weights": [(wa + wb) / 2 for wa, wb in zip(na["weights"], nb["weights"])]}
+            nc = {
+                "weights": [
+                    (wa + wb) / 2 for wa, wb in zip(na["weights"], nb["weights"])
+                ]
+            }
             clayers.append(nc)
         c.layers.append(clayers)
     mutate(c, 0.8)
     return c
 
-def mutate(individual: Network, mutation_rate = 0.3):
+
+def mutate(individual: Network, mutation_rate=0.3):
     for layer in individual.layers:
         for neuron in layer:
             for i, w in enumerate(neuron["weights"]):
                 if random.random() < mutation_rate:
-                    neuron["weights"][i] += random.uniform(-mutation_rate, mutation_rate)
+                    neuron["weights"][i] += random.uniform(
+                        -mutation_rate, mutation_rate
+                    )
+
 
 def natural_selection(n_individuals, generations):
     old_pop = []
@@ -532,9 +539,9 @@ def natural_selection(n_individuals, generations):
     for generation in range(generations):
         for individual in population:
             individual.evaluate()
-        population.sort(key = lambda x: x.fitness)
+        population.sort(key=lambda x: x.fitness)
         best_score = population[-1].fitness
-        print(' '.join(f"{x.fitness:.3f}" for x in population))
+        print(" ".join(f"{x.fitness:.3f}" for x in population))
         print(f"Generation {generation + 1 : 3d} {best_score = :.3f}")
         # if best_score == -5.0:
         #     old_pop = population
@@ -543,10 +550,15 @@ def natural_selection(n_individuals, generations):
         bests = 10
         parents = population[-bests:]
         old_pop = population
-        population = [child(parents, best_score) for _ in range(n_individuals - bests)] + parents
+        population = [
+            child(parents, best_score) for _ in range(n_individuals - bests)
+        ] + parents
 
     assert old_pop
     print("Training successfully ended")
     return old_pop[-1]
 
-brain = natural_selection(120, 100)
+
+# brain = natural_selection(120, 100)
+
+brain = None
