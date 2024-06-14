@@ -61,7 +61,7 @@ class Local extends HTMLElement {
 
 	}
 
-	initGame() {
+	async initGame() {
 		this.ball = new Ball(
 			this.canvas.width / 2,
 			this.canvas.height / 2,
@@ -94,7 +94,18 @@ class Local extends HTMLElement {
 
 		this.gameFinished = false;
 
+		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+		this.drawCentralLine();
+		this.drawScores();
+
+		this.ball.draw(this.ctx);
+		this.player_1.draw(this.ctx);
+		this.player_2.draw(this.ctx);
+
+		this.player_1.update(this.canvas.height);
+		this.player_2.update(this.canvas.height);
+		await this.sleep(2000);
 		this.gameLoop();
 
 	}
