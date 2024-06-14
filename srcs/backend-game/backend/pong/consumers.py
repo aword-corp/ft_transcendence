@@ -428,54 +428,58 @@ class PongConsumer(AsyncWebsocketConsumer):
         await player1.user.arefresh_from_db()
         await player2.user.arefresh_from_db()
         await self.game.arefresh_from_db()
-        if player1.score > player2.score and self.game.game_type == Game.Type.MM:
-            diff = player2.user.elo - player1.user.elo
+        if player1.score > player2.score:
+            if self.game.game_type == Game.Type.MM:
+                diff = player2.user.elo - player1.user.elo
 
-            diff_divided = diff / 400
+                diff_divided = diff / 400
 
-            expected = 1 / (1 + 10**diff_divided)
+                expected = 1 / (1 + 10**diff_divided)
+
+                await player1.user.elo_history.acreate(elo=player1.user.elo)
+
+                self.game.elo_winner = player1.user.elo
+
+                player1.user.elo += 20 * (1 - expected)
+
+                await player2.user.elo_history.acreate(elo=player2.user.elo)
+
+                self.game.elo_loser = player2.user.elo
+
+                player2.user.elo += 20 * (0 - expected)
 
             self.game.winner = player1.user
             self.game.score_winner = player1.score
 
-            await player1.user.elo_history.acreate(elo=player1.user.elo)
-
-            self.game.elo_winner = player1.user.elo
-
-            player1.user.elo += 20 * (1 - expected)
-
             self.game.loser = player2.user
             self.game.score_loser = player2.score
 
-            await player2.user.elo_history.acreate(elo=player2.user.elo)
+        elif player1.score < player2.score:
+            if self.game.game_type == Game.Type.MM:
+                diff = player2.user.elo - player1.user.elo
 
-            self.game.elo_loser = player2.user.elo
+                diff_divided = diff / 400
 
-            player2.user.elo += 20 * (0 - expected)
-        elif player1.score < player2.score and self.game.game_type == Game.Type.MM:
-            diff = player2.user.elo - player1.user.elo
+                expected = 1 / (1 + 10**diff_divided)
 
-            diff_divided = diff / 400
+                await player1.user.elo_history.acreate(elo=player1.user.elo)
 
-            expected = 1 / (1 + 10**diff_divided)
+                self.game.elo_loser = player1.user.elo
+
+                player1.user.elo += 20 * (0 - expected)
+
+                await player2.user.elo_history.acreate(elo=player2.user.elo)
+
+                self.game.elo_winner = player2.user.elo
+
+                player2.user.elo += 20 * (1 - expected)
 
             self.game.loser = player1.user
             self.game.score_loser = player1.score
 
-            await player1.user.elo_history.acreate(elo=player1.user.elo)
-
-            self.game.elo_loser = player1.user.elo
-
-            player1.user.elo += 20 * (0 - expected)
-
             self.game.winner = player2.user
             self.game.score_winner = player2.score
 
-            await player2.user.elo_history.acreate(elo=player2.user.elo)
-
-            self.game.elo_winner = player2.user.elo
-
-            player2.user.elo += 20 * (1 - expected)
         if self.game.game_type == Game.Type.DUEL:
             await player1.user.duels.aremove(player2.user)
         player1.user.is_playing = False
@@ -585,11 +589,13 @@ class PongConsumer(AsyncWebsocketConsumer):
 
         await self.close()
 
+
 def rand_moment(speed):
-	angle = random.uniform(0.5, 1.5 * math.pi)
-	dx = speed * math.cos(angle)
-	dy = speed * math.sin(angle)
-	return dx, dy
+    angle = random.uniform(0.5, 1.5 * math.pi)
+    dx = speed * math.cos(angle)
+    dy = speed * math.sin(angle)
+    return dx, dy
+
 
 class PongAIConsumer(AsyncWebsocketConsumer):
     games = {}
@@ -608,7 +614,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
             await self.send(json.dumps({"error": "AI is not ready."}))
             await self.close()
             return
-    
+
         # if self.user.id not in self.games or self.games[self.user.id]["state"] == 2:
         self.games[self.user.id] = {
             "ball": Ball(
@@ -690,7 +696,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
             if now - ai_last_fetch >= ONE_SECOND_NS / 100:
                 # AI Move
                 output = brain.activate((player2.y, ball.x, ball.y, ball.dx, ball.dy))
-                decision = max(range(len(output)), key = output.__getitem__)
+                decision = max(range(len(output)), key=output.__getitem__)
                 # decision = random.randint(0, 2) # Random move for tests
                 player2.up = decision == 2
                 player2.down = decision == 1
@@ -1058,7 +1064,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
 
     active_tournament = [False]
 
-    queue = []
+    queue = [[]]
 
     @database_sync_to_async
     def create_tournament(self, user, starting_at, ended_at):
@@ -1111,9 +1117,9 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             f"user_{self.user.id}_tournament_channel_name", self.channel_name
         )
 
-        self.queue.append(self.user)
+        self.queue[0].append(self.user)
 
-        print(f"Number of users in queue {len(self.queue)}")
+        print(f"Number of users in queue {len(self.queue[0])}")
         if not self.active_tournament[0]:
             self.active_tournament[0] = True
             print("Tournament task started")
@@ -1126,40 +1132,43 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             "tournament",
             {
                 "type": "update.message",
-                "users": len(self.queue),
+                "users": len(self.queue[0]),
                 # "time_left": (time_in_queue - datetime.now()).strftime("%H:%M:%S"),
             },
         )
 
     async def tournament(self):
         while True:
-            while not len(self.queue):
+            while len(self.queue[0]) < 2:
                 await asyncio.sleep(1)
 
             starting_at = datetime.now() + timedelta(seconds=15)
             ended_at = datetime.now() + timedelta(hours=2)
 
-            while len(self.queue) < 32 and datetime.now() < starting_at:
+            while len(self.queue[0]) < 32 and datetime.now() < starting_at:
                 await asyncio.sleep(1)
 
-            if len(self.queue) < 2:
-                self.queue = []
+            if len(self.queue[0]) < 2:
+                self.queue[0] = []
                 await self.channel_layer.group_send(
                     "tournament",
                     {"type": "discard.everyone"},
                 )
-                return
+                continue
 
             tournament = await self.create_tournament(
-                self.queue[0], starting_at, ended_at
+                self.queue[0][0], starting_at, ended_at
             )
             self.tournaments.append(tournament)
 
             players = []
-            for player in self.queue:
+            for player in self.queue[0]:
+                usr_channel_name = await cache.aget(
+                    f"user_{player.id}_tournament_channel_name"
+                )
                 await tournament.users.aadd(player)
-                players.append(player)
-            self.queue = []
+                players.append((player, usr_channel_name))
+            self.queue[0] = []
             tournament.starting_at = datetime.now()
             tournament.state = Tournament.State.PLAYING
             await tournament.asave()
@@ -1182,10 +1191,11 @@ class TournamentConsumer(AsyncWebsocketConsumer):
                 else:
                     tree.append(players[i])
 
-            players = await self.collect_winners(tree)
+            winners = await self.collect_winners(tree)
+            players = [(user, chnl) for (user, chnl) in players if user.id in winners]
             current_round += 1
 
-        tournament.winner = players[0]
+        tournament.winner = players[0][0]
         print(f"Winner is {players[0]}")
         tournament.state = Tournament.State.ENDED
         await tournament.asave()
@@ -1195,49 +1205,52 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         await asyncio.sleep(2)
         game = await Game.objects.acreate(
             uuid=uuid.uuid4(),
-            region=player1.region,
+            region=player1[0].region,
             state=Game.State.WAITING,
             game_type=Game.Type.TOURNAMENT,
         )
-        await game.users.aadd(player1)
-        await game.users.aadd(player2)
+        await game.users.aadd(player1[0])
+        await game.users.aadd(player2[0])
         await game.asave()
         # print(player1)
         # print(player1.channel_name)
         # print(player2)
         # print(player2.channel_name)
-        usr_channel_name = await cache.aget(
-            f"user_{player1.id}_tournament_channel_name"
-        )
         await self.channel_layer.send(
-            usr_channel_name,
+            player1[1],
             {"type": "game.start", "game_id": str(game.uuid)},
         )
-        usr_channel_name = await cache.aget(
-            f"user_{player2.id}_tournament_channel_name"
-        )
         await self.channel_layer.send(
-            usr_channel_name,
+            player2[1],
             {"type": "game.start", "game_id": str(game.uuid)},
         )
-        await player1.arefresh_from_db()
-        player1.is_playing = True
-        await player1.asave()
-        await player2.arefresh_from_db()
-        player2.is_playing = True
-        await player2.asave()
+        await player1[0].arefresh_from_db()
+        player1[0].is_playing = True
+        await player1[0].asave()
+        await player2[0].arefresh_from_db()
+        player2[0].is_playing = True
+        await player2[0].asave()
 
         return game
 
     async def collect_winners(self, tree):
         winners = []
+        tasks = []
         for game in tree:
             if isinstance(game, Game):
-                winner = await self.wait_game_winner(game)
-                winners.append(winner)
+                tasks.append((self.wait_game_winner(game), True))
             else:
-                winners.append(game)
-                await self.send(text_data=json.dumps({"type": "game_waiting"}))
+                tasks.append((game[0].id, False))
+                print(game)
+                await self.channel_layer.send(
+                    game[1],
+                    {"type": "game.waiting"},
+                )
+        for task, is_task in tasks:
+            if is_task:
+                winners.append((await task).id)
+            else:
+                winners.append(task)
         return winners
 
     async def wait_game_winner(self, game: Game):
@@ -1256,21 +1269,23 @@ class TournamentConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         try:
-            await self.user.arefresh_from_db()
             usr_channel_name = await cache.aget(
                 f"user_{self.user.id}_tournament_channel_name"
             )
             if self.channel_name == usr_channel_name:
                 await cache.adelete(f"user_{self.user.id}_tournament_channel_name")
                 try:
-                    self.queue.remove(self.user)
+                    for user in self.queue[0]:
+                        if user.id == self.user.id:
+                            self.queue[0].remove(user)
+
                 except ValueError:
                     pass
                 await self.channel_layer.group_send(
                     "tournament",
                     {
                         "type": "update.message",
-                        "users": len(self.queue),
+                        "users": len(self.queue[0]),
                         # "time_left": (time_in_queue - datetime.now()).strftime("%H:%M:%S"),
                     },
                 )
@@ -1298,3 +1313,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({"details": "Connection closed."}))
 
         await self.close()
+
+    async def game_waiting(self, event):
+        print(event)
+        await self.send(json.dumps(event))

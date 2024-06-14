@@ -28,6 +28,7 @@ class TournamentQueue extends HTMLElement {
 				`;
 			} else if (data.type == "game.waiting") {
 				document.getElementById("status").innerText = `Currently waiting`;
+				document.getElementById("game").innerHTML = `<img src="https://media4.giphy.com/media/QBd2kLB5qDmysEXre9/giphy.gif?cid=6c09b9524n5r3ou51c7v4t9fz23gm3qymowstl74ps138sxn&ep=v1_internal_gif_by_id&rid=giphy.gif&ct=g"/>`
 			}
 			else if (data.type == "update.message") {
 				console.log(data.users);
