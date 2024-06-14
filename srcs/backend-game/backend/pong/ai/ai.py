@@ -553,12 +553,13 @@ def natural_selection(n_individuals, generations):
         population = [
             child(parents, best_score) for _ in range(n_individuals - bests)
         ] + parents
+        population = [
+            child(parents, best_score) for _ in range(n_individuals - bests)
+        ] + parents
 
     assert old_pop
     print("Training successfully ended")
     return old_pop[-1]
 
 
-# brain = natural_selection(120, 100)
-
-brain = None
+brain = natural_selection(120, 100)

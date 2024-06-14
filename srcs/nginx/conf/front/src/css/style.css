@@ -1,13 +1,13 @@
 /* Root variables */
 :root {
-  --primary: #020202; /* Background color */
-  --secondary: #0d2818; /* Primary green */
-  --secondary-light: #04471c; /* Darker green for hover states */
-  --accent: #16db65; /* Accent green */
-  --neutral: #eeeeee; /* Neutral light color */
-  --error-color: #ff4d4d; /* Error color */
-  --button-color: #de5499; /* Button color */
-  --box-shadow-color: #e99f4c; /* Box shadow color */
+    --primary: #020202; /* Background color */
+    --secondary: #0d2818; /* Primary green */
+    --secondary-light: #04471c; /* Darker green for hover states */
+    --accent: #16db65; /* Accent green */
+    --neutral: #eeeeee; /* Neutral light color */
+    --error-color: #ff4d4d; /* Error color */
+    --button-color: #DE5499; /* Button color */
+    --box-shadow-color: #0d2818; /* Box shadow color */
 
   font-size: 16px; /* Increased base font size */
 }
@@ -400,4 +400,168 @@ body {
 
 .play-button {
   margin: 0.5em 0;
+}
+
+
+/* Scoreboard Styles */
+.scoreboard {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 1rem;
+    color: var(--neutral);
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    border: 2px solid var(--secondary);
+    border-radius: 10px;
+}
+
+.player-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: var(--secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    box-shadow: 0 0 10px var(--accent);
+}
+
+#player1-info {
+    text-align: left;
+}
+
+#player2-info {
+    text-align: right;
+}
+
+#player1-name, #player2-name {
+    margin-bottom: 0.5rem;
+    color: var(--accent);
+}
+
+#player1-score, #player2-score {
+    color: var(--neutral);
+}
+
+/* Canvas Styles */
+.pongCanvas {
+    margin-top: 1rem;
+    width: 100%;
+    height: auto;
+    max-width: 800px;
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+}
+
+
+/* Messages area styles */
+.messages-area {
+    flex: 1;
+    background-color: var(--primary);
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.message {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    background-color: var(--secondary-light);
+    color: var(--neutral);
+}
+
+/* Sender area styles */
+.sender-area {
+    background-color: var(--primary);
+    width: 100%;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.input-place {
+    display: flex;
+    align-items: center;
+    background-color: var(--secondary-light);
+    border-radius: 7px;
+    height: 40px;
+    width: 100%;
+    padding: 0 10px;
+    border: 1px solid var(--secondary);
+}
+
+.send-input {
+    outline: none;
+    border: none;
+    background: none;
+    height: 100%;
+    width: 100%;
+    color: var(--neutral);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.send-input::placeholder {
+    color: var(--accent);
+}
+
+.send {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.send-icon {
+    width: 17px;
+    fill: var(--accent);
+}
+
+
+
+/* Message Styles */
+.message_u {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    background-color: var(--secondary-light);
+    color: var(--neutral);
+    gap: 10px; /* Space between items */
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.profile-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.spectate-image {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+}
+
+.text-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.text-container span {
+    color: var(--neutral);
+    word-wrap: break-word;
+    white-space: normal;
 }
