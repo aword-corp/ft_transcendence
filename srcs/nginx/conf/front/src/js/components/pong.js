@@ -5,7 +5,6 @@ class PongGame extends HTMLElement {
 		super();
 
 		this.innerHTML = `
-			<canvas tabindex='1' id="pongCanvas" class="pongCanvas"></canvas>
 			<h1 style="text-align: center">Controls: W/Z and S</h1>
 			<div id="chat">
 			<div class="scoreboard">
