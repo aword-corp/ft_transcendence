@@ -54,8 +54,8 @@ const routes = {
 	"/channels": { title: channels_title, render: channels_view, auth: "yes" },
 	"/pong/:uuid": { title: pong_title, render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket }, // AI will go here with game id "ai"
 	"/pong/:uuid/iframe": { title: pong_title, render: pong_view, auth: "yes", constructor: initPongSocket, destructor: closePongSocket, iframe: true },
-	"/pong_local": { title: pong_local_title, render: pong_local_view, auth: "yes" },
-	"/pong_local_tournament": { title: pong_local_tournament_title, render: pong_local_tournament_view, auth: "yes" },
+	"/pong_local": { title: pong_local_title, render: pong_local_view, auth: "no" },
+	"/pong_local_tournament": { title: pong_local_tournament_title, render: pong_local_tournament_view, auth: "no" },
 	"/auth/login": { title: login_title, render: login_view, auth: "no_only" },
 	"/auth/ft/callback": { title: ft_callback_title, render: ft_callback_view, auth: "no_only" },
 	"/auth/register": { title: register_title, render: register_view, auth: "no_only" },
