@@ -33,11 +33,11 @@ class EditProfile extends HTMLElement {
 						</p>
 						<p>
 							<label for="id_display_name">Display name:</label>
-							<input id="id_display_name" type=text name="display_name" max_length="64" ${json.user.display_name ? `value=${json.user.display_name}` : ""}>
+							<input id="id_display_name" type=text name="display_name" max_length="64" ${json.user.display_name ? `value="${json.user.display_name}"` : ""}>
 						</p>
 						<p>
 							<label for="id_bio">Bio:</label>
-							<input id="id_bio" type=text name="bio" max_length="2048" ${json.user.bio ? `value=${json.user.bio}` : ""}>
+							<input id="id_bio" type=text name="bio" max_length="2048" ${json.user.bio ? `value="${json.user.bio}"` : ""}>
 						</p>
 						<p>
 							<label for="id_password">Password:</label>
@@ -50,7 +50,7 @@ class EditProfile extends HTMLElement {
 						
 						<p>
 							<label for="id_birth_date">Birth date:</label>
-							<input id="id_birth_date" type=date name="birth_date" ${json.user.birth_date ? `value=${json.user.birth_date}` : ""}>
+							<input id="id_birth_date" type=date name="birth_date" ${json.user.birth_date ? `value="${json.user.birth_date}"` : ""}>
 						</p>
 						${json.user.avatar_url ? `<img src="${json.user.avatar_url}" alt="avatar" />` : ""}
 						<p>
