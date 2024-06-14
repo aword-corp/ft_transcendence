@@ -209,8 +209,6 @@ class Local extends HTMLElement {
 			this.ball.dy *= -1;
 		}
 
-		// TODO might have to switch this check and the next one for really high speed cases
-		// check for left and right walls collision.
 		if (this.ball.x - this.ball.radius < 0) {
 			this.reset_ball(1);
 			this.reset_paddles();

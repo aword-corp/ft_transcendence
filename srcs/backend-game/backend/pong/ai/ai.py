@@ -3,7 +3,6 @@ import random
 import math
 import neat
 import os
-import time
 import pickle
 
 ACCELERATION = 1.05
@@ -50,11 +49,15 @@ class Ball:
 		self.speed = speed
 		self.radius = radius
 
+
 def rand_moment(speed):
 	angle = random.uniform(0.5, 1.5 * math.pi)
 	dx = speed * math.cos(angle)
 	dy = speed * math.sin(angle)
 	return dx, dy
+
+def sigmoid(x):
+	return 1.0 / (1.0 + math.exp(-x))
 
 def train_ai(genome1, genome2, config):
 	"""
@@ -103,22 +106,32 @@ def train_ai(genome1, genome2, config):
 
 	ONE_SECOND_NS = 1_000_000_000
 	max_speed = 0.03
-	max_hits = 100
-	max_ticks = 8000
+	max_hits = 50
+	max_ticks = 7000
 
 	ticks = 0
 	running = True
 	while ticks < max_ticks and running and player1.score + player2.score < 1 and player1.hits < max_hits and player2.hits < max_hits:
+
 		# AI Move
-		if ticks % 1 == 0:
-			output1 = net1.activate((player1.y, ball.x, ball.y, ball.dx, ball.dy))
-			decision1 = max(range(len(output1)), key = output1.__getitem__)
-			player1.up = decision1 == 2
-			player1.down = decision1 == 1
+		if ticks % 7 == 0:
+			output1 = net1.activate(
+				(
+					player1.y + player1.half_height,
+					player2.y + player2.half_height,
+					ball.x, 
+					ball.y, 
+					ball.dx, 
+					ball.dy
+				)
+			)
+			up, down = map(sigmoid, output1)
+			player1.up = up > 0.5 and up > down
+			player1.down = down > 0.5 and down > up
 			player1.moves += player1.up ^ player1.down
 
 		if genome2:
-			output2 = net2.activate((player2.y, ball.x, ball.y, ball.dx, ball.dy))
+			output2 = net2.activate((player2.y, player1.y, ball.x, ball.y, ball.dx, ball.dy))
 			decision2 = max(range(len(output2)), key = output2.__getitem__)
 			player2.up = decision2 == 2
 			player2.down = decision2 == 1
@@ -209,7 +222,7 @@ def train_ai(genome1, genome2, config):
 			speed = min(max_speed, (ball.dx**2 + ball.dy**2) ** 0.5 * ACCELERATION)
 			ball.dx = speed * -math.cos(bounceAngle)
 			ball.dy = speed * -math.sin(bounceAngle)
-		
+
 		ticks += 1
 
 	genome1.fitness = player1.hits
@@ -230,7 +243,7 @@ def eval_genomes(genomes, config):
 		if force_quit:
 			quit()
 		# continue
-		# for j in range(i + 1, n): # Generational 1v1 training
+		# for j in range(i + 1, n):
 		# 	id1, genome1 = genomes[i]
 		# 	id2, genome2 = genomes[j]
 		# 	genome1.fitness = 0
@@ -256,12 +269,14 @@ config_path = os.path.join(local_dir, 'config.txt')
 config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction,
 						 neat.DefaultSpeciesSet, neat.DefaultStagnation,
 						 config_path)
+# Training phase
 # best_gen = run_neat(config)
 # brain = None
 # with open(f'winner_genome.pkl', 'wb') as f:
 #     pickle.dump(best_gen, f)
 # brain = neat.nn.FeedForwardNetwork.create(best_gen, config)
 
+# Deserealize pre-trained
 brain = None
 with open('./pong/ai/winner_genome.pkl', 'rb') as f:
     brain = pickle.load(f)

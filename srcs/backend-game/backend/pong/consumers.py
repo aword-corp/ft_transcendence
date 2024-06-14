@@ -3,15 +3,14 @@ from typing import List, Optional
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from db.models import Count, Elo, Game, User, Tournament
+from db.models import Count, Game, User, Tournament
 from math import pi, cos, sin
 import asyncio
 import uuid
 from datetime import datetime, timedelta
-from .ai.ai import Paddle, Ball, brain, ACCELERATION
+from .ai.ai import Paddle, Ball, brain, ACCELERATION, sigmoid
 import math
 import time
-import random
 from django.core.cache import cache
 
 # from colorama import Fore, Back, Style
@@ -589,14 +588,6 @@ class PongConsumer(AsyncWebsocketConsumer):
 
         await self.close()
 
-
-def rand_moment(speed):
-    angle = random.uniform(0.5, 1.5 * math.pi)
-    dx = speed * math.cos(angle)
-    dy = speed * math.sin(angle)
-    return dx, dy
-
-
 class PongAIConsumer(AsyncWebsocketConsumer):
     games = {}
 
@@ -620,8 +611,9 @@ class PongAIConsumer(AsyncWebsocketConsumer):
             "ball": Ball(
                 0.5,
                 0.5,
-                *rand_moment(0.008),
-                0.008,
+                0.004,
+                0.004,
+                0.004,
                 0.0128,
             ),
             "state": 0,
@@ -662,6 +654,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         if self.task:
             self.task.cancel()
+            self.task = None
 
     async def receive(self, text_data):
         data = json.loads(text_data)
@@ -693,13 +686,22 @@ class PongAIConsumer(AsyncWebsocketConsumer):
         while player1.score < 3 and player2.score < 3:
             # Update AI if it can be updated
             now = time.time_ns()
-            if now - ai_last_fetch >= ONE_SECOND_NS / 100:
+            if now - ai_last_fetch >= ONE_SECOND_NS:
                 # AI Move
-                output = brain.activate((player2.y, ball.x, ball.y, ball.dx, ball.dy))
-                decision = max(range(len(output)), key=output.__getitem__)
-                # decision = random.randint(0, 2) # Random move for tests
-                player2.up = decision == 2
-                player2.down = decision == 1
+                output = brain.activate(
+                    (
+                        player2.y + player2.half_height,
+                        player1.y + player1.half_height,
+                        ball.x, 
+                        ball.y, 
+                        ball.dx, 
+                        ball.dy
+                    )
+                )
+                up, down = map(sigmoid, output)
+                player2.up = up > 0.5 and up > down
+                player2.down = down > 0.5 and down > up
+                player2.moves += player2.up ^ player2.down
 
                 ai_last_fetch = now
 
@@ -735,7 +737,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
             if ball.x - ball.radius < 0:
                 ball.x = 0.5
                 ball.y = 0.5
-                ball.dx, ball.dy = rand_moment(ball.speed)
+                ball.dx = ball.dy = 0.004
                 player1.y = 0.5
                 player2.y = 0.5
                 player2.score += 1
@@ -754,7 +756,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
             elif ball.x + ball.radius > 1:
                 ball.x = 0.5
                 ball.y = 0.5
-                ball.dx, ball.dy = rand_moment(ball.speed)
+                ball.dx = ball.dy = 0.004
                 ball.dx = -ball.dx
                 player1.y = 0.5
                 player2.y = 0.5
