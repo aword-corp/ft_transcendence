@@ -894,7 +894,7 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
 
     elo_range_timer = {}
 
-    has_task = False
+    has_task = [False]
 
     async def connect(self):
         print(self.channel_name)
@@ -939,8 +939,8 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
         self.queue.append(self.user)
         self.region = self.user.region
 
-        if not self.has_task:
-            self.has_task = True
+        if not self.has_task[0]:
+            self.has_task[0] = True
             asyncio.create_task(self.matchmaking())
 
         await self.channel_layer.group_add("matchmaking", self.channel_name)
@@ -996,7 +996,7 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             for _ in range(2):
                 user, chnl = users.pop()
                 if channel_names[user.id] and channel_names[user.id] == chnl:
-                    await self.queue.append(user)
+                    self.queue.append(user)
                     await self.channel_layer.group_send(
                         "matchmaking",
                         {"type": "update.message", "users": len(self.queue)},
@@ -1062,19 +1062,18 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
 class TournamentConsumer(AsyncWebsocketConsumer):
     tournaments = []
 
-    active_tournament = False
+    active_tournament = [False]
 
     queue = []
 
     @database_sync_to_async
-    def create_tournament(self, user):
+    def create_tournament(self, user, starting_at, ended_at):
         return Tournament.objects.create(
             name="Tournament n" + str(len(Tournament.objects.all())),
             description="Regular Tournament",
             author=user,
-            created_at=datetime.now(),
-            starting_at=datetime.now() + timedelta(seconds=15),
-            ended_at=datetime.now() + timedelta(hours=2),
+            starting_at=starting_at,
+            ended_at=ended_at,
             state=Tournament.State.STARTING,
             region=user.region,
         )
@@ -1131,8 +1130,9 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         self.queue.append(self.user)
 
         print(f"Number of users in queue {len(self.queue)}")
-        if not self.active_tournament:
-            self.active_tournament = True
+        if not self.active_tournament[0]:
+            self.active_tournament[0] = True
+            print("Tournament task started")
             asyncio.create_task(self.tournament())
 
         await self.channel_layer.group_add("tournament", self.channel_name)
@@ -1148,32 +1148,39 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         )
 
     async def tournament(self):
-        if len(self.queue) == 0:
-            await self.send(json.dumps({"message": "Queue is empty"}))
-            return
+        while True:
+            while not len(self.queue):
+                await asyncio.sleep(1)
 
-        tournament = await self.create_tournament(self.queue[0])
-        self.tournaments.append(tournament)
+            starting_at = datetime.now() + timedelta(seconds=15)
+            ended_at = datetime.now() + timedelta(hours=2)
 
-        while len(self.queue) < 32 and datetime.now() < tournament.starting_at:
-            print(datetime.now(), tournament.starting_at)
-            await asyncio.sleep(1)
+            while len(self.queue) < 32 and datetime.now() < starting_at:
+                await asyncio.sleep(1)
 
-        players = []
-        for player in self.queue:
-            await tournament.users.aadd(player)
-            players.append(player)
-            try:
-                self.queue.remove(player)
-            except ValueError:
-                pass
-        tournament.starting_at = datetime.now()
-        tournament.state = Tournament.State.PLAYING
-        await tournament.asave()
+            if len(self.queue) < 2:
+                self.queue = []
+                await self.channel_layer.group_send(
+                    "tournament",
+                    {"type": "discard.everyone"},
+                )
+                return
 
-        await self.run_tournament(tournament, players)
+            tournament = await self.create_tournament(
+                self.queue[0], starting_at, ended_at
+            )
+            self.tournaments.append(tournament)
 
-        self.active_tournament = False
+            players = []
+            for player in self.queue:
+                await tournament.users.aadd(player)
+                players.append(player)
+            self.queue = []
+            tournament.starting_at = datetime.now()
+            tournament.state = Tournament.State.PLAYING
+            await tournament.asave()
+
+            await self.run_tournament(tournament, players)
 
     async def run_tournament(self, tournament, players):
         n_rounds = math.ceil(math.log2(len(players)))
@@ -1198,6 +1205,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         print(f"Winner is {players[0]}")
         tournament.state = Tournament.State.ENDED
         await tournament.asave()
+        print("Tournament ended")
 
     async def start_game(self, player1, player2):
         await asyncio.sleep(2)
@@ -1245,10 +1253,6 @@ class TournamentConsumer(AsyncWebsocketConsumer):
                 winners.append(winner)
             else:
                 winners.append(game)
-        # print(Fore.GREEN)
-        print(winners)
-        # print(Style.RESET_ALL)
-        print(await winners[0].get_tournament_channel_name())
         return winners
 
     async def wait_game_winner(self, game: Game):
@@ -1277,8 +1281,16 @@ class TournamentConsumer(AsyncWebsocketConsumer):
                     self.queue.remove(self.user)
                 except ValueError:
                     pass
+                await self.channel_layer.group_send(
+                    "tournament",
+                    {
+                        "type": "update.message",
+                        "users": len(self.queue),
+                        # "time_left": (time_in_queue - datetime.now()).strftime("%H:%M:%S"),
+                    },
+                )
 
-            await self.channel_layer.group_discard("matchmaking", self.channel_name)
+            await self.channel_layer.group_discard("tournament", self.channel_name)
 
         except AttributeError:
             pass
@@ -1296,3 +1308,8 @@ class TournamentConsumer(AsyncWebsocketConsumer):
                 }
             )
         )
+
+    async def discard_everyone(self, event):
+        await self.send(text_data=json.dumps({"details": "Connection closed."}))
+
+        await self.close()
