@@ -15,7 +15,7 @@ export function home_view() {
                         label="French"
                         kind="subtitles"
                         srclang="fr"
-                        src="https://cdn.acorp.games/assets/mushoku-s01-e21.vtt"
+                        src="/static/static/assets/mushoku-s01-e21.vtt"
                         default />
                 </video>
                 <video controls class="home-video" width=320>

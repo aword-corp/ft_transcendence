@@ -19,8 +19,7 @@ class TournamentQueue extends HTMLElement {
 			if (data.type == "game.start") {
 				console.log(data.game_id);
 				console.log(`Pushed state = ${"/pong/" + data.game_id}`)
-				// history.pushState("", "", "/pong/" + data.game_id);
-				// router();
+
 				let src = "/pong/" + data.game_id + "/iframe";
 				document.getElementById("status").innerText = `In game with id ${data.game_id}`;
 				document.getElementById("game").innerHTML = `
@@ -28,11 +27,10 @@ class TournamentQueue extends HTMLElement {
 					</iframe>
 				`;
 			} else if (data.type == "update.message") {
-				data.users.forEach((user) => {
-					console.log(user);
-				});
+				console.log(data.users);
 			} else {
-				console.log("whatever");
+				history.pushState("", "", "/");
+				router();
 			}
 		};
 	}

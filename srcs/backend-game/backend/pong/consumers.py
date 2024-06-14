@@ -906,6 +906,15 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
+        usr_channel_name = await cache.aget(
+            f"user_{self.user.id}_tournament_channel_name"
+        )
+
+        if usr_channel_name:
+            await self.send(json.dumps({"error": "You are already in a queue."}))
+            await self.close()
+            return
+
         usr_channel_name = await cache.aget(f"user_{self.user.id}_mm_channel_name")
 
         if usr_channel_name:
@@ -1053,6 +1062,8 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
 class TournamentConsumer(AsyncWebsocketConsumer):
     tournaments = []
 
+    active_tournament = False
+
     queue = []
 
     @database_sync_to_async
@@ -1087,7 +1098,18 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        if bool(self.user.tournament_channel_name):
+        usr_channel_name = await cache.aget(
+            f"user_{self.user.id}_tournament_channel_name"
+        )
+
+        if usr_channel_name:
+            await self.send(json.dumps({"error": "You are already in a queue."}))
+            await self.close()
+            return
+
+        usr_channel_name = await cache.aget(f"user_{self.user.id}_mm_channel_name")
+
+        if usr_channel_name:
             await self.send(json.dumps({"error": "You are already in a queue."}))
             await self.close()
             return
@@ -1102,26 +1124,25 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        await self.user.set_tournament_channel_name(self.channel_name)
-        await self.user.asave()
+        await cache.aset(
+            f"user_{self.user.id}_tournament_channel_name", self.channel_name
+        )
 
         self.queue.append(self.user)
 
         print(f"Number of users in queue {len(self.queue)}")
-        if len(self.queue) == 1:
+        if not self.active_tournament:
+            self.active_tournament = True
             asyncio.create_task(self.tournament())
 
         await self.channel_layer.group_add("tournament", self.channel_name)
 
-        users = []
-        for user in self.queue:
-            users.append(user.username)
         # time_in_queue = tournament.starting_at
         await self.channel_layer.group_send(
             "tournament",
             {
                 "type": "update.message",
-                "users": users,
+                "users": len(self.queue),
                 # "time_left": (time_in_queue - datetime.now()).strftime("%H:%M:%S"),
             },
         )
@@ -1142,12 +1163,17 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         for player in self.queue:
             await tournament.users.aadd(player)
             players.append(player)
-        self.queue = []
+            try:
+                self.queue.remove(player)
+            except ValueError:
+                pass
         tournament.starting_at = datetime.now()
         tournament.state = Tournament.State.PLAYING
         await tournament.asave()
 
         await self.run_tournament(tournament, players)
+
+        self.active_tournament = False
 
     async def run_tournament(self, tournament, players):
         n_rounds = math.ceil(math.log2(len(players)))
@@ -1188,15 +1214,20 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         # print(player1.channel_name)
         # print(player2)
         # print(player2.channel_name)
-        await self.channel_layer.send(
-            player1.tournament_channel_name,
-            {"type": "game.start", "game_id": str(game.uuid)},
+        usr_channel_name = await cache.aget(
+            f"user_{player1.id}_tournament_channel_name"
         )
         await self.channel_layer.send(
-            player2.tournament_channel_name,
+            usr_channel_name,
             {"type": "game.start", "game_id": str(game.uuid)},
         )
-
+        usr_channel_name = await cache.aget(
+            f"user_{player2.id}_tournament_channel_name"
+        )
+        await self.channel_layer.send(
+            usr_channel_name,
+            {"type": "game.start", "game_id": str(game.uuid)},
+        )
         await player1.arefresh_from_db()
         player1.is_playing = True
         await player1.asave()
@@ -1236,34 +1267,21 @@ class TournamentConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         try:
-            self.queue.remove(self.user)
-        except (ValueError, AttributeError):
-            return
+            await self.user.arefresh_from_db()
+            usr_channel_name = await cache.aget(
+                f"user_{self.user.id}_tournament_channel_name"
+            )
+            if self.channel_name == usr_channel_name:
+                await cache.adelete(f"user_{self.user.id}_tournament_channel_name")
+                try:
+                    self.queue.remove(self.user)
+                except ValueError:
+                    pass
 
-        await self.user.arefresh_from_db()
+            await self.channel_layer.group_discard("matchmaking", self.channel_name)
 
-        await self.user.set_tournament_channel_name(None)
-
-        await self.user.asave()
-
-        await self.channel_layer.group_discard("tournament", self.channel_name)
-
-        users = []
-        for user in self.queue:
-            users.append(user.username)
-        # time_in_queue = tournament.starting_at
-        await self.channel_layer.group_send(
-            "tournament",
-            {
-                "type": "update.message",
-                "users": users,
-                # "time_left": (time_in_queue - datetime.now()).strftime("%H:%M:%S"),
-            },
-        )
-
-        await self.channel_layer.group_send(
-            "tournament", {"type": "update.message", "users": users}
-        )
+        except AttributeError:
+            pass
 
     async def update_message(self, event):
         users = event["users"]

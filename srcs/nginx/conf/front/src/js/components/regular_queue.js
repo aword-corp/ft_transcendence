@@ -22,7 +22,8 @@ class RegularQueue extends HTMLElement {
 			} else if (data.type == "update.message") {
 				console.log(data.users);
 			} else {
-				console.log("whatever");
+				history.pushState("", "", "/");
+				router();
 			}
 		};
 	}

@@ -61,8 +61,8 @@ const routes = {
 	"/auth/register": { title: register_title, render: register_view, auth: "no_only" },
 	"/profile/settings": { title: edit_profile_title, render: edit_profile_view, auth: "yes" },
 	"/profile/settings/setup_2fa": { title: setup_2fa_title, render: setup_2fa_view, auth: "yes" },
-	"/profile/:user": { title: user_profile_title, render: user_profile_view, auth: "yes" },
 	"/profile": { title: profile_title, render: profile_view, auth: "yes" },
+	"/profile/:user": { title: user_profile_title, render: user_profile_view, auth: "yes" },
 	"/leaderboard": { title: leaderboard_title, render: leaderboard_view, auth: "no" },
 };
 
