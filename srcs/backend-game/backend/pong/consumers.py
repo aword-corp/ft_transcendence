@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import List, Optional
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -11,8 +11,7 @@ from datetime import datetime, timedelta
 from .ai.ai import Paddle, Ball, brain, get_hit, ACCELERATION
 import math
 import time
-from asgiref.sync import sync_to_async
-
+from django.core.cache import cache
 # from colorama import Fore, Back, Style
 
 
@@ -66,7 +65,7 @@ class PongConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
         if self.scope["user"].is_authenticated:
-            self.user: User = self.scope["user"]
+            self.user: User = await User.objects.aget(id=self.scope["user"].id)
         else:
             await self.send(json.dumps({"error": "You need to be logged in."}))
             await self.close()
@@ -205,9 +204,6 @@ class PongConsumer(AsyncWebsocketConsumer):
                 del self.users[self.user.id]
             if self.user.is_spectating:
                 self.user.is_spectating = False
-                await self.user.asave()
-            if self.user.is_playing:
-                self.user.is_playing = False
                 await self.user.asave()
             await self.channel_layer.group_discard(self.game_channel, self.channel_name)
         except AttributeError:
@@ -594,7 +590,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
         if self.scope["user"].is_authenticated:
-            self.user: User = self.scope["user"]
+            self.user: User = await User.objects.aget(id=self.scope["user"].id)
         else:
             await self.send(json.dumps({"error": "You need to be logged in."}))
             await self.close()
@@ -687,7 +683,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                 # AI Move
 
                 # Test
-                move, = brain.predict(_input)
+                (move,) = brain.predict(_input)
                 print(f"AI {move = :.5f}")
                 player2.up = move > 2 / 3
                 player2.down = move < 1 / 3
@@ -898,16 +894,21 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
 
     elo_range_timer = {}
 
+    has_task = False
+
     async def connect(self):
+        print(self.channel_name)
         await self.accept()
         if self.scope["user"].is_authenticated:
-            self.user: User = self.scope["user"]
+            self.user: User = await User.objects.aget(id=self.scope["user"].id)
         else:
             await self.send(json.dumps({"error": "You need to be logged in."}))
             await self.close()
             return
 
-        if bool(self.user.mm_channel_name):
+        usr_channel_name = await cache.aget(f"user_{self.user.id}_mm_channel_name")
+
+        if usr_channel_name:
             await self.send(json.dumps({"error": "You are already in a queue."}))
             await self.close()
             return
@@ -922,25 +923,25 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        await self.user.set_mm_channel_name(self.channel_name)
-        await self.user.asave()
+        await cache.aset(f"user_{self.user.id}_mm_channel_name", self.channel_name)
 
         self.elo_range[self.user.id] = 60
         self.elo_range_timer[self.user.id] = datetime.now()
         self.queue.append(self.user)
         self.region = self.user.region
 
-        if len(self.queue) == 1:
+        if not self.has_task:
+            self.has_task = True
             asyncio.create_task(self.matchmaking())
 
         await self.channel_layer.group_add("matchmaking", self.channel_name)
 
         await self.channel_layer.group_send(
-            "matchmaking", {"type": "update.message", "users": repr(self.queue)}
+            "matchmaking", {"type": "update.message", "users": len(self.queue)}
         )
 
     async def matchmaking(self):
-        while len(self.queue) > 0:
+        while True:
             now = datetime.now()
             for player in self.queue:
                 potential_matches = [
@@ -954,37 +955,42 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
                     users = []
                     for _ in range(2):
                         player = potential_matches.pop()
-                        users.append(player)
+                        users.append(
+                            (
+                                player,
+                                await cache.aget(f"user_{player.id}_mm_channel_name"),
+                            )
+                        )
                         self.queue.remove(player)
                         await self.channel_layer.group_send(
                             "matchmaking",
-                            {"type": "update.message", "users": repr(self.queue)},
+                            {"type": "update.message", "users": len(self.queue)},
                         )
-                        self.elo_range.pop(player.id)
                     asyncio.create_task(self.start_game(users))
                 else:
                     if (now - self.elo_range_timer[player.id]).total_seconds() > 15:
                         self.elo_range[player.id] += 15
                         self.elo_range_timer[player.id] = now
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
 
-    async def start_game(self, users: List[User]):
+    async def start_game(self, users: List[tuple[User, Optional[str]]]):
         await asyncio.sleep(3)
         can_start = True
+        channel_names = {}
 
-        for user in users:
-            await user.arefresh_from_db()
-            if not bool(self.user.mm_channel_name):
+        for user, chnl in users:
+            channel_names[user.id] = await cache.aget(f"user_{user.id}_mm_channel_name")
+            if not channel_names[user.id] or channel_names[user.id] != chnl:
                 can_start = False
 
         if not can_start:
             for _ in range(2):
-                user = users.pop()
-                if bool(self.user.mm_channel_name):
+                user, chnl = users.pop()
+                if channel_names[user.id] and channel_names[user.id] == chnl:
                     await self.queue.append(user)
                     await self.channel_layer.group_send(
                         "matchmaking",
-                        {"type": "update.message", "users": repr(self.queue)},
+                        {"type": "update.message", "users": len(self.queue)},
                     )
             return
 
@@ -996,37 +1002,37 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
         )
 
         for _ in range(2):
-            user: User = users.pop()
+            user, chnl = users.pop()
             await game.users.aadd(user)
-            await game.asave()
             await self.channel_layer.send(
-                await user.get_mm_channel_name(),
+                chnl,
                 {"type": "game.start", "game_id": str(game.uuid)},
             )
-            await self.channel_layer.group_discard(
-                "matchmaking", await user.get_mm_channel_name()
-            )
+            await self.channel_layer.group_discard("matchmaking", chnl)
+            await user.arefresh_from_db()
             user.is_playing = True
-            user.mm_channel_name = None
+            await cache.adelete(f"user_{user.id}_mm_channel_name")
             await user.asave()
+        await game.asave()
 
     async def disconnect(self, close_code):
         try:
-            self.queue.remove(self.user)
-        except (ValueError, AttributeError):
-            return
+            await self.user.arefresh_from_db()
+            usr_channel_name = await cache.aget(f"user_{self.user.id}_mm_channel_name")
+            if self.channel_name == usr_channel_name:
+                await cache.adelete(f"user_{self.user.id}_mm_channel_name")
+                try:
+                    self.queue.remove(self.user)
+                except ValueError:
+                    pass
 
-        await self.user.arefresh_from_db()
+            await self.channel_layer.group_discard("matchmaking", self.channel_name)
 
-        await self.user.set_mm_channel_name(None)
-
-        await self.user.asave()
-
-        await self.channel_layer.group_discard("matchmaking", self.channel_name)
-
-        await self.channel_layer.group_send(
-            "matchmaking", {"type": "update.message", "users": repr(self.queue)}
-        )
+            await self.channel_layer.group_send(
+                "matchmaking", {"type": "update.message", "users": len(self.queue)}
+            )
+        except AttributeError:
+            pass
 
     async def game_start(self, event):
         game_id = event["game_id"]
@@ -1040,7 +1046,7 @@ class MatchmakingConsumer(AsyncWebsocketConsumer):
         users = event["users"]
 
         await self.send(
-            text_data=json.dumps({"type": "update.message", "users": repr(users)})
+            text_data=json.dumps({"type": "update.message", "users": users})
         )
 
 
@@ -1075,7 +1081,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
         if self.scope["user"].is_authenticated:
-            self.user: User = self.scope["user"]
+            self.user: User = await User.objects.aget(id=self.scope["user"].id)
         else:
             await self.send(json.dumps({"error": "You need to be logged in."}))
             await self.close()

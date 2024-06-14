@@ -113,12 +113,16 @@ async function onIceCandidate(event) {
 	}
 }
 
-async function onConnectionStateChange(event) {
+async function onConnectionStateChange(event, offer) {
 	if (peerConnection.connectionState === 'connected' && interval) {
 		clearInterval(interval);
 		interval = undefined;
 	} else if (peerConnection.connectionState === 'failed') {
-		peerConnection.createOffer({ iceRestart: true }).then((offer) => {
+		peerConnection.createOffer({
+			'offerToReceiveAudio': true,
+			'offerToReceiveVideo': false,
+			'iceRestart': true,
+		}).then((offer) => {
 			peerConnection.setLocalDescription(offer).then(() => {
 				pongSocket.send(JSON.stringify({ 'offer': offer }));
 			});
@@ -127,9 +131,17 @@ async function onConnectionStateChange(event) {
 		clearInterval(interval);
 		interval = undefined;
 	} else if (peerConnection.connectionState === 'disconnected' && !interval) {
-		interval = setInterval(() => {
-			pongSocket.send(JSON.stringify({ 'offer': offer }));
-		}, 4000);
+		peerConnection.createOffer({
+			'offerToReceiveAudio': true,
+			'offerToReceiveVideo': false,
+			'iceRestart': true,
+		}).then((offer) => {
+			peerConnection.setLocalDescription(offer).then(() => {
+				interval = setInterval(() => {
+					pongSocket.send(JSON.stringify({ 'offer': offer }));
+				}, 4000);
+			});
+		});
 	}
 }
 

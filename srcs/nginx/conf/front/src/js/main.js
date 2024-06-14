@@ -58,10 +58,10 @@ const routes = {
 	"/auth/login": { title: login_title, render: login_view, auth: "no_only" },
 	"/auth/ft/callback": { title: ft_callback_title, render: ft_callback_view, auth: "no_only" },
 	"/auth/register": { title: register_title, render: register_view, auth: "no_only" },
-	"/profile/:user": { title: user_profile_title, render: user_profile_view, auth: "yes" },
-	"/profile": { title: profile_title, render: profile_view, auth: "yes" },
 	"/profile/settings": { title: edit_profile_title, render: edit_profile_view, auth: "yes" },
 	"/profile/settings/setup_2fa": { title: setup_2fa_title, render: setup_2fa_view, auth: "yes" },
+	"/profile/:user": { title: user_profile_title, render: user_profile_view, auth: "yes" },
+	"/profile": { title: profile_title, render: profile_view, auth: "yes" },
 	"/leaderboard": { title: leaderboard_title, render: leaderboard_view, auth: "no" },
 };
 
