@@ -179,7 +179,7 @@ class User(AbstractBaseUser):
         max_length=256,
         null=True,
         upload_to="medias/users/avatar/",
-        default="discordyellow.png",
+        default="avatar.png",
     )
     banner_url = models.ImageField(
         max_length=256, null=True, upload_to="medias/users/banner/"
