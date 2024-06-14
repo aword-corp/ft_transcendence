@@ -562,4 +562,6 @@ def natural_selection(n_individuals, generations):
     return old_pop[-1]
 
 
-brain = natural_selection(120, 100)
+# brain = natural_selection(120, 100)
+
+brain = None

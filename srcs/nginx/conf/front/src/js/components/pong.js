@@ -36,6 +36,7 @@ class PongGame extends HTMLElement {
                     </div>
                 </div>
             </div>
+			<video style="visibility: hidden;" autoplay id="peer_stream"></video>
         `;
 
 		this.canvas = document.getElementById("pongCanvas");
