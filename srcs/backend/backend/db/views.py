@@ -2031,7 +2031,7 @@ def channel_messages_id(request, channel_id: int, message_id: int):
 @time_cache(time=timedelta(seconds=10))
 def get_leaderboard(request) -> Response:
     print("---------Get leaderboard call---------")
-    leaderboard = sorted(User.objects.values(), key=itemgetter("elo"))
+    leaderboard = sorted(User.objects.values(), key=itemgetter("elo"), reverse = True)
 
     return Response(
         {
