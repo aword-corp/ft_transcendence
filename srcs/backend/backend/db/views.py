@@ -1,6 +1,8 @@
 import uuid
 from .serializers import EditUserSerializer, UserSerializer, MyTokenObtainPairSerializer
 from rest_framework.response import Response
+from django.core.files.base import ContentFile
+from django.core.files import File
 from rest_framework.decorators import (
     api_view,
     throttle_classes,
@@ -276,6 +278,14 @@ def ft_callback(request: Request):
             language="FR-FR",
             has_ft=True,
         )
+        response = requests.get(me_json["image"]["link"])
+        try:
+            if response.status_code == 200:
+                content = ContentFile(response.content)
+                file_name = uuid.uuid4().hex + ".jpg"
+                user.avatar_url.save(file_name, File(content), save=True)
+        except Exception:
+            pass
         user.set_unusable_password()
         user.save()
         django_login(request, user, backend="db.authentication.CustomAuthBackend")
