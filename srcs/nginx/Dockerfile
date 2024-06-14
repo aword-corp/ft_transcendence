@@ -48,7 +48,7 @@ RUN mkdir -p /var/www/static
 
 RUN mkdir -p /var/www/static/media
 
-COPY conf/discordyellow.png /var/www/static/media/
+COPY conf/avatar.png /var/www/static/media/
 
 RUN chown -R www-data:www-data /var/www
 

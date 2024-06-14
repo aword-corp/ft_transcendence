@@ -1,11 +1,11 @@
 // import "../components/home.js"
 
 export function home_title() {
-    return ("Home");
+	return ("Home");
 }
 
 export function home_view() {
-    return (`
+	return (`
         <div class="container-home">
             <h1 class="main-title">PONG</h1>
             <div class="video-row">
@@ -25,6 +25,12 @@ export function home_view() {
                     <source src="https://cdn.acorp.games/assets/nichijou-ed1.mp4" />
                 </video>
             </div>
+			<div class="checkbox-wrapper-5">
+  				<div class="check">
+					<input checked="" id="check-5" type="checkbox">
+    				<label for="check-5"></label>
+  				</div>
+			</div>
         </div>
     `);
 }

@@ -410,7 +410,9 @@ class PongConsumer(AsyncWebsocketConsumer):
                             "width": player1.width,
                             "height": player1.height,
                             "score": player1.score,
-                            "name": player1.user.username,
+                            "name": player1.user.display_name
+                            if player1.user.display_name
+                            else player1.user.username,
                         },
                         "player2": {
                             "x": player2.x,
@@ -418,7 +420,9 @@ class PongConsumer(AsyncWebsocketConsumer):
                             "width": player2.width,
                             "height": player2.height,
                             "score": player2.score,
-                            "name": player2.user.username,
+                            "name": player2.user.display_name
+                            if player2.user.display_name
+                            else player2.user.username,
                         },
                     },
                 },
@@ -825,7 +829,9 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                                 "width": player1.width,
                                 "height": player1.height,
                                 "score": player1.score,
-                                "name": player1.user.username,
+                                "name": player1.user.display_name
+                                if player1.user.display_name
+                                else player1.user.username,
                             },
                             "player2": {
                                 "x": player2.x,
@@ -833,7 +839,7 @@ class PongAIConsumer(AsyncWebsocketConsumer):
                                 "width": player2.width,
                                 "height": player2.height,
                                 "score": player2.score,
-                                "name": None,
+                                "name": "IA",
                             },
                         },
                     }
